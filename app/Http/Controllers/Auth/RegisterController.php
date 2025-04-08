@@ -40,13 +40,13 @@ class RegisterController extends Controller
             'department' => $validatedData['department'],
         ]);
 
-        // Log the user in.
+        // Assign a default role (for example, "user")
+        $user->assignRole('user');
+
         Auth::login($user);
 
-        // Flash a success message.
         session()->flash('success', "You've successfully registered!");
 
-        // Redirect to the dashboard.
         return redirect($this->redirectTo);
     }
 }

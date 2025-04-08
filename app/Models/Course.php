@@ -7,5 +7,5 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Course extends Model
 {
-//r
+    protected $fillable = ['title', 'description', 'status'];
 }

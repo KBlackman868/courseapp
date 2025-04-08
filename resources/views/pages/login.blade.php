@@ -2,7 +2,7 @@
     <html lang="en">
     <head>
     <meta charset="UTF-8" />
-    <title>Cool Login</title>
+    <title>Ministry of Health</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,7 +26,7 @@
         <!-- Glassmorphism effect for the form container -->
         <div class="bg-white/80 backdrop-blur-lg rounded-xl shadow-2xl p-8">
             <div class="text-center">
-            <img class="mx-auto h-12 w-auto" src="https://tailwindui.com/plus/img/logos/mark.svg?color=indigo&shade=600" alt="Ministry of Health" />
+            <img class="mx-auto h-12 w-auto" src="{{ asset('images/moh_logo.jpg') }}" alt="Ministry of Health" />
             <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
                 Sign in to your account
             </h2>
