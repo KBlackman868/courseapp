@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,20 +14,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Call other seeders (ensure you pass them as an array)
-        $this->call([
-            RoleSeeder::class,
-            UserSeeder::class,
+        // Create roles if they don't exist.
+        Role::firstOrCreate(['name' => 'superadmin']);
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'user']);
+
+        // Create an admin user. Make sure not to include email_verified_at.
+        $admin = User::create([
+            'first_name' => 'Kyle',
+            'last_name'  => 'Blackman',
+            'email'      => 'kyle.blackman@health.gov.tt',
+            'password'   => Hash::make('He@Lth2025!'),
+            'department' => 'ICT',
         ]);
 
-        // Create an additional test user and assign the 'admin' role
-        $user = User::factory()->create([
-            'first_name' => 'Test',
-            'last_name'  => 'User',
-            'email'      => 'test@example.com',
-            'password'   => Hash::make('password123'),
-        ]);
+        // Assign the 'admin' role to this user.
+        $admin->assignRole('admin');
 
-        $user->assignRole('admin');
+        // Optionally, create dummy users here.
+        // User::factory(10)->create()->each(function ($user) {
+        //     $user->assignRole('user');
+        // });
     }
 }
