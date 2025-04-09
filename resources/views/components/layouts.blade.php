@@ -23,9 +23,11 @@
                     </div>
                     -->
                     <div class="hidden md:block">
+                        @role('user')
                         <x-nav-link href="/home" :active="request()->is('home')">Home</x-nav-link>
                         <x-nav-link href="/mycourses" :active="request()->is('mycourses')">Courses</x-nav-link>
-                        @role('superadmin')
+                        @endrole
+                        @role('superadmin|admin')
                         <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->is('admin/users*')">
                             Users
                         </x-nav-link>
