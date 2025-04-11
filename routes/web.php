@@ -6,6 +6,9 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\UserManagementController;
+use Illuminate\Support\Facades\Password;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +20,27 @@ use App\Http\Controllers\UserManagementController;
 Route::get('/', function () {
     return view('landing.welcome');
 })->name('welcome');
+
+
+// Show the form to request a password reset link
+Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
+    ->middleware('guest')
+    ->name('password.request');
+
+// Handle the form submission: send a password reset link to the given email.
+Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->middleware('guest')
+    ->name('password.email');
+
+// Show the form to reset the password (with token)
+Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
+    ->middleware('guest')
+    ->name('password.reset');
+
+// Handle the password reset form submission
+Route::post('/password/reset', [ResetPasswordController::class, 'reset'])
+    ->middleware('guest')
+    ->name('password.update');
 
 // Authentication routes
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
