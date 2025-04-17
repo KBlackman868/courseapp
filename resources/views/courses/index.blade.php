@@ -26,7 +26,7 @@
         <div class="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($courses as $course)
                 @php
-                    // Check if the authenticated user has an enrollment for this course (pending or approved)
+                    // Check if the authenticated user is enrolled in this course (pending or approved)
                     $isEnrolled = false;
                     if(Auth::check()){
                         $isEnrolled = \App\Models\Enrollment::where('user_id', Auth::id())
@@ -38,8 +38,9 @@
 
                 <div class="relative bg-white rounded-2xl shadow-xl overflow-hidden transform transition duration-300 hover:scale-105 hover:shadow-2xl {{ $isEnrolled ? 'opacity-50 pointer-events-none' : '' }}">
                     <div class="relative">
-                        <img src="{{ asset('images/' . ($course->image ?? 'default.jpg')) }}" alt="{{ $course->title }}" class="w-full h-56 object-cover transition-transform duration-300 transform hover:scale-105">
+                        <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" class="w-full h-64 object-cover">
                         @if($isEnrolled)
+                            <!-- Overlay for enrolled courses -->
                             <div class="absolute inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
                                 <span class="text-xl text-white font-bold">Enrolled</span>
                             </div>
@@ -50,7 +51,7 @@
                         <p class="mb-4 text-gray-700 text-sm">{{ Str::limit($course->description, 150) }}</p>
                         @if(!$isEnrolled)
                             <a href="{{ route('courses.register', ['course' => $course->id]) }}"
-                                class="block w-full bg-gradient-to-r from-red-500 via-red-600 to-yellow-500 text-white font-semibold rounded-full text-lg px-5 py-3 shadow-lg transition-all hover:shadow-2xl focus:ring-4 focus:outline-none focus:ring-red-200">
+                               class="block w-full bg-gradient-to-r from-red-500 via-red-600 to-yellow-500 text-white font-semibold rounded-full text-lg px-5 py-3 shadow-lg transition-all hover:shadow-2xl focus:ring-4 focus:outline-none focus:ring-red-200">
                                 Enroll Now
                             </a>
                         @else
@@ -58,6 +59,17 @@
                                 Already Enrolled
                             </span>
                         @endif
+
+                        @hasanyrole('admin|superadmin')
+                        <!-- Delete Course Button: visible to admins and superadmins -->
+                        <form action="{{ route('courses.destroy', $course->id) }}" method="POST" class="mt-4" onsubmit="return confirm('Are you sure you want to delete this course?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="w-full bg-red-600 text-white font-semibold rounded-full text-lg px-5 py-3 shadow hover:bg-red-700 transition-all">
+                                Delete Course
+                            </button>
+                        </form>
+                        @endhasanyrole
                     </div>
                 </div>
             @endforeach

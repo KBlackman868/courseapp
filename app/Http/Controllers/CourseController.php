@@ -41,11 +41,19 @@ class CourseController extends Controller
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
             'status'      => 'required|string|max:255',
+            'image'       => 'nullable|image|max:2048'
         ]);
+
+        //dd($validated);
+
+        if ($request->hasFile('image')){
+            //Store the image in the 'public/courses' directory.
+            $path = $request->file('image')->store('courses','public');
+            $validated['image'] = $path;
+        }
 
         // Create a new course; the database auto-assigns the course ID.
         Course::create($validated);
-
         return redirect()->route('courses.index')->with('success', 'Course created successfully.');
     }
 
