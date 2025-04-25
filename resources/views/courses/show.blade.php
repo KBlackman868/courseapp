@@ -22,5 +22,3 @@
         </div>
     </div>
 </x-layouts>
-
-{{ Storage::url($student->PicturePath) }}

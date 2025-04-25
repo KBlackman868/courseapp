@@ -51,7 +51,7 @@
                         <p class="mb-4 text-gray-700 text-sm">{{ Str::limit($course->description, 150) }}</p>
                         @if(!$isEnrolled)
                             <a href="{{ route('courses.register', ['course' => $course->id]) }}"
-                               class="block w-full bg-gradient-to-r from-red-500 via-red-600 to-yellow-500 text-white font-semibold rounded-full text-lg px-5 py-3 shadow-lg transition-all hover:shadow-2xl focus:ring-4 focus:outline-none focus:ring-red-200">
+                               class="block w-full bg-gradient-to-r from-red-500 via-red-600 to-yellow-500 text-white font-semibold rounded-full text-lg px-5 py-3 shadow-lg transition-all hover:shadow-2xl focus:ring-4 focus:outline-none focus:ring-red-200 ">
                                 Enroll Now
                             </a>
                         @else
@@ -74,12 +74,4 @@
                 </div>
             @endforeach
         </div>
-    </main>
-
-    <!-- Footer Section -->
-    <footer class="bg-gray-800 text-white py-8">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <p class="text-sm">&copy; Ministry of Health. All rights reserved.</p>
-        </div>
-    </footer>
 </x-layouts>

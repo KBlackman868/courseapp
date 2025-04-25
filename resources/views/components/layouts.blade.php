@@ -1,162 +1,161 @@
-        <!DOCTYPE html>
-        <html lang="en" class="h-full bg-gray-100">
-        <head>
-            <meta charset="utf-8">
-            <meta http-equiv="X-UA-Compatible" content="IE=edge">
-            <title></title>
-            <meta name="description" content="">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link rel="stylesheet" href="">
-            <script src="https://cdn.tailwindcss.com"></script>
-            <!-- In the head section -->
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
-        </head>
-        <body class="h-full">
-            <div class="min-h-full">
-            <nav class="bg-gray-800">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="flex h-16 items-center justify-between">
-                    <div class="flex items-center">
-                    <!-- MOH LOGO Change
-                    <div class="shrink-0">
-                        <img class="size-8" src="{{ asset('images/moh_logo.jpg') }}" alt="Your Company">
-                    </div>
-                    -->
-                    <div class="hidden md:block">
-                        @role('user')
-                        <x-nav-link href="/home" :active="request()->is('home')">Home</x-nav-link>
-                        <x-nav-link href="/mycourses" :active="request()->is('mycourses')">Courses</x-nav-link>
-                        @endrole
-                        @role('superadmin|admin')
-                        <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->is('admin/users*')">
-                            Users
-                        </x-nav-link>
-                        @endrole
-                        @hasanyrole('superadmin|admin')
-                        <x-nav-link href="{{ route('admin.enrollments.index') }}" :active="request()->is('admin/listusers*')">
-                            Pending Enrollments
-                        </x-nav-link>
-                        @endhasanyrole
-                        @hasanyrole('superadmin|admin')
-                        <x-nav-link href="{{ route('courses.create') }}" :active="request()->is('courses/create*')">
-                            Create Courses
-                        </x-nav-link>
-                        @endhasanyrole
-                    </div>
+<!DOCTYPE html>
+<html lang="en" x-data="layout()" x-bind:class="{ 'dark': dark }" class="h-full bg-gray-100 dark:bg-gray-900">
+<head>
+  <meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{{ config('app.name', 'Ministry of Health') }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="//unpkg.com/alpinejs" defer></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+</head>
+<body class="h-full font-sans antialiased text-gray-900 dark:text-gray-100">
 
-                    </div>
-                    <div class="hidden md:block">
-                    <div class="ml-4 flex items-center md:ml-6">
-                        <button type="button" class="relative rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 focus:outline-hidden">
-                        <span class="absolute -inset-1.5"></span>
-                        <span class="sr-only">View notifications</span>
-                        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                        </button>
-                        <!-- Logout form for desktop -->
-                        <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="ml-4 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700">
-                            Logout
-                        </button>
-                        </form>
-                    </div>
-                    </div>
-                    <div class="-mr-2 flex md:hidden">
-                    <!-- Mobile menu button -->
-                    <button type="button" class="relative inline-flex items-center justify-center rounded-md bg-gray-800 p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 focus:outline-hidden" aria-controls="mobile-menu" aria-expanded="false">
-                        <span class="absolute -inset-0.5"></span>
-                        <span class="sr-only">Open main menu</span>
-                        <!-- Menu open: "hidden", Menu closed: "block" -->
-                        <svg class="block size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                        </svg>
-                        <!-- Menu open: "block", Menu closed: "hidden" -->
-                        <svg class="hidden size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                    </div>
-                </div>
-                </div>
-
-                <!-- Mobile menu -->
-                <div class="md:hidden" id="mobile-menu">
-                <div class="space-y-1 px-2 pt-2 pb-3 sm:px-3">
-                    <x-nav-link href="/home" :active="request()->is('home')">Home</x-nav-link>
-                    <x-nav-link href="/course" :active="request()->is('course')">Courses</x-nav-link>
-                    <x-nav-link href="/mycourses" :active="request()->is('mycourses')">My Courses</x-nav-link>
-                    @if (['auth','role:superadmin'])->group(function(){
-                    <x-nav-link href="/userlists" :active="request()->is('userlists')">List of Users</x-nav-link>
-                    });
-                    @endif
-                </div>
-                <div class="border-t border-gray-700 pt-4 pb-3">
-                    <div class="flex items-center px-5">
-                    <div class="shrink-0">
-                        <img class="size-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&amp;ixid=eyJhcHBfaWQiOjEyMDd9&amp;auto=format&amp;fit=facearea&amp;facepad=2&amp;w=256&amp;h=256&amp;q=80" alt="">
-                    </div>
-                    <div class="ml-3">
-                        <div class="text-base/5 font-medium text-white">Tom Cook</div>
-                        <div class="text-sm font-medium text-gray-400">tom@example.com</div>
-                    </div>
-                    <button type="button" class="relative ml-auto shrink-0 rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 focus:outline-hidden">
-                        <span class="absolute -inset-1.5"></span>
-                        <span class="sr-only">View notifications</span>
-                        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                    </button>
-                    </div>
-                    <div class="mt-3 space-y-1 px-2">
-                    <a href="#" class="block rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">Your Profile</a>
-                    <a href="#" class="block rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">Settings</a>
-                    <!-- Logout form for mobile -->
-                    <form method="POST" action="{{ route('logout') }}" class="block">
-                        @csrf
-                        <button type="submit" class="w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-400 hover:bg-gray-700 hover:text-white">
-                        Logout
-                        </button>
-                    </form>
-                    </div>
-                </div>
-                </div>
-            </nav>
-
-            <header class="bg-white shadow-sm">
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold tracking-tight text-gray-900">{{ $heading }}</h1>
-                </div>
-            </header>
-
-            <main>
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                {{ $slot }}
-                </div>
-            </main>
+  <div class="min-h-full flex flex-col">
+    {{-- NAVBAR --}}
+    <nav class="fixed w-full z-50 bg-green-200/80 backdrop-blur-md border-b border-green-300 dark:bg-green-800/80 dark:border-green-700 transition-colors">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          {{-- Logo & Links --}}
+          <div class="flex items-center">
+            <a href="{{ route('home') }}" class="flex items-center space-x-2">
+              <img src="{{ asset('images/moh_logo.jpg') }}" class="h-8 w-8" alt="MOH Logo">
+              <span class="font-bold text-xl text-black dark:text-white">MOH × Moodle</span>
+            </a>
+            <div class="hidden md:flex md:space-x-6 md:ml-10">
+              @role('user')
+                <x-nav-link href="{{ route('home') }}" :active="request()->routeIs('home')"
+                  class="text-black dark:text-white hover:-translate-y-1 hover:scale-105 transition">
+                  Home
+                </x-nav-link>
+                <x-nav-link href="{{ route('mycourses') }}" :active="request()->routeIs('mycourses')"
+                  class="text-black dark:text-white hover:-translate-y-1 hover:scale-105 transition">
+                  My Courses
+                </x-nav-link>
+              @endrole
+              @role('admin|superadmin')
+                <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')"
+                  class="text-black dark:text-white hover:-translate-y-1 hover:scale-105 transition">
+                  Users
+                </x-nav-link>
+                <x-nav-link href="{{ route('admin.enrollments.index') }}" :active="request()->routeIs('admin.enrollments.*')"
+                  class="text-black dark:text-white hover:-translate-y-1 hover:scale-105 transition">
+                  Pending
+                </x-nav-link>
+                <x-nav-link href="{{ route('courses.create') }}" :active="request()->routeIs('courses.create')"
+                  class="text-black dark:text-white hover:-translate-y-1 hover:scale-105 transition">
+                  Create
+                </x-nav-link>
+              @endrole
             </div>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-            @if(session('success'))
-                <script>
-                    toastr.options = {
-                        "closeButton": true,
-                        "progressBar": true,
-                        "positionClass": "toast-top-right",
-                    };
-                    toastr.success("{{ session('success') }}");
-                </script>
-            @endif
-            @if(session('error'))
-                <script>
-                    toastr.options = {
-                        "closeButton": true,
-                        "progressBar": true,
-                        "positionClass": "toast-top-right",
-                    };
-                    toastr.error("{{ session('error') }}");
-                </script>
-            @endif
-        </body>
-        </html>
+          </div>
+
+          {{-- Toggles & Profile --}}
+          <div class="flex items-center space-x-4">
+            {{-- Dark Mode --}}
+            <button @click="toggleDark()"
+              class="p-2 rounded-full hover:-translate-y-1 hover:scale-105 transition bg-white/60 dark:bg-black/60">
+              <template x-if="!dark">
+                <svg class="h-6 w-6 text-black" fill="currentColor"><path d="M12 3v2m0 14v2m9-9h-2M5 12H3"/></svg>
+              </template>
+              <template x-if="dark">
+                <svg class="h-6 w-6 text-white" fill="currentColor"><path d="M21 12.79A9 9 0 1111.21 3"/></svg>
+              </template>
+            </button>
+
+            {{-- Profile dropdown --}}
+            <div class="relative" x-data="{ open: false }">
+              <button @click="open = !open"
+                class="flex items-center space-x-1 p-1 rounded-full hover:-translate-y-1 hover:scale-105 transition">
+                @php
+                $photo = auth()->user()->profile_photo;
+                @endphp
+                <img src="{{ $photo ? Storage::url($photo) : asset('images/default-avatar.png') }}" class="h-8 w-8 rounded-full object-cover" alt="Avatar">
+                <svg class="h-4 w-4 text-black dark:text-white" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div x-show="open" @click.away="open=false"
+                   class="origin-top-right absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                <a href="{{ route('profile.show') }}" class="block px-4 py-2 text-sm hover:bg-green-100 dark:hover:bg-green-900">Your Profile</a>
+                <a href="{{ route('mycourses') }}"     class="block px-4 py-2 text-sm hover:bg-green-100 dark:hover:bg-green-900">Enrolled</a>
+                <a href="{{ route('profile.settings') }}" class="block px-4 py-2 text-sm hover:bg-green-100 dark:hover:bg-green-900">Settings</a>
+                <a href="{{ route('password.change') }}"   class="block px-4 py-2 text-sm hover:bg-green-100 dark:hover:bg-green-900">Change Password</a>
+                <form method="POST" action="{{ route('logout') }}">
+                  @csrf
+                  <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-green-100 dark:hover:bg-green-900">
+                    Logout
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {{-- Mobile toggle --}}
+            <button @click="mobileOpen = !mobileOpen"
+              class="md:hidden p-2 rounded-md hover:-translate-y-1 hover:scale-105 transition bg-white/60 dark:bg-black/60">
+              <svg x-show="!mobileOpen" class="h-6 w-6 text-black dark:text-white" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <svg x-show="mobileOpen"  class="h-6 w-6 text-black dark:text-white" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {{-- Mobile menu --}}
+      <div x-show="mobileOpen" class="md:hidden bg-green-200 dark:bg-green-800">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+          @role('user')
+            <x-nav-link href="{{ route('home') }}" :active="request()->routeIs('home')" class="text-black dark:text-white">Home</x-nav-link>
+            <x-nav-link href="{{ route('mycourses') }}" :active="request()->routeIs('mycourses')" class="text-black dark:text-white">My Courses</x-nav-link>
+          @endrole
+          @role('admin|superadmin')
+            <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')" class="text-black dark:text-white">Users</x-nav-link>
+            <x-nav-link href="{{ route('admin.enrollments.index') }}" :active="request()->routeIs('admin.enrollments.*')" class="text-black dark:text-white">Pending</x-nav-link>
+            <x-nav-link href="{{ route('courses.create') }}" :active="request()->routeIs('courses.create')" class="text-black dark:text-white">Create</x-nav-link>
+          @endrole
+        </div>
+      </div>
+    </nav>
+
+    {{-- PAGE HEADER --}}
+    <header class="pt-16 bg-gray-50 dark:bg-gray-900 shadow">
+      <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-semibold">{{ $heading }}</h1>
+      </div>
+    </header>
+
+    {{-- CONTENT --}}
+    <main class="flex-1 overflow-y-auto py-6">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {{ $slot }}
+      </div>
+    </main>
+
+    {{-- FOOTER --}}
+    <footer class="bg-blue-200 dark:bg-blue-800 border-t border-blue-300 dark:border-blue-700 py-6 mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-800 dark:text-gray-200">
+        &copy; {{ date('Y') }} Ministry of Health. All rights reserved.
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toastr -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+  <script>
+    function layout() {
+      return {
+        dark: JSON.parse(localStorage.getItem('dark') || 'false'),
+        mobileOpen: false,
+        toggleDark() {
+          this.dark = !this.dark;
+          localStorage.setItem('dark', this.dark);
+        }
+      }
+    }
+
+    @if(session('success'))
+      toastr.success("{{ session('success') }}");
+    @endif
+    @if(session('error'))
+      toastr.error("{{ session('error') }}");
+    @endif
+  </script>
+</body>
+</html>

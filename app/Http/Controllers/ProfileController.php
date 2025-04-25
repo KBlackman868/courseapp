@@ -3,30 +3,88 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Enrollment;                      // ← fix this
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;             // ← need this
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;   // ← and this
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
+    public function show(Request $request)
+    {
+        $user = $request->user();
+
+        // Eager-load approved enrollments + their courses
+        $enrollments = Enrollment::with('course')
+                         ->where('user_id', $user->id)
+                         ->where('status', 'approved')
+                         ->get();
+
+        return view('profile.show', compact('user', 'enrollments'));
+    }
+
+    public function updatePhoto(Request $request)
+    {
+        $request->validate([
+            'profile_photo' => 'required|image|max:2048',
+        ]);
+    
+        $user = $request->user();
+        $file = $request->file('profile_photo');
+        $ext  = $file->extension();
+        $filename = $user->id . '.' . $ext;
+    
+        // will go to storage/app/public/avatars/{id}.{ext}
+        $file->storeAs('avatars', $filename, 'public');
+    
+        // save *relative* path in DB
+        $user->profile_photo = "avatars/{$filename}";
+        $user->save();
+    
+        return back()->with('success','Profile photo updated.');
+    }
+   
+
+    public function updatePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => 'required',
+            'password'         => 'required|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect.'],
+            ]);
+        }
+
+        $user->password = Hash::make($data['password']);
+        $user->save();
+
+        return back()->with('success','Password changed.');
+    }
+
+    public function settings(Request $request)
+    {
+        return view('profile.settings', ['user' => $request->user()]);
+    }
+
     public function edit(Request $request): Response
     {
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => session('status'),
+            'status'          => session('status'),
         ]);
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $request->user()->fill($request->validated());
@@ -40,9 +98,6 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit');
     }
 
-    /**
-     * Delete the user's account.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([
@@ -52,7 +107,6 @@ class ProfileController extends Controller
         $user = $request->user();
 
         Auth::logout();
-
         $user->delete();
 
         $request->session()->invalidate();

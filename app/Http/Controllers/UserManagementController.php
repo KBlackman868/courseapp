@@ -17,6 +17,10 @@ class UserManagementController extends Controller
     // Update a user's role
     public function updateRole(Request $request, User $user)
     {
+        if ($user->hasRole('superadmin')) {
+            return back()->with('error', 'You cannot change the superadmin role.');
+        }
+        
         $request->validate([
             'role' => 'required|in:superadmin,admin,user',
         ]);

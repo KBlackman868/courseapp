@@ -6,9 +6,9 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\UserManagementController;
-use Illuminate\Support\Facades\Password;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,88 +17,77 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 */
 
 // Landing page
-Route::get('/', function () {
-    return view('landing.welcome');
-})->name('welcome');
+Route::get('/', fn() => view('landing.welcome'))->name('welcome');
 
+// Password reset (forgot / email link)
+Route::middleware('guest')->group(function(){
+    Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
+         ->name('password.request');
+    Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+         ->name('password.email');
+    Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
+         ->name('password.reset');
+    Route::post('/password/reset', [ResetPasswordController::class, 'reset'])
+         ->name('password.update');
 
-// Show the form to request a password reset link
-Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
-    ->middleware('guest')
-    ->name('password.request');
+    // Auth
+    Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+    Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
+    Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
+});
 
-// Handle the form submission: send a password reset link to the given email.
-Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
-    ->middleware('guest')
-    ->name('password.email');
-
-// Show the form to reset the password (with token)
-Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
-    ->middleware('guest')
-    ->name('password.reset');
-
-// Handle the password reset form submission
-Route::post('/password/reset', [ResetPasswordController::class, 'reset'])
-    ->middleware('guest')
-    ->name('password.update');
-
-// Authentication routes
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+// Logout must remain outside guest
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
 
 /*
 |--------------------------------------------------------------------------
 | Protected Routes (Require Authentication)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
+Route::middleware('auth')->group(function () {
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('pages.dashboard');
-    })->name('dashboard');
+    Route::view('/dashboard', 'pages.dashboard')->name('dashboard');
 
-    // Home page - list all courses via the CourseController index method
+    // Home / Courses
     Route::get('/home', [CourseController::class, 'index'])->name('home');
-
-    /*
-    |----------------------------------------------------------------------
-    | Course Routes (Resource)
-    |----------------------------------------------------------------------
-    */
     Route::resource('courses', CourseController::class);
+    Route::get('/courses/{course}/register', [CourseController::class, 'register'])
+         ->name('courses.register');
+    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])
+         ->name('courses.enroll.store');
+    Route::get('/mycourses', [EnrollmentController::class, 'myCourses'])
+         ->name('mycourses');
 
-    // GET route to display the registration page for a course
-    Route::get('/courses/{course}/register', [CourseController::class, 'register'])->name('courses.register');
-
-    // POST route to handle enrollment
-    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('courses.enroll.store');
-
-    // Route to show my courses listing for the authenticated user
-    Route::get('/mycourses', [EnrollmentController::class, 'myCourses'])->name('mycourses');
+    // Profile & Settings
+    Route::get('/profile',          [ProfileController::class, 'show'])            ->name('profile.show');
+    Route::get('/profile/settings', [ProfileController::class, 'settings'])        ->name('profile.settings');
+    Route::post('/profile/photo',   [ProfileController::class, 'updatePhoto'])     ->name('profile.photo');
+    // Change password form
+    Route::get('/password/change',  [ProfileController::class, 'showChangeForm'])  ->name('password.change');
+    Route::post('/profile/password',[ProfileController::class, 'updatePassword'])  ->name('profile.password');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Admin-only routes: List users, update roles, manage enrollments.
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
-    Route::middleware([\Spatie\Permission\Middleware\RoleMiddleware::class . ':admin|superadmin'])->group(function () {
-        // Route to list all users
-        Route::get('/admin/users', [UserManagementController::class, 'index'])->name('admin.users.index');
+    Route::middleware(\Spatie\Permission\Middleware\RoleMiddleware::class . ':admin|superadmin')
+        ->group(function () {
+            Route::get('/admin/users',       [UserManagementController::class, 'index'])
+                 ->name('admin.users.index');
+            Route::post('/admin/users/{user}/role',
+                 [UserManagementController::class, 'updateRole'])
+                 ->name('admin.users.updateRole');
 
-        // Route to update a user's role
-        Route::post('/admin/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('admin.users.updateRole');
-
-        // Route to list enrollments (e.g., for approval)
-        Route::get('/admin/enrollments', [EnrollmentController::class, 'index'])->name('admin.enrollments.index');
-
-        // Route to update enrollment status (PUT request)
-        Route::put('/admin/enrollments/{enrollment}', [EnrollmentController::class, 'update'])->name('admin.enrollments.update');
-
-        // New route: Admin unenrolls a user (DELETE request)
-        Route::delete('/admin/enrollments/{enrollment}', [EnrollmentController::class, 'unenroll'])->name('admin.enrollments.unenroll');
-    });
+            Route::get('/admin/enrollments',        [EnrollmentController::class, 'index'])
+                 ->name('admin.enrollments.index');
+            Route::put('/admin/enrollments/{enrollment}',
+                 [EnrollmentController::class, 'update'])
+                 ->name('admin.enrollments.update');
+            Route::delete('/admin/enrollments/{enrollment}',
+                 [EnrollmentController::class, 'unenroll'])
+                 ->name('admin.enrollments.unenroll');
+        });
 });
