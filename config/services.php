@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'moodle' => [
+        'base_url'=>env('learnabouthealth.hin.gov.tt'),
+        'token'=>env('d6fc4e6a36c21396998527f094048936'),
+    ],
+
 ];

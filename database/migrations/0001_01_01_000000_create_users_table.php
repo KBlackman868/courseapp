@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->string('email')->unique();
             $table->string('password');
             $table->string('department');
+            $table->unsignedBigInteger('moodle_user_id')->nullable()->index()->after('id');
             $table->rememberToken();
             $table->timestamps();
         });

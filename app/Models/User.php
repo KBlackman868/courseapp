@@ -26,6 +26,7 @@ class User extends Authenticatable
         'password',
         'department',
         'profile_photo',
+        'moodle_user_id',
     ];
 
     /**
@@ -49,5 +50,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+        public function hasMoodleAccount(): bool
+    {
+        return !is_null($this->moodle_user_id);
     }
 }
