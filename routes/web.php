@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Password;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\http\Controller\Auth\ProfileController;
+use App\Http\Controllers\Admin\MoodleTestController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -95,6 +96,173 @@ Route::middleware(['auth'])->group(function () {
     */
     
     Route::middleware([\Spatie\Permission\Middleware\RoleMiddleware::class . ':admin|superadmin'])->group(function () {
+
+        // Add this to your routes/web.php file
+
+Route::get('/moodle-diagnosis', function () {
+    
+    $results = [];
+    
+    // 1. Check ENV variables
+    $results['env_check'] = [
+        'MOODLE_URL' => env('MOODLE_URL') ? '✅ Set' : '❌ NOT SET',
+        'MOODLE_TOKEN' => env('MOODLE_TOKEN') ? '✅ Set' : '❌ NOT SET',
+        'actual_url' => env('MOODLE_URL', 'Not configured'),
+    ];
+    
+    // 2. Test connection
+    try {
+        $moodle = new \App\Services\MoodleService();
+        $connected = $moodle->testConnection();
+        $results['connection'] = $connected ? '✅ Connected' : '❌ Failed';
+    } catch (\Exception $e) {
+        $results['connection'] = '❌ Error: ' . $e->getMessage();
+    }
+    
+    // 3. Check available functions
+    try {
+        $response = $moodle->call('core_webservice_get_site_info');
+        $functions = $response['functions'] ?? [];
+        
+        // Check for critical functions
+        $critical = [
+            'core_user_create_users' => false,
+            'core_user_get_users' => false,
+        ];
+        
+        foreach ($functions as $func) {
+            if (isset($critical[$func['name']])) {
+                $critical[$func['name']] = true;
+            }
+        }
+        
+        $results['permissions'] = [
+            'core_user_create_users' => $critical['core_user_create_users'] ? '✅ Enabled' : '❌ DISABLED - Cannot create users!',
+            'core_user_get_users' => $critical['core_user_get_users'] ? '✅ Enabled' : '❌ DISABLED - Cannot get users!',
+        ];
+        
+    } catch (\Exception $e) {
+        $results['permissions'] = '❌ Could not check permissions: ' . $e->getMessage();
+    }
+    
+    // 4. Test creating a user
+    try {
+        $testUsername = 'test_' . time();
+        $testUser = [
+            'username' => $testUsername,
+            'password' => 'TestPass123!',
+            'firstname' => 'Test',
+            'lastname' => 'User',
+            'email' => $testUsername . '@test.com',
+            'auth' => 'manual',
+        ];
+        
+        $userId = $moodle->createUser($testUser);
+        
+        if ($userId) {
+            $results['user_creation'] = "✅ Test user created successfully! (ID: $userId)";
+        } else {
+            $results['user_creation'] = "❌ User creation returned null";
+        }
+        
+    } catch (\Exception $e) {
+        $results['user_creation'] = "❌ User creation failed: " . $e->getMessage();
+    }
+    
+    // 5. Check last 5 users in Laravel
+    $users = \App\Models\User::latest()->take(5)->get(['email', 'moodle_user_id', 'created_at']);
+    $results['recent_users'] = $users->map(function ($user) {
+        return [
+            'email' => $user->email,
+            'moodle_synced' => $user->moodle_user_id ? "✅ Yes (ID: {$user->moodle_user_id})" : "❌ No",
+            'created' => $user->created_at->diffForHumans(),
+        ];
+    })->toArray();
+    
+    // Display results
+    $html = '<!DOCTYPE html>
+    <html>
+    <head>
+        <title>Moodle Integration Diagnosis</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+    </head>
+    <body class="bg-gray-100 p-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold mb-8">🔍 Moodle Integration Diagnosis</h1>';
+    
+    // Environment Check
+    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">1️⃣ Environment Configuration</h2>';
+    foreach ($results['env_check'] as $key => $value) {
+        $html .= "<p><strong>$key:</strong> $value</p>";
+    }
+    $html .= '</div>';
+    
+    // Connection Test
+    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">2️⃣ Connection Test</h2>
+        <p>' . $results['connection'] . '</p>
+    </div>';
+    
+    // Permissions Check
+    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">3️⃣ Moodle Permissions</h2>';
+    if (is_array($results['permissions'])) {
+        foreach ($results['permissions'] as $func => $status) {
+            $html .= "<p><strong>$func:</strong> $status</p>";
+        }
+    } else {
+        $html .= '<p>' . $results['permissions'] . '</p>';
+    }
+    $html .= '</div>';
+    
+    // User Creation Test
+    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">4️⃣ User Creation Test</h2>
+        <p>' . $results['user_creation'] . '</p>
+    </div>';
+    
+    // Recent Users
+    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">5️⃣ Recent Laravel Users</h2>
+        <table class="w-full">';
+    foreach ($results['recent_users'] as $user) {
+        $html .= '<tr class="border-b">
+            <td class="py-2">' . $user['email'] . '</td>
+            <td class="py-2">' . $user['moodle_synced'] . '</td>
+            <td class="py-2 text-gray-500">' . $user['created'] . '</td>
+        </tr>';
+    }
+    $html .= '</table>
+    </div>';
+    
+    // Solution
+    $html .= '<div class="bg-blue-50 rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4">💡 Diagnosis Summary</h2>';
+    
+    if (strpos($results['connection'], '✅') !== false) {
+        if (isset($results['permissions']['core_user_create_users']) && 
+            strpos($results['permissions']['core_user_create_users'], '❌') !== false) {
+            $html .= '<p class="text-red-600 font-bold">❌ PROBLEM FOUND: Your Moodle token does NOT have permission to create users!</p>
+                     <p class="mt-2">Solution: In Moodle, go to Site Administration → Web Services → External Services, 
+                     find your service and add the "core_user_create_users" function.</p>';
+        } elseif (strpos($results['user_creation'], '❌') !== false) {
+            $html .= '<p class="text-red-600 font-bold">❌ PROBLEM: User creation is failing even with permissions.</p>
+                     <p class="mt-2">Error: ' . $results['user_creation'] . '</p>';
+        } else {
+            $html .= '<p class="text-green-600 font-bold">✅ Everything seems to be working!</p>';
+        }
+    } else {
+        $html .= '<p class="text-red-600 font-bold">❌ PROBLEM: Cannot connect to Moodle. Check your MOODLE_URL and MOODLE_TOKEN in .env file.</p>';
+    }
+    
+    $html .= '</div>
+        </div>
+    </body>
+    </html>';
+    
+    return $html;
+})->middleware('auth');
         // Route to list all users
         Route::get('/admin/users', [UserManagementController::class, 'index'])->name('admin.users.index');
         // Add this route for admins
@@ -103,6 +271,18 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(['auth', 'role:admin|superadmin']);
          // Route to update a user's role
         Route::post('/admin/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('admin.users.updateRole');
+            // User deletion and suspension routes
+            Route::delete('/admin/users/{user}', [UserManagementController::class, 'destroy'])
+            ->name('admin.users.destroy');
+        Route::patch('/admin/users/{user}/suspend', [UserManagementController::class, 'suspend'])
+            ->name('admin.users.suspend');
+
+        Route::patch('/admin/users/{user}/reactivate', [UserManagementController::class, 'reactivate'])
+            ->name('admin.users.reactivate');
+
+        Route::delete('/admin/users/bulk-delete', [UserManagementController::class, 'bulkDelete'])
+            ->name('admin.users.bulkDelete');
+});
 
         // Route to list enrollments (e.g., for approval)
         Route::get('/admin/enrollments', [EnrollmentController::class, 'index'])->name('admin.enrollments.index');
@@ -121,7 +301,7 @@ Route::middleware(['auth'])->group(function () {
         // Change password
         Route::post('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
     });
-});
+
 /*
 |--------------------------------------------------------------------------
 | API Routes

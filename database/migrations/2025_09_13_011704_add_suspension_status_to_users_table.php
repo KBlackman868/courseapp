@@ -12,10 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'moodle_user_id')) {
-                $table->integer('moodle_user_id')->nullable()->after('department');
-                $table->index('moodle_user_id');
-            }
+            //
         });
     }
 
@@ -25,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('moodle_user_id');
+            //
         });
     }
 };

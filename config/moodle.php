@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'base_url' => env('MOODLE_BASE_URL', 'https://moodle.example.com'),
-    'token' => env('MOODLE_TOKEN', ''),
+    'base_url' => env('MOODLE_BASE_URL', 'https://learnabouthealth.hin.gov.tt'),
+    'token' => env('MOODLE_TOKEN', '567e4cb1482a56a1540a5b759b6a1b51'),
     'format' => env('MOODLE_FORMAT', 'json'),
     'default_student_role_id' => env('MOODLE_DEFAULT_STUDENT_ROLE_ID', 5),
     'timeout' => env('MOODLE_TIMEOUT', 20),

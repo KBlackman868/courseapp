@@ -4,31 +4,29 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\MoodleService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ResetPasswordController extends Controller
 {
-    // Display the password reset form along with the token
     public function showResetForm(Request $request, $token = null)
     {
         return view('pages.reset_password', ['token' => $token, 'email' => $request->email]);
     }
 
-    // Handle password reset form submission
     public function reset(Request $request)
     {
-        // Validate the reset form inputs
         $request->validate([
-            'token'                 => 'required',
-            'email'                 => 'required|email',
-            'password'              => 'required|min:8|confirmed',
+            'token'    => 'required',
+            'email'    => 'required|email',
+            'password' => 'required|min:8|confirmed',
         ]);
 
-        // Attempt to reset the user's password.
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
@@ -37,11 +35,25 @@ class ResetPasswordController extends Controller
                     'remember_token' => Str::random(60)
                 ])->save();
 
+                // Update Moodle password if user has Moodle account
+                if ($user->moodle_user_id) {
+                    try {
+                        $moodleService = new MoodleService();
+                        $moodleService->createOrUpdateUser($user, $password);
+                        
+                        Log::info('Moodle password updated for user', ['user_id' => $user->id]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to update Moodle password', [
+                            'user_id' => $user->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+
                 event(new PasswordReset($user));
             }
         );
 
-        // Redirect accordingly:
         return $status === Password::PasswordReset
             ? redirect()->route('login')->with('status', __($status))
             : back()->withErrors(['email' => [__($status)]]);

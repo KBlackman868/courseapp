@@ -14,6 +14,17 @@ return [
     |
     */
 
+    'mailgun' => [
+        'domain' => env('MAILGUN_DOMAIN'),
+        'secret' => env('MAILGUN_SECRET'),
+        'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
+        'scheme' => 'https',
+    ],
+
+    'postmark' => [
+        'token' => env('POSTMARK_TOKEN'),
+    ],
+    
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
@@ -34,10 +45,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-
     'moodle' => [
-        'base_url'=>env('learnabouthealth.hin.gov.tt'),
-        'token'=>env('d6fc4e6a36c21396998527f094048936'),
+        'base_url' => env('MOODLE_BASE_URL', 'https://learnabouthealth.hin.gov.tt'),
+        'token' => env('MOODLE_TOKEN', 'd6fc4e6a36c21396998527f094048936'),
     ],
 
 ];
