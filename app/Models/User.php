@@ -27,6 +27,7 @@ class User extends Authenticatable
         'department',
         'profile_photo',
         'moodle_user_id',
+        'temp_moodle_password',
     ];
 
     /**

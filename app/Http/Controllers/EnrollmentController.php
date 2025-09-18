@@ -18,13 +18,14 @@ use Illuminate\Support\Facades\Mail;
 
 class EnrollmentController extends Controller
 {
-    private ?MoodleClient $moodleClient;
+    private ?MoodleClient $moodleClient = null;
 
-    public function __construct(?MoodleClient $moodleClient = null)
+    public function __construct()
     {
+        // Make MoodleClient optional - don't fail if it's not configured
         try {
-            $this->moodleClient = $moodleClient ?? new MoodleClient();
-        } catch (\RuntimeException $e) {
+            $this->moodleClient = app(MoodleClient::class);
+        } catch (\Exception $e) {
             // Moodle not configured, continue without it
             $this->moodleClient = null;
             Log::info('Moodle client not configured, Moodle sync disabled');
@@ -160,6 +161,12 @@ class EnrollmentController extends Controller
      */
     private function syncApprovedEnrollmentToMoodle(Enrollment $enrollment): void
     {
+        // Skip if Moodle client is not configured
+        if (!$this->moodleClient) {
+            Log::info('Moodle sync skipped - client not configured');
+            return;
+        }
+
         try {
             $course = $enrollment->course;
             $user = $enrollment->user;
@@ -179,20 +186,29 @@ class EnrollmentController extends Controller
                     'user_id' => $user->id,
                 ]);
                 
-                // Dispatch job to create/link Moodle user
-                CreateOrLinkMoodleUser::dispatch($user);
+                // Create user synchronously to ensure it completes
+                CreateOrLinkMoodleUser::dispatchSync($user);
                 
-                // Wait a moment for user creation, then enroll
-                EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id)
-                    ->delay(now()->addSeconds(10));
-            } else {
-                // User already exists in Moodle, enroll directly
-                EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
+                // Refresh user to get the updated moodle_user_id
+                $user->refresh();
+                
+                // Check if user was successfully created
+                if (!$user->moodle_user_id) {
+                    Log::error('Failed to create Moodle user', [
+                        'user_id' => $user->id,
+                        'enrollment_id' => $enrollment->id,
+                    ]);
+                    return;
+                }
             }
+
+            // Now enroll the user (user definitely exists in Moodle at this point)
+            EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
 
             Log::info('Moodle enrollment sync dispatched', [
                 'enrollment_id' => $enrollment->id,
                 'user_id' => $user->id,
+                'moodle_user_id' => $user->moodle_user_id,
                 'course_id' => $course->id,
                 'moodle_course_id' => $course->moodle_course_id,
             ]);
@@ -212,12 +228,17 @@ class EnrollmentController extends Controller
      */
     private function removeEnrollmentFromMoodle(Enrollment $enrollment): void
     {
+        // Skip if Moodle client is not configured
+        if (!$this->moodleClient) {
+            return;
+        }
+
         try {
             $course = $enrollment->course;
             $user = $enrollment->user;
 
             // Only proceed if both user and course have Moodle IDs
-            if (!$course->moodle_course_id || !$user->moodle_user_id || !$this->moodleClient) {
+            if (!$course->moodle_course_id || !$user->moodle_user_id) {
                 return;
             }
 
@@ -283,17 +304,25 @@ class EnrollmentController extends Controller
         $syncCount = 0;
         foreach ($approvedEnrollments as $enrollment) {
             if (!$enrollment->user->moodle_user_id) {
-                // Create user in Moodle first
-                CreateOrLinkMoodleUser::dispatch($enrollment->user);
+                // Create user in Moodle first (synchronously)
+                CreateOrLinkMoodleUser::dispatchSync($enrollment->user);
+                
+                // Refresh to get moodle_user_id
+                $enrollment->user->refresh();
             }
             
-            // Enroll in course (with delay to ensure user is created first)
-            EnrollUserIntoMoodleCourse::dispatch(
-                $enrollment->user, 
-                $course->moodle_course_id
-            )->delay(now()->addSeconds(5));
-            
-            $syncCount++;
+            // Only enroll if user was successfully created/exists
+            if ($enrollment->user->moodle_user_id) {
+                EnrollUserIntoMoodleCourse::dispatch(
+                    $enrollment->user, 
+                    $course->moodle_course_id
+                );
+                $syncCount++;
+            } else {
+                Log::error('Failed to create Moodle user for bulk sync', [
+                    'user_id' => $enrollment->user->id
+                ]);
+            }
         }
 
         return redirect()->back()->with('success', "Initiated Moodle sync for {$syncCount} enrollments.");

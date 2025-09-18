@@ -6,337 +6,426 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\UserManagementController;
-use Illuminate\Support\Facades\Password;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
-use App\http\Controller\Auth\ProfileController;
-use App\Http\Controllers\Admin\MoodleTestController;
+use App\Http\Controllers\ProfileController;
+// Note: Removed duplicate Auth\ProfileController import
+
 /*
 |--------------------------------------------------------------------------
-| Public Routes
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes (No Authentication Required)
 |--------------------------------------------------------------------------
 */
 
-// Landing page
+// Landing page - accessible to everyone
 Route::get('/', function () {
     return view('landing.welcome');
 })->name('welcome');
 
+/*
+|--------------------------------------------------------------------------
+| Authentication Routes (Guest Only)
+|--------------------------------------------------------------------------
+| These routes are only accessible to non-authenticated users
+*/
 
-// Show the form to request a password reset link
-Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
-    ->middleware('guest')
-    ->name('password.request');
+Route::middleware('guest')->group(function () {
+    // Login routes
+    Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+    
+    // Registration routes
+    Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
+    Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
+    
+    // Password reset routes
+    Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])
+        ->name('password.request');
+    Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+        ->name('password.email');
+    Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
+        ->name('password.reset');
+    Route::post('/password/reset', [ResetPasswordController::class, 'reset'])
+        ->name('password.update');
+});
 
-// Handle the form submission: send a password reset link to the given email.
-Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])
-    ->middleware('guest')
-    ->name('password.email');
-
-// Show the form to reset the password (with token)
-Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])
-    ->middleware('guest')
-    ->name('password.reset');
-
-// Handle the password reset form submission
-Route::post('/password/reset', [ResetPasswordController::class, 'reset'])
-    ->middleware('guest')
-    ->name('password.update');
-
-// Authentication routes
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-
-Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
+// Logout route (requires authentication but placed here for organization)
+Route::post('/logout', [LoginController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
 
 /*
 |--------------------------------------------------------------------------
-| Protected Routes (Require Authentication)
+| Authenticated User Routes (Requires Login)
 |--------------------------------------------------------------------------
 */
+
 Route::middleware(['auth'])->group(function () {
-    // Dashboard
+    
+    /*
+    |----------------------------------------------------------------------
+    | Dashboard & Home
+    |----------------------------------------------------------------------
+    */
+    
+    // Main dashboard
     Route::get('/dashboard', function () {
         return view('pages.dashboard');
     })->name('dashboard');
-
-    // Home page - list all courses via the CourseController index method
+    
+    // Home page - lists all available courses
     Route::get('/home', [CourseController::class, 'index'])->name('home');
-
+    
     /*
     |----------------------------------------------------------------------
-    | Course Routes (Resource)
+    | Course Management (CRUD + Enrollment)
     |----------------------------------------------------------------------
     */
+    
+    // Resource routes for courses (index, create, store, show, edit, update, destroy)
     Route::resource('courses', CourseController::class);
-
-    // GET route to display the registration page for a course
-    Route::get('/courses/{course}/register', [CourseController::class, 'register'])->name('courses.register');
-
-    // POST route to handle enrollment
-    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('courses.enroll.store');
-
-    // Route to show my courses listing for the authenticated user
+    
+    // Course enrollment routes
+    Route::get('/courses/{course}/register', [CourseController::class, 'register'])
+        ->name('courses.register'); // Shows enrollment page for specific course
+    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])
+        ->name('courses.enroll.store'); // Handles enrollment submission
+    
+    // User's enrolled courses
     Route::get('/mycourses', [EnrollmentController::class, 'myCourses'])->name('mycourses');
-        // Profile “view”
-        Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
-        // Settings page
-        Route::get('/profile/settings', [\App\Http\Controllers\ProfileController::class, 'settings'])->name('profile.settings');
-        // Upload new avatar
-        Route::post('/profile/photo', [\App\Http\Controllers\ProfileController::class, 'updatePhoto'])->name('profile.photo');
-        // Change password
-        Route::post('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
-
+    
     /*
     |----------------------------------------------------------------------
-    | Admin-only routes: List users, update roles, manage enrollments.
+    | User Profile Management
     |----------------------------------------------------------------------
     */
     
-    Route::middleware([\Spatie\Permission\Middleware\RoleMiddleware::class . ':admin|superadmin'])->group(function () {
-
-        // Add this to your routes/web.php file
-
-Route::get('/moodle-diagnosis', function () {
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'show'])->name('show');
+        Route::get('/settings', [ProfileController::class, 'settings'])->name('settings');
+        Route::post('/photo', [ProfileController::class, 'updatePhoto'])->name('photo');
+        Route::post('/password', [ProfileController::class, 'updatePassword'])->name('password');
+    });
     
-    $results = [];
+    /*
+    |----------------------------------------------------------------------
+    | Testing & Development Routes (Protected)
+    |----------------------------------------------------------------------
+    */
     
-    // 1. Check ENV variables
-    $results['env_check'] = [
-        'MOODLE_URL' => env('MOODLE_URL') ? '✅ Set' : '❌ NOT SET',
-        'MOODLE_TOKEN' => env('MOODLE_TOKEN') ? '✅ Set' : '❌ NOT SET',
-        'actual_url' => env('MOODLE_URL', 'Not configured'),
-    ];
-    
-    // 2. Test connection
-    try {
-        $moodle = new \App\Services\MoodleService();
-        $connected = $moodle->testConnection();
-        $results['connection'] = $connected ? '✅ Connected' : '❌ Failed';
-    } catch (\Exception $e) {
-        $results['connection'] = '❌ Error: ' . $e->getMessage();
-    }
-    
-    // 3. Check available functions
-    try {
-        $response = $moodle->call('core_webservice_get_site_info');
-        $functions = $response['functions'] ?? [];
+    // Moodle integration test page - shows enrollment flow status
+    Route::get('/test-enrollment-flow', function () {
+        $users = \App\Models\User::latest()->take(10)->get();
+        $courses = \App\Models\Course::all();
         
-        // Check for critical functions
-        $critical = [
-            'core_user_create_users' => false,
-            'core_user_get_users' => false,
-        ];
+        // Calculate statistics
+        $totalUsers = \App\Models\User::count();
+        $moodleUsers = \App\Models\User::whereNotNull('moodle_user_id')->count();
+        $pendingUsers = $totalUsers - $moodleUsers;
         
-        foreach ($functions as $func) {
-            if (isset($critical[$func['name']])) {
-                $critical[$func['name']] = true;
+        $html = '<!DOCTYPE html>
+        <html>
+        <head>
+            <title>Enrollment-Based Moodle Sync Test</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="bg-gray-100 p-8">
+            <div class="max-w-6xl mx-auto">
+                <h1 class="text-3xl font-bold mb-8">🎓 Enrollment-Based Moodle User Creation</h1>
+                
+                <div class="bg-blue-50 border border-blue-200 p-4 rounded mb-6">
+                    <h2 class="font-bold text-blue-800 mb-2">How it works now:</h2>
+                    <ol class="list-decimal list-inside text-blue-700">
+                        <li>User registers → Created ONLY in Laravel (no Moodle account)</li>
+                        <li>User enrolls in first course → Moodle account created automatically</li>
+                        <li>User enrolls in more courses → Uses existing Moodle account</li>
+                    </ol>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Recent Users -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-xl font-bold mb-4">Recent Users</h2>
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left pb-2">User</th>
+                                    <th class="text-left pb-2">Moodle Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
+        
+        foreach ($users as $user) {
+            $status = $user->moodle_user_id 
+                ? '✅ Has Moodle (ID: ' . $user->moodle_user_id . ')' 
+                : '⏳ No Moodle (will create on enrollment)';
+            $rowClass = $user->moodle_user_id ? 'bg-green-50' : 'bg-yellow-50';
+            
+            $html .= "<tr class='border-b $rowClass'>
+                        <td class='py-2'>{$user->email}</td>
+                        <td class='py-2'>$status</td>
+                      </tr>";
+        }
+        
+        $html .= '</tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Courses -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-xl font-bold mb-4">Available Courses</h2>
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left pb-2">Course</th>
+                                    <th class="text-left pb-2">Moodle ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
+        
+        foreach ($courses as $course) {
+            $moodleStatus = $course->moodle_course_id 
+                ? '✅ ' . $course->moodle_course_id 
+                : '❌ Not synced';
+            
+            $html .= "<tr class='border-b'>
+                        <td class='py-2'>{$course->title}</td>
+                        <td class='py-2'>$moodleStatus</td>
+                      </tr>";
+        }
+        
+        $html .= '</tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Test Scenario -->
+                <div class="bg-white rounded-lg shadow p-6 mt-6">
+                    <h2 class="text-xl font-bold mb-4">📝 Test the Flow</h2>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li><strong>Register a new user</strong> - They should NOT get a Moodle account</li>
+                        <li><strong>Login as that user</strong></li>
+                        <li><strong>Enroll in a course</strong> - NOW they should get a Moodle account</li>
+                        <li><strong>Check this page again</strong> - User should now have a Moodle ID</li>
+                    </ol>
+                </div>
+                
+                <!-- Current Stats -->
+                <div class="bg-gray-100 rounded-lg p-6 mt-6">
+                    <h2 class="text-xl font-bold mb-4">📊 Current Statistics</h2>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded">
+                            <div class="text-2xl font-bold">' . $totalUsers . '</div>
+                            <div class="text-gray-600">Total Users</div>
+                        </div>
+                        <div class="bg-white p-4 rounded">
+                            <div class="text-2xl font-bold text-green-600">' . $moodleUsers . '</div>
+                            <div class="text-gray-600">Have Moodle Accounts</div>
+                        </div>
+                        <div class="bg-white p-4 rounded">
+                            <div class="text-2xl font-bold text-yellow-600">' . $pendingUsers . '</div>
+                            <div class="text-gray-600">No Moodle Yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>';
+        
+        return $html;
+    })->name('test.enrollment.flow');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin & Super Admin Routes
+|--------------------------------------------------------------------------
+| Routes accessible only to users with admin or superadmin roles
+*/
+
+Route::middleware(['auth', 'role:admin|superadmin'])->group(function () {
+    
+    /*
+    |----------------------------------------------------------------------
+    | User Management
+    |----------------------------------------------------------------------
+    */
+    
+    Route::prefix('admin/users')->name('admin.users.')->group(function () {
+        // List all users with filtering and pagination
+        Route::get('/', [UserManagementController::class, 'index'])->name('index');
+        
+        // Update a specific user's role
+        Route::post('/{user}/role', [UserManagementController::class, 'updateRole'])->name('updateRole');
+        
+        // User suspension and deletion
+        Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('destroy');
+        Route::patch('/{user}/suspend', [UserManagementController::class, 'suspend'])->name('suspend');
+        Route::patch('/{user}/reactivate', [UserManagementController::class, 'reactivate'])->name('reactivate');
+        
+        // Bulk operations
+        Route::delete('/bulk-delete', [UserManagementController::class, 'bulkDelete'])->name('bulkDelete');
+    });
+    
+    /*
+    |----------------------------------------------------------------------
+    | Enrollment Management (Admin Review & Approval)
+    |----------------------------------------------------------------------
+    */
+    
+    Route::prefix('admin/enrollments')->name('admin.enrollments.')->group(function () {
+        // View all enrollments (pending, approved, denied)
+        Route::get('/', [EnrollmentController::class, 'index'])->name('index');
+        
+        // Update enrollment status (approve/deny)
+        Route::put('/{enrollment}', [EnrollmentController::class, 'update'])->name('update');
+        
+        // Admin force unenroll a user from a course
+        Route::delete('/{enrollment}', [EnrollmentController::class, 'unenroll'])->name('unenroll');
+        
+        // Manual Moodle sync for specific enrollment
+        Route::post('/{enrollment}/sync-to-moodle', function(\App\Models\Enrollment $enrollment) {
+            if ($enrollment->status !== 'approved') {
+                return back()->with('error', 'Only approved enrollments can be synced');
             }
-        }
-        
-        $results['permissions'] = [
-            'core_user_create_users' => $critical['core_user_create_users'] ? '✅ Enabled' : '❌ DISABLED - Cannot create users!',
-            'core_user_get_users' => $critical['core_user_get_users'] ? '✅ Enabled' : '❌ DISABLED - Cannot get users!',
-        ];
-        
-    } catch (\Exception $e) {
-        $results['permissions'] = '❌ Could not check permissions: ' . $e->getMessage();
-    }
-    
-    // 4. Test creating a user
-    try {
-        $testUsername = 'test_' . time();
-        $testUser = [
-            'username' => $testUsername,
-            'password' => 'TestPass123!',
-            'firstname' => 'Test',
-            'lastname' => 'User',
-            'email' => $testUsername . '@test.com',
-            'auth' => 'manual',
-        ];
-        
-        $userId = $moodle->createUser($testUser);
-        
-        if ($userId) {
-            $results['user_creation'] = "✅ Test user created successfully! (ID: $userId)";
-        } else {
-            $results['user_creation'] = "❌ User creation returned null";
-        }
-        
-    } catch (\Exception $e) {
-        $results['user_creation'] = "❌ User creation failed: " . $e->getMessage();
-    }
-    
-    // 5. Check last 5 users in Laravel
-    $users = \App\Models\User::latest()->take(5)->get(['email', 'moodle_user_id', 'created_at']);
-    $results['recent_users'] = $users->map(function ($user) {
-        return [
-            'email' => $user->email,
-            'moodle_synced' => $user->moodle_user_id ? "✅ Yes (ID: {$user->moodle_user_id})" : "❌ No",
-            'created' => $user->created_at->diffForHumans(),
-        ];
-    })->toArray();
-    
-    // Display results
-    $html = '<!DOCTYPE html>
-    <html>
-    <head>
-        <title>Moodle Integration Diagnosis</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="bg-gray-100 p-8">
-        <div class="max-w-4xl mx-auto">
-            <h1 class="text-3xl font-bold mb-8">🔍 Moodle Integration Diagnosis</h1>';
-    
-    // Environment Check
-    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">1️⃣ Environment Configuration</h2>';
-    foreach ($results['env_check'] as $key => $value) {
-        $html .= "<p><strong>$key:</strong> $value</p>";
-    }
-    $html .= '</div>';
-    
-    // Connection Test
-    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">2️⃣ Connection Test</h2>
-        <p>' . $results['connection'] . '</p>
-    </div>';
-    
-    // Permissions Check
-    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">3️⃣ Moodle Permissions</h2>';
-    if (is_array($results['permissions'])) {
-        foreach ($results['permissions'] as $func => $status) {
-            $html .= "<p><strong>$func:</strong> $status</p>";
-        }
-    } else {
-        $html .= '<p>' . $results['permissions'] . '</p>';
-    }
-    $html .= '</div>';
-    
-    // User Creation Test
-    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">4️⃣ User Creation Test</h2>
-        <p>' . $results['user_creation'] . '</p>
-    </div>';
-    
-    // Recent Users
-    $html .= '<div class="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 class="text-xl font-bold mb-4">5️⃣ Recent Laravel Users</h2>
-        <table class="w-full">';
-    foreach ($results['recent_users'] as $user) {
-        $html .= '<tr class="border-b">
-            <td class="py-2">' . $user['email'] . '</td>
-            <td class="py-2">' . $user['moodle_synced'] . '</td>
-            <td class="py-2 text-gray-500">' . $user['created'] . '</td>
-        </tr>';
-    }
-    $html .= '</table>
-    </div>';
-    
-    // Solution
-    $html .= '<div class="bg-blue-50 rounded-lg p-6">
-        <h2 class="text-xl font-bold mb-4">💡 Diagnosis Summary</h2>';
-    
-    if (strpos($results['connection'], '✅') !== false) {
-        if (isset($results['permissions']['core_user_create_users']) && 
-            strpos($results['permissions']['core_user_create_users'], '❌') !== false) {
-            $html .= '<p class="text-red-600 font-bold">❌ PROBLEM FOUND: Your Moodle token does NOT have permission to create users!</p>
-                     <p class="mt-2">Solution: In Moodle, go to Site Administration → Web Services → External Services, 
-                     find your service and add the "core_user_create_users" function.</p>';
-        } elseif (strpos($results['user_creation'], '❌') !== false) {
-            $html .= '<p class="text-red-600 font-bold">❌ PROBLEM: User creation is failing even with permissions.</p>
-                     <p class="mt-2">Error: ' . $results['user_creation'] . '</p>';
-        } else {
-            $html .= '<p class="text-green-600 font-bold">✅ Everything seems to be working!</p>';
-        }
-    } else {
-        $html .= '<p class="text-red-600 font-bold">❌ PROBLEM: Cannot connect to Moodle. Check your MOODLE_URL and MOODLE_TOKEN in .env file.</p>';
-    }
-    
-    $html .= '</div>
-        </div>
-    </body>
-    </html>';
-    
-    return $html;
-})->middleware('auth');
-        // Route to list all users
-        Route::get('/admin/users', [UserManagementController::class, 'index'])->name('admin.users.index');
-        // Add this route for admins
-        Route::post('/courses/{course}/sync-to-moodle', [CourseController::class, 'syncToMoodle'])
-        ->name('courses.syncToMoodle')
-        ->middleware(['auth', 'role:admin|superadmin']);
-         // Route to update a user's role
-        Route::post('/admin/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('admin.users.updateRole');
-            // User deletion and suspension routes
-            Route::delete('/admin/users/{user}', [UserManagementController::class, 'destroy'])
-            ->name('admin.users.destroy');
-        Route::patch('/admin/users/{user}/suspend', [UserManagementController::class, 'suspend'])
-            ->name('admin.users.suspend');
-
-        Route::patch('/admin/users/{user}/reactivate', [UserManagementController::class, 'reactivate'])
-            ->name('admin.users.reactivate');
-
-        Route::delete('/admin/users/bulk-delete', [UserManagementController::class, 'bulkDelete'])
-            ->name('admin.users.bulkDelete');
-});
-
-        // Route to list enrollments (e.g., for approval)
-        Route::get('/admin/enrollments', [EnrollmentController::class, 'index'])->name('admin.enrollments.index');
-
-        // Route to update enrollment status (PUT request)
-        Route::put('/admin/enrollments/{enrollment}', [EnrollmentController::class, 'update'])->name('admin.enrollments.update');
-
-        // New route: Admin unenrolls a user (DELETE request)
-        Route::delete('/admin/enrollments/{enrollment}', [EnrollmentController::class, 'unenroll'])->name('admin.enrollments.unenroll');
-        // Profile “view”
-        Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
-        // Settings page
-        Route::get('/profile/settings', [\App\Http\Controllers\ProfileController::class, 'settings'])->name('profile.settings');
-        // Upload new avatar
-        Route::post('/profile/photo', [\App\Http\Controllers\ProfileController::class, 'updatePhoto'])->name('profile.photo');
-        // Change password
-        Route::post('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
+            
+            if (!$enrollment->course->moodle_course_id) {
+                return back()->with('error', 'Course does not have a Moodle course ID');
+            }
+            
+            // Create/link user first if needed
+            if (!$enrollment->user->moodle_user_id) {
+                \App\Jobs\CreateOrLinkMoodleUser::dispatchSync($enrollment->user);
+            }
+            
+            // Then enroll in Moodle course
+            \App\Jobs\EnrollUserIntoMoodleCourse::dispatch(
+                $enrollment->user,
+                $enrollment->course->moodle_course_id
+            );
+            
+            return back()->with('success', 'Enrollment sync to Moodle initiated');
+        })->name('syncToMoodle');
     });
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
-
-// User info endpoint (optional, for testing Sanctum auth)
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+    
+    /*
+    |----------------------------------------------------------------------
+    | Course Moodle Integration
+    |----------------------------------------------------------------------
+    */
+    
+    // Sync a course to Moodle (creates course in Moodle if not exists)
+    Route::post('/courses/{course}/sync-to-moodle', [CourseController::class, 'syncToMoodle'])
+        ->name('courses.syncToMoodle');
+    
+    /*
+    |----------------------------------------------------------------------
+    | Moodle Integration Admin Dashboard
+    |----------------------------------------------------------------------
+    */
+    
+    Route::prefix('admin/moodle')->name('admin.moodle.')->group(function () {
+        
+        // Moodle integration status dashboard
+        Route::get('/status', function() {
+            $stats = [
+                'users_total' => \App\Models\User::count(),
+                'users_with_moodle' => \App\Models\User::whereNotNull('moodle_user_id')->count(),
+                'courses_total' => \App\Models\Course::count(),
+                'courses_with_moodle' => \App\Models\Course::whereNotNull('moodle_course_id')->count(),
+                'pending_sync' => \App\Models\Enrollment::where('status', 'approved')
+                    ->whereHas('user', fn($q) => $q->whereNull('moodle_user_id'))
+                    ->count(),
+                'failed_jobs' => \DB::table('failed_jobs')->count(),
+            ];
+            
+            // If you don't have the view yet, return JSON for now
+            return response()->json($stats);
+            // return view('admin.moodle.status', compact('stats'));
+        })->name('status');
+        
+        // Test Moodle API connection
+        Route::get('/test-connection', function() {
+            try {
+                $client = new \App\Services\MoodleClient();
+                $result = $client->call('core_webservice_get_site_info');
+                
+                return response()->json([
+                    'status' => 'success',
+                    'site' => $result['sitename'] ?? 'Unknown',
+                    'version' => $result['release'] ?? 'Unknown',
+                    'username' => $result['username'] ?? 'Unknown',
+                    'userid' => $result['userid'] ?? 'Unknown',
+                    'functions_available' => count($result['functions'] ?? [])
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                    'moodle_url' => config('services.moodle.base_url'),
+                    'token_configured' => !empty(config('services.moodle.token'))
+                ], 500);
+            }
+        })->name('testConnection');
+        
+        // Sync specific user to Moodle
+        Route::post('/users/{user}/sync', function(\App\Models\User $user) {
+            \App\Jobs\CreateOrLinkMoodleUser::dispatch($user);
+            return back()->with('success', 'User sync initiated for ' . $user->email);
+        })->name('users.sync');
+        
+        // Bulk sync all users without Moodle accounts
+        Route::post('/users/bulk-sync', function() {
+            $users = \App\Models\User::whereNull('moodle_user_id')->get();
+            $count = 0;
+            
+            foreach ($users as $user) {
+                \App\Jobs\CreateOrLinkMoodleUser::dispatch($user);
+                $count++;
+            }
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => "Initiated sync for $count users"
+            ]);
+        })->name('users.bulkSync');
+        
+        // View and manage failed jobs
+        Route::get('/failed-jobs', function() {
+            $failedJobs = \DB::table('failed_jobs')
+                ->orderBy('failed_at', 'desc')
+                ->paginate(20);
+            
+            return response()->json($failedJobs);
+            // return view('admin.moodle.failed-jobs', compact('failedJobs'));
+        })->name('failedJobs');
+        
+        // Retry all failed Moodle jobs
+        Route::post('/retry-failed', function() {
+            \Artisan::call('queue:retry', ['id' => 'all']);
+            return back()->with('success', 'Retrying all failed jobs');
+        })->name('retryFailed');
+    });
 });
 
 /*
 |--------------------------------------------------------------------------
-| Moodle Provisioning API v1
+| Fallback Route (Must be last)
 |--------------------------------------------------------------------------
 */
-Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
-    
-    Route::prefix('moodle')->group(function () {
-        // User provisioning
-        Route::post('users', [MoodleUserController::class, 'store'])
-            ->name('api.v1.moodle.users.store');
-        
-        Route::put('users/{user}', [MoodleUserController::class, 'update'])
-            ->name('api.v1.moodle.users.update');
-        
-        // Course enrollment
-        Route::post('enrolments', [MoodleEnrolmentController::class, 'store'])
-            ->name('api.v1.moodle.enrolments.store');
-        
-        // Optional: Bulk operations
-        Route::post('users/bulk', [MoodleUserController::class, 'bulkCreate'])
-            ->name('api.v1.moodle.users.bulk');
-        
-        Route::post('enrolments/bulk', [MoodleEnrolmentController::class, 'bulkStore'])
-            ->name('api.v1.moodle.enrolments.bulk');
-    });
+
+// Catch all undefined routes and show 404
+Route::fallback(function () {
+    return view('errors.404');
 });

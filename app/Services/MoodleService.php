@@ -12,7 +12,8 @@ class MoodleService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.moodle.url', env('MOODLE_URL'));
+        // Check for both possible variable names
+        $this->baseUrl = config('services.moodle.url', env('MOODLE_URL', env('MOODLE_BASE_URL')));
         $this->token = config('services.moodle.token', env('MOODLE_TOKEN'));
         
         // Remove trailing slash from base URL if present
@@ -27,7 +28,6 @@ class MoodleService
      * @return mixed Response from Moodle
      * @throws \Exception
      */
-    
     public function call($function, array $params = [])
     {
         $url = $this->baseUrl . '/webservice/rest/server.php';
@@ -38,12 +38,17 @@ class MoodleService
             'wsfunction' => $function,
             'moodlewsrestformat' => 'json'
         ]);
-    
+
         try {
-            // ALWAYS disable SSL verification for self-signed certificates
-            $response = Http::withoutVerifying()
-                ->asForm()
-                ->post($url, $requestParams);
+            // Create HTTP client with SSL verification setting
+            $client = Http::asForm();
+            
+            // Check if SSL verification should be disabled
+            if (env('MOODLE_VERIFY_SSL', true) === false || env('MOODLE_VERIFY_SSL', true) === 'false') {
+                $client = $client->withoutVerifying();
+            }
+            
+            $response = $client->post($url, $requestParams);
             
             if ($response->successful()) {
                 $data = $response->json();
@@ -60,7 +65,8 @@ class MoodleService
         } catch (\Exception $e) {
             Log::error('Moodle API call failed', [
                 'function' => $function,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'params' => $params
             ]);
             throw $e;
         }
@@ -90,37 +96,26 @@ class MoodleService
 
             // Check if user was created successfully
             if (isset($response[0]['id'])) {
-                Log::info('Moodle user created successfully', [
-                    'moodle_user_id' => $response[0]['id'],
-                    'username' => $userData['username']
-                ]);
+                // Success - user created
                 return $response[0]['id'];
             }
 
-            // Check for username already exists error
-            if (isset($response[0]['username'])) {
-                // Try to get existing user
-                $existingUser = $this->getUserByUsername($userData['username']);
-                if ($existingUser) {
-                    Log::info('Moodle user already exists', [
-                        'moodle_user_id' => $existingUser['id'],
-                        'username' => $userData['username']
-                    ]);
-                    return $existingUser['id'];
-                }
+            // Check for errors in response
+            if (isset($response['exception'])) {
+                throw new \Exception("Moodle API Error: " . ($response['message'] ?? 'Unknown error'));
             }
 
-            Log::warning('Moodle user creation returned unexpected response', [
-                'response' => $response
-            ]);
-            return null;
+            // Check for username already exists error
+            if (isset($response[0]) && !isset($response[0]['id'])) {
+                // This might be an error response
+                throw new \Exception("Moodle user creation failed. Response: " . json_encode($response));
+            }
+
+            throw new \Exception("Unexpected Moodle response: " . json_encode($response));
 
         } catch (\Exception $e) {
-            Log::error('Failed to create Moodle user', [
-                'error' => $e->getMessage(),
-                'username' => $userData['username'] ?? 'unknown'
-            ]);
-            return null;
+            // Re-throw the exception so RegisterController can catch and display it
+            throw $e;
         }
     }
 
@@ -187,6 +182,41 @@ class MoodleService
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to enroll user in Moodle course', [
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+                'course_id' => $courseId
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Unenroll a user from a Moodle course
+     *
+     * @param int $userId Moodle user ID
+     * @param int $courseId Moodle course ID
+     * @return bool Success status
+     */
+    public function unenrollUserFromCourse($userId, $courseId)
+    {
+        try {
+            $response = $this->call('enrol_manual_unenrol_users', [
+                'enrolments' => [
+                    [
+                        'userid' => $userId,
+                        'courseid' => $courseId
+                    ]
+                ]
+            ]);
+            
+            Log::info('User unenrolled from Moodle course', [
+                'user_id' => $userId,
+                'course_id' => $courseId
+            ]);
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to unenroll user from Moodle course', [
                 'error' => $e->getMessage(),
                 'user_id' => $userId,
                 'course_id' => $courseId

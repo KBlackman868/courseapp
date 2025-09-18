@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CreateOrLinkMoodleUser implements ShouldQueue
@@ -102,19 +103,33 @@ class CreateOrLinkMoodleUser implements ShouldQueue
     private function createMoodleUser(MoodleClient $moodleClient): int
     {
         $username = $this->generateUsername();
-        $password = $this->generateSecurePassword();
+        
+        // Try to get password from cache (set during registration)
+        // If not found (e.g., user created by admin), generate a secure one
+        // Check if user has a stored password from registration
+        if ($this->user->temp_moodle_password) {
+            $password = decrypt($this->user->temp_moodle_password);
+            $passwordSource = 'from_registration';
+            
+            // Clear it after use for security
+            $this->user->update(['temp_moodle_password' => null]);
+        } else {
+            // Generate password for admin-created users
+            $password = $this->generateSecurePassword();
+            $passwordSource = 'generated';
+        }
         
         $userData = [
             'users' => [
                 [
                     'username' => $username,
                     'password' => $password,
-                    'firstname' => $this->firstName ?? $this->user->name ?? 'User',
-                    'lastname' => $this->lastName ?? 'User',
+                    'firstname' => $this->firstName ?? $this->user->first_name ?? 'User',
+                    'lastname' => $this->lastName ?? $this->user->last_name ?? 'User',
                     'email' => $this->email ?? $this->user->email,
                     'auth' => 'manual',
                     'lang' => 'en',
-                    'confirmed' => 1,
+                    // Don't include 'confirmed' as it caused issues
                     'createpassword' => 0,
                 ],
             ],
@@ -126,14 +141,24 @@ class CreateOrLinkMoodleUser implements ShouldQueue
             throw new MoodleException('Failed to create Moodle user: Invalid response');
         }
 
-        // Optionally store the generated password somewhere secure or email it to the user
-        // For now, we'll log it (in production, you should handle this more securely)
+        // Log successful creation
         Log::info('Moodle user created with credentials', [
             'user_id' => $this->user->id,
             'username' => $username,
-            // Don't log passwords in production!
-            'temporary_password' => app()->environment('local') ? $password : '[HIDDEN]',
+            'password_source' => $passwordSource,
+            'moodle_user_id' => $response[0]['id'],
+            // Only log actual password in local environment for debugging
+            'temporary_password' => app()->environment('local') && $passwordSource === 'generated' ? $password : '[HIDDEN]',
         ]);
+
+        // If password was generated (not from registration), email it to the user
+        if ($passwordSource === 'generated') {
+            // TODO: Implement email notification with generated password
+            Log::warning('Generated password for Moodle user - implement email notification', [
+                'user_id' => $this->user->id,
+                'email' => $this->user->email,
+            ]);
+        }
 
         return (int) $response[0]['id'];
     }
@@ -177,16 +202,15 @@ class CreateOrLinkMoodleUser implements ShouldQueue
      */
     private function generateUsername(): string
     {
-        // Generate unique username based on email or ID
-        $base = $this->email 
-            ? Str::before($this->email, '@')
-            : 'user' . $this->user->id;
+        $email = $this->email ?? $this->user->email;
         
-        // Clean the username (remove special characters, make lowercase)
-        $base = preg_replace('/[^a-z0-9_]/', '', strtolower($base));
+        // Keep the email prefix as-is with the dot
+        $username = strtolower(Str::before($email, '@'));
         
-        // Ensure uniqueness by adding random suffix
-        return $base . '_' . Str::random(4);
+        // Only remove spaces and other special characters, but KEEP dots
+        $username = preg_replace('/[^a-z0-9.]/', '', $username);
+        
+        return $username; // Results in: gerardo.olivier
     }
 
     /**

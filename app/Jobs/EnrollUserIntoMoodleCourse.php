@@ -18,28 +18,15 @@ class EnrollUserIntoMoodleCourse implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * The number of times the job may be attempted.
-     */
     public int $tries = 3;
-
-    /**
-     * The number of seconds the job can run before timing out.
-     */
     public int $timeout = 30;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         private User $user,
         private int $moodleCourseId,
         private ?int $roleId = null
     ) {}
 
-    /**
-     * Execute the job.
-     */
     public function handle(MoodleClient $moodleClient): void
     {
         // Ensure user has a Moodle account
@@ -49,7 +36,6 @@ class EnrollUserIntoMoodleCourse implements ShouldQueue
             ]);
             
             // Dispatch job to create/link Moodle user first
-            // Using dispatchSync to ensure it completes before enrollment
             CreateOrLinkMoodleUser::dispatchSync($this->user);
             
             // Refresh user to get the updated moodle_user_id
@@ -64,11 +50,9 @@ class EnrollUserIntoMoodleCourse implements ShouldQueue
         $this->enrollUser($moodleClient);
     }
 
-    /**
-     * Enroll the user in the Moodle course
-     */
     private function enrollUser(MoodleClient $moodleClient): void
     {
+        // Default role ID for student is 5 in Moodle
         $roleId = $this->roleId ?? config('moodle.default_student_role_id', 5);
         
         $enrollmentData = [
@@ -105,9 +89,6 @@ class EnrollUserIntoMoodleCourse implements ShouldQueue
         }
     }
 
-    /**
-     * Handle a job failure.
-     */
     public function failed(\Throwable $exception): void
     {
         Log::error('Failed to enroll user in Moodle course', [
@@ -116,8 +97,5 @@ class EnrollUserIntoMoodleCourse implements ShouldQueue
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
         ]);
-        
-        // Optionally, you can notify admins or the user about the failure
-        // Mail::to('admin@example.com')->send(new EnrollmentFailedNotification(...));
     }
 }
