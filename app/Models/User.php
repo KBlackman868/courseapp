@@ -56,4 +56,41 @@ class User extends Authenticatable
     {
         return !is_null($this->moodle_user_id);
     }
+    
+        public function hasAnyPermission(...$permissions): bool
+    {
+        if ($this->hasRole('superadmin')) {
+            return true;
+        }
+        
+        return $this->hasAnyDirectPermission($permissions) || 
+            $this->hasAnyPermissionViaRole($permissions);
+    }
+
+    /**
+     * Get user's role display name
+     */
+    public function getRoleDisplayName(): string
+    {
+        $role = $this->roles->first();
+        return $role ? ($role->display_name ?? $role->name) : 'No Role';
+    }
+
+    /**
+     * Check if user can manage course
+     */
+    public function canManageCourse($course): bool
+    {
+        if ($this->hasRole(['superadmin', 'course_admin'])) {
+            return true;
+        }
+        
+        // Instructors can only manage their own courses
+        if ($this->hasRole('instructor')) {
+            // Add logic to check if user is instructor of this course
+            return $course->instructor_id === $this->id;
+        }
+        
+        return false;
+    }
 }

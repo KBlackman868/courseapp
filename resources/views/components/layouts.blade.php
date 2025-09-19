@@ -169,15 +169,22 @@
             </div>
           </a>
 
+
           <!-- Desktop Navigation Links -->
           <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
-            @role('user')
-              <a href="{{ route('home') }}" 
-                 class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+            <!-- Home Link (visible to all authenticated users) -->
+            <a href="{{ route('home') }}" 
+              class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+              <span class="relative z-10">Home</span>
+            </a>
+            
+            @role('user|admin|superadmin')
+              <a href="{{ route('dashboard') }}" 
+                class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('dashboard') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
                 <span class="relative z-10">Dashboard</span>
               </a>
               <a href="{{ route('mycourses') }}" 
-                 class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+                class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
                 <span class="relative z-10">My Courses</span>
               </a>
             @endrole
@@ -186,20 +193,27 @@
               <div class="flex items-center space-x-1 px-2 py-1 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
                 <span class="text-xs font-semibold text-purple-600 dark:text-purple-400 mr-2">Admin</span>
                 <a href="{{ route('admin.users.index') }}" 
-                   class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.users.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.users.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
                   Users
                 </a>
+                
+                <!-- New Role Assignment Tab -->
+                <a href="{{ route('admin.roles.index') }}" 
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.roles.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                  Roles
+                </a>
+                
                 <a href="{{ route('admin.enrollments.index') }}" 
-                   class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
                   Pending
                 </a>
                 <a href="{{ route('courses.create') }}" 
-                   class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
                   Create
                 </a>
               </div>
             @endrole
-          </div>
+</div>
 
           <!-- Right Side Actions -->
           <div class="flex items-center space-x-2 md:space-x-3">
@@ -317,19 +331,25 @@
 
       <!-- Mobile Menu -->
       <div x-show="mobileMenuOpen" 
-           x-transition:enter="transition ease-out duration-300"
-           x-transition:enter-start="opacity-0 -translate-y-4"
-           x-transition:enter-end="opacity-100 translate-y-0"
-           @click.away="mobileMenuOpen = false"
-           class="md:hidden glass dark:glass-dark border-t border-gray-200 dark:border-gray-700">
+          x-transition:enter="transition ease-out duration-300"
+          x-transition:enter-start="opacity-0 -translate-y-4"
+          x-transition:enter-end="opacity-100 translate-y-0"
+          @click.away="mobileMenuOpen = false"
+          class="md:hidden glass dark:glass-dark border-t border-gray-200 dark:border-gray-700">
         <div class="px-4 pt-2 pb-3 space-y-1">
-          @role('user')
-            <a href="{{ route('home') }}" 
-               class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('home') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+          <!-- Home Link for all authenticated users -->
+          <a href="{{ route('home') }}" 
+            class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('home') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+            Home
+          </a>
+          
+          @role('user|admin|superadmin')
+            <a href="{{ route('dashboard') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('dashboard') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
               Dashboard
             </a>
             <a href="{{ route('mycourses') }}" 
-               class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('mycourses') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('mycourses') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
               My Courses
             </a>
           @endrole
@@ -339,15 +359,22 @@
               <p class="px-3 text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Admin Menu</p>
             </div>
             <a href="{{ route('admin.users.index') }}" 
-               class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
               Manage Users
             </a>
+            
+            <!-- New Role Assignment Link -->
+            <a href="{{ route('admin.roles.index') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.roles.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              Role Management
+            </a>
+            
             <a href="{{ route('admin.enrollments.index') }}" 
-               class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
               Pending Enrollments
             </a>
             <a href="{{ route('courses.create') }}" 
-               class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('courses.create') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('courses.create') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
               Create Course
             </a>
           @endrole
