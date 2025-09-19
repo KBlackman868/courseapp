@@ -9,6 +9,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\ProfileController;
+use App\Http\RoleManagementController;
 // Note: Removed duplicate Auth\ProfileController import
 
 /*
@@ -273,19 +274,22 @@ Route::middleware(['auth', 'role:admin|superadmin'])->group(function () {
         Route::delete('/{user}', [UserManagementController::class, 'destroy'])->name('destroy');
         Route::patch('/{user}/suspend', [UserManagementController::class, 'suspend'])->name('suspend');
         Route::patch('/{user}/reactivate', [UserManagementController::class, 'reactivate'])->name('reactivate');
-
-        //Role Management
-        Route::prefix('admin/roles')->name('admin.roles.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\RoleManagementController::class, 'index'])->name('index');
-            Route::post('/assign/{user}', [\App\Http\Controllers\Admin\RoleManagementController::class, 'assignRole'])->name('assign');
-            Route::post('/bulk-assign', [\App\Http\Controllers\Admin\RoleManagementController::class, 'bulkAssignRoles'])->name('bulkAssign');
-        });
-        
-    // User role assignment
-    Route::post('users/{user}/assign-role', [RolePermissionController::class, 'assignRole'])
-        ->name('users.assign-role');
         // Bulk operations
         Route::delete('/bulk-delete', [UserManagementController::class, 'bulkDelete'])->name('bulkDelete');
+        
+    });
+    
+        
+    /*
+    |----------------------------------------------------------------------
+    | Role Management
+    |----------------------------------------------------------------------
+    */
+    
+    Route::prefix('admin/roles')->name('admin.roles.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\RoleManagementController::class, 'index'])->name('index');
+        Route::post('/assign/{user}', [\App\Http\Controllers\Admin\RoleManagementController::class, 'assignRole'])->name('assign');
+        Route::post('/bulk-assign', [\App\Http\Controllers\Admin\RoleManagementController::class, 'bulkAssignRoles'])->name('bulkAssign');
     });
     
     /*

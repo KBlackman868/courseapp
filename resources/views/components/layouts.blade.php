@@ -134,6 +134,18 @@
     .btn-shine:hover::before {
       left: 100%;
     }
+
+    /* Role badge styles */
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.125rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
   </style>
 </head>
 <body class="min-h-screen font-sans antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -165,156 +177,203 @@
             </div>
             <div class="hidden md:block">
               <span class="text-xl font-bold gradient-text">MOH Learning</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Empowering Learning </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Empowering Healthcare Excellence</p>
             </div>
           </a>
 
-
           <!-- Desktop Navigation Links -->
           <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
-            <!-- Home Link (visible to all authenticated users) -->
-            <a href="{{ route('home') }}" 
-              class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
-              <span class="relative z-10">Home</span>
-            </a>
             
-            @role('user|admin|superadmin')
-              <a href="{{ route('dashboard') }}" 
-                class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('dashboard') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
-                <span class="relative z-10">Dashboard</span>
+            <!-- Home Link (visible to all authenticated users) -->
+            @auth
+              <a href="{{ route('home') }}" 
+                class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+                <span class="relative z-10">Home</span>
               </a>
+
+              <!-- My Courses - Available to all authenticated users -->
               <a href="{{ route('mycourses') }}" 
                 class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
                 <span class="relative z-10">My Courses</span>
               </a>
-            @endrole
-            
-            @role('admin|superadmin')
-              <div class="flex items-center space-x-1 px-2 py-1 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
-                <span class="text-xs font-semibold text-purple-600 dark:text-purple-400 mr-2">Admin</span>
-                <a href="{{ route('admin.users.index') }}" 
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.users.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
-                  Users
-                </a>
-                
-                <!-- New Role Assignment Tab -->
-                <a href="{{ route('admin.roles.index') }}" 
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.roles.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
-                  Roles
-                </a>
-                
-                <a href="{{ route('admin.enrollments.index') }}" 
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
-                  Pending
-                </a>
-                <a href="{{ route('courses.create') }}" 
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
-                  Create
-                </a>
-              </div>
-            @endrole
-</div>
+
+              <!-- Admin and Superadmin Section -->
+              @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                <div class="flex items-center space-x-1 px-2 py-1 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
+                  <span class="role-badge bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 mr-2">
+                    @if(auth()->user()->hasRole('superadmin')) 
+                      Super Admin 
+                    @else 
+                      Admin 
+                    @endif
+                  </span>
+                  
+                  <a href="{{ route('admin.users.index') }}" 
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.users.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                    Users
+                  </a>
+                  
+                  <a href="{{ route('admin.roles.index') }}" 
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.roles.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                    Roles
+                  </a>
+                  
+                  <a href="{{ route('admin.enrollments.index') }}" 
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                    Pending
+                    @if(isset($pendingCount) && $pendingCount > 0)
+                      <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
+                    @endif
+                  </a>
+                  
+                  <a href="{{ route('courses.create') }}" 
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                    Create
+                  </a>
+
+                  @if(auth()->user()->hasRole('superadmin'))
+                    <a href="{{ route('admin.moodle.status') }}" 
+                      class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.moodle.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                      Moodle
+                    </a>
+                  @endif
+                </div>
+              @endif
+            @endauth
+
+            <!-- Guest Links -->
+            @guest
+              <a href="{{ route('login') }}" 
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300">
+                Login
+              </a>
+              <a href="{{ route('register') }}" 
+                class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-medium transition-all duration-300 hover:from-indigo-700 hover:to-purple-700 btn-shine">
+                Register
+              </a>
+            @endguest
+          </div>
 
           <!-- Right Side Actions -->
           <div class="flex items-center space-x-2 md:space-x-3">
             
-            <!-- Search Button -->
-            <button @click="searchOpen = true" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
-              <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-            </button>
-            
-            <!-- Notifications -->
-            <button class="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
-              <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-              </svg>
-              <span class="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
-            </button>
-            
-            <!-- Dark Mode Toggle -->
-            <button @click="toggleDarkMode()" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
-              <svg x-show="!darkMode" class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-              </svg>
-              <svg x-show="darkMode" class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-              </svg>
-            </button>
-            
-            <!-- Profile Dropdown -->
-            <div class="relative">
-              <button @click="profileOpen = !profileOpen" 
-                      class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
-                @php $photo = auth()->user()->profile_photo; @endphp
-                <img src="{{ $photo ? Storage::url($photo) : asset('images/default-avatar.png') }}" 
-                     class="h-8 w-8 rounded-full ring-2 ring-indigo-500/30 hover:ring-indigo-500/50 transition-all duration-300" alt="Avatar">
-                <svg class="h-4 w-4 text-gray-600 dark:text-gray-400 transition-transform duration-300" 
-                     :class="{ 'rotate-180': profileOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            @auth
+              <!-- Search Button -->
+              <button @click="searchOpen = true" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
+                <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
               </button>
               
-              <!-- Profile Dropdown Menu -->
-              <div x-show="profileOpen" 
-                   x-transition:enter="transition ease-out duration-200"
-                   x-transition:enter-start="opacity-0 scale-95 translate-y-2"
-                   x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                   x-transition:leave="transition ease-in duration-100"
-                   x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                   x-transition:leave-end="opacity-0 scale-95 translate-y-2"
-                   @click.away="profileOpen = false"
-                   class="absolute right-0 mt-2 w-64 rounded-2xl glass dark:glass-dark shadow-xl overflow-hidden">
+              <!-- Notifications -->
+              <button class="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
+                <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                @if(isset($unreadNotifications) && $unreadNotifications > 0)
+                  <span class="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
+                @endif
+              </button>
+              
+              <!-- Dark Mode Toggle -->
+              <button @click="toggleDarkMode()" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+                <svg x-show="!darkMode" class="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                </svg>
+                <svg x-show="darkMode" class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+              </button>
+              
+              <!-- Profile Dropdown -->
+              <div class="relative">
+                <button @click="profileOpen = !profileOpen" 
+                        class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+                  @php $photo = auth()->user()->profile_photo; @endphp
+                  <img src="{{ $photo ? Storage::url($photo) : asset('images/default-avatar.png') }}" 
+                       class="h-8 w-8 rounded-full ring-2 ring-indigo-500/30 hover:ring-indigo-500/50 transition-all duration-300" alt="Avatar">
+                  <svg class="h-4 w-4 text-gray-600 dark:text-gray-400 transition-transform duration-300" 
+                       :class="{ 'rotate-180': profileOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
                 
-                <!-- User Info Header -->
-                <div class="px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500">
-                  <p class="text-sm font-semibold text-white">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
-                  <p class="text-xs text-indigo-100">{{ auth()->user()->email }}</p>
-                </div>
-                
-                <!-- Menu Items -->
-                <div class="py-2">
-                  <a href="{{ route('profile.show') }}" 
-                     class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                    <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                    Your Profile
-                  </a>
+                <!-- Profile Dropdown Menu -->
+                <div x-show="profileOpen" 
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                     @click.away="profileOpen = false"
+                     class="absolute right-0 mt-2 w-64 rounded-2xl glass dark:glass-dark shadow-xl overflow-hidden">
                   
-                  <a href="{{ route('mycourses') }}" 
-                     class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                    <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                    </svg>
-                    Enrolled Courses
-                  </a>
+                  <!-- User Info Header -->
+                  <div class="px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500">
+                    <p class="text-sm font-semibold text-white">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
+                    <p class="text-xs text-indigo-100">{{ auth()->user()->email }}</p>
+                    @if(auth()->user()->getRoleNames()->isNotEmpty())
+                      <div class="mt-1">
+                        @php
+                          $primaryRole = auth()->user()->getRoleNames()->first();
+                          $roleColors = [
+                            'superadmin' => 'bg-purple-200 text-purple-800',
+                            'admin' => 'bg-indigo-200 text-indigo-800',
+                            'student' => 'bg-blue-200 text-blue-800',
+                            'user' => 'bg-gray-200 text-gray-800'
+                          ];
+                        @endphp
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full {{ $roleColors[$primaryRole] ?? 'bg-gray-200 text-gray-800' }}">
+                          {{ ucfirst(str_replace('_', ' ', $primaryRole)) }}
+                        </span>
+                      </div>
+                    @endif
+                  </div>
                   
-                  <a href="{{ route('profile.settings') }}" 
-                     class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                    <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                    Settings
-                  </a>
-                  
-                  <hr class="my-2 border-gray-200 dark:border-gray-700">
-                  
-                  <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" 
-                            class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                      <svg class="mr-3 h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  <!-- Menu Items -->
+                  <div class="py-2">
+                    <a href="{{ route('profile.show') }}" 
+                       class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                      <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                       </svg>
-                      Sign Out
-                    </button>
-                  </form>
+                      Your Profile
+                    </a>
+                    
+                    <a href="{{ route('mycourses') }}" 
+                       class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                      <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                      </svg>
+                      My Courses
+                    </a>
+                    
+                    <a href="{{ route('profile.settings') }}" 
+                       class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                      <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                      Settings
+                    </a>
+                    
+                    <hr class="my-2 border-gray-200 dark:border-gray-700">
+                    
+                    <form method="POST" action="{{ route('logout') }}">
+                      @csrf
+                      <button type="submit" 
+                              class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                        <svg class="mr-3 h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Sign Out
+                      </button>
+                    </form>
+                  </div>
                 </div>
               </div>
-            </div>
+            @endauth
             
             <!-- Mobile Menu Toggle -->
             <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
@@ -337,47 +396,82 @@
           @click.away="mobileMenuOpen = false"
           class="md:hidden glass dark:glass-dark border-t border-gray-200 dark:border-gray-700">
         <div class="px-4 pt-2 pb-3 space-y-1">
-          <!-- Home Link for all authenticated users -->
-          <a href="{{ route('home') }}" 
-            class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('home') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-            Home
-          </a>
           
-          @role('user|admin|superadmin')
-            <a href="{{ route('dashboard') }}" 
-              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('dashboard') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-              Dashboard
+          @auth
+            <!-- Display Current Role -->
+            @if(auth()->user()->getRoleNames()->isNotEmpty())
+              <div class="px-3 py-2">
+                @php
+                  $primaryRole = auth()->user()->getRoleNames()->first();
+                @endphp
+                <span class="role-badge 
+                  @if($primaryRole == 'superadmin') bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300
+                  @elseif($primaryRole == 'admin') bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300
+                  @else bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300
+                  @endif">
+                  {{ ucfirst(str_replace('_', ' ', $primaryRole)) }}
+                </span>
+              </div>
+            @endif
+
+            <!-- Home Link for all authenticated users -->
+            <a href="{{ route('home') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('home') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              Home
             </a>
+            
+            <!-- My Courses for all authenticated users -->
             <a href="{{ route('mycourses') }}" 
               class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('mycourses') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
               My Courses
             </a>
-          @endrole
-          
-          @role('admin|superadmin')
-            <div class="pt-2 pb-1">
-              <p class="px-3 text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Admin Menu</p>
-            </div>
-            <a href="{{ route('admin.users.index') }}" 
-              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-              Manage Users
-            </a>
             
-            <!-- New Role Assignment Link -->
-            <a href="{{ route('admin.roles.index') }}" 
-              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.roles.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-              Role Management
+            <!-- Admin Menu -->
+            @if(auth()->user()->hasRole(['admin', 'superadmin']))
+              <div class="pt-2 pb-1">
+                <p class="px-3 text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Admin Menu</p>
+              </div>
+              <a href="{{ route('admin.users.index') }}" 
+                class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                Manage Users
+              </a>
+              
+              <a href="{{ route('admin.roles.index') }}" 
+                class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.roles.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                Role Management
+              </a>
+              
+              <a href="{{ route('admin.enrollments.index') }}" 
+                class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                Pending Enrollments
+                @if(isset($pendingCount) && $pendingCount > 0)
+                  <span class="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
+                @endif
+              </a>
+              
+              <a href="{{ route('courses.create') }}" 
+                class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('courses.create') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                Create Course
+              </a>
+              
+              @if(auth()->user()->hasRole('superadmin'))
+                <a href="{{ route('admin.moodle.status') }}" 
+                  class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.moodle.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                  Moodle Integration
+                </a>
+              @endif
+            @endif
+          @else
+            <!-- Guest Links -->
+            <a href="{{ route('login') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Login
             </a>
-            
-            <a href="{{ route('admin.enrollments.index') }}" 
-              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-              Pending Enrollments
+            <a href="{{ route('register') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+              Register
             </a>
-            <a href="{{ route('courses.create') }}" 
-              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('courses.create') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-              Create Course
-            </a>
-          @endrole
+          @endauth
         </div>
       </div>
     </nav>
@@ -387,9 +481,11 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
-              {{ $heading }}
-            </h1>
+            @if(isset($heading))
+              <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
+                {{ $heading }}
+              </h1>
+            @endif
             <!-- Breadcrumbs -->
             <nav class="flex mt-3" aria-label="Breadcrumb">
               <ol class="inline-flex items-center space-x-1 md:space-x-3">
@@ -401,6 +497,7 @@
                     Home
                   </a>
                 </li>
+                @if(isset($heading))
                 <li>
                   <div class="flex items-center">
                     <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
@@ -409,25 +506,28 @@
                     <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">{{ $heading }}</span>
                   </div>
                 </li>
+                @endif
               </ol>
             </nav>
           </div>
           
-          <!-- Quick Stats -->
+          <!-- Quick Stats (only for admin roles) -->
+          @if(auth()->check() && auth()->user()->hasRole(['admin', 'superadmin']))
           <div class="hidden lg:flex items-center space-x-6">
             <div class="text-center">
-              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">24</p>
+              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ $totalCourses ?? '0' }}</p>
               <p class="text-xs text-gray-500 dark:text-gray-400">Courses</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">156</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Hours</p>
+              <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ $totalUsers ?? '0' }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Users</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">89%</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Progress</p>
+              <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">{{ $pendingCount ?? '0' }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Pending</p>
             </div>
           </div>
+          @endif
         </div>
       </div>
     </header>
@@ -466,13 +566,6 @@
                   <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"></path>
                 </svg>
               </a>
-              <a href="#" class="text-gray-400 hover:text-white transition-colors">
-                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"></path>
-                  <path d="M12 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zm0 10.162a3.999 3.999 0 110-7.998 3.999 3.999 0 010 7.998z"></path>
-                  <circle cx="18.406" cy="5.594" r="1.44"></circle>
-                </svg>
-              </a>
             </div>
           </div>
           
@@ -480,10 +573,12 @@
           <div>
             <h4 class="text-white font-semibold mb-4">Quick Links</h4>
             <ul class="space-y-2">
-              <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">About Us</a></li>
-              <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Contact</a></li>
+              <li><a href="{{ route('home') }}" class="text-gray-400 hover:text-white text-sm transition-colors">Home</a></li>
+              @auth
+                <li><a href="{{ route('mycourses') }}" class="text-gray-400 hover:text-white text-sm transition-colors">My Courses</a></li>
+                <li><a href="{{ route('profile.show') }}" class="text-gray-400 hover:text-white text-sm transition-colors">Profile</a></li>
+              @endauth
               <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Support</a></li>
-              <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a></li>
             </ul>
           </div>
           
@@ -504,13 +599,14 @@
         </div>
         
         <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400 text-sm">
-          <p>&copy; {{ date('Y') }} Ministry of Health. All rights reserved. | Developed with by Kyle Blackman</p>
+          <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved. | Developed with ❤️ by Kyle Blackman</p>
         </div>
       </div>
     </footer>
   </div>
 
   <!-- Search Modal -->
+  @auth
   <div x-show="searchOpen" 
        x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="opacity-0"
@@ -538,10 +634,12 @@
       </div>
     </div>
   </div>
+  @endauth
 
   <!-- Toast Notifications Container -->
   <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-4"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
     function layoutData() {
@@ -568,8 +666,30 @@
             "closeButton": true,
             "progressBar": true,
             "positionClass": "toast-top-right",
-            "timeOut": "3000"
+            "timeOut": "3000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
           };
+          
+          // Display session messages
+          @if(session('success'))
+            toastr.success("{{ session('success') }}");
+          @endif
+          
+          @if(session('error'))
+            toastr.error("{{ session('error') }}");
+          @endif
+          
+          @if(session('warning'))
+            toastr.warning("{{ session('warning') }}");
+          @endif
+          
+          @if(session('info'))
+            toastr.info("{{ session('info') }}");
+          @endif
         },
         
         toggleDarkMode() {
@@ -580,5 +700,8 @@
       }
     }
   </script>
+  
+  <!-- Additional Page Scripts -->
+  @stack('scripts')
 </body>
 </html>

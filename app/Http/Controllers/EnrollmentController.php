@@ -19,9 +19,11 @@ use Illuminate\Support\Facades\Mail;
 class EnrollmentController extends Controller
 {
     private ?MoodleClient $moodleClient = null;
+    private EmailNotificationService $emailService;
 
-    public function __construct()
+    public function __construct(EmailNotificationService $emailService)
     {
+        $this->emailService = $emailService;
         // Make MoodleClient optional - don't fail if it's not configured
         try {
             $this->moodleClient = app(MoodleClient::class);
@@ -56,6 +58,8 @@ class EnrollmentController extends Controller
             'status'    => 'pending',
         ]);
 
+        $this->emailService->sendEnrollmentConfirmation($enrollment);
+        
         // Send notification email to superadmins
         $superadmins = User::role('superadmin')->get();
         foreach ($superadmins as $admin) {

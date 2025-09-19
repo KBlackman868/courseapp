@@ -5,15 +5,18 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Jobs\CreateOrLinkMoodleUser;
+use App\Mail\WelcomeEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Auth\Events\Registered;
 
 class RegisterController extends Controller
 {
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/email/verify';
 
     public function showRegistrationForm()
     {
@@ -44,20 +47,23 @@ class RegisterController extends Controller
         $user->assignRole('user');
         
         // Store the plain password temporarily for Moodle sync
-        // This will be used when the user enrolls and Moodle account is created
-        Cache::put('moodle_temp_password_' . $user->id, $validatedData['password'], 300); // 5 minutes
+        Cache::put('moodle_temp_password_' . $user->id, $validatedData['password'], 300);
         
         // Log that password is cached for Moodle
         Log::info('New user registered, password cached for Moodle sync on first enrollment', [
             'user_id' => $user->id,
             'email' => $user->email,
-            'cache_key' => 'moodle_temp_password_' . $user->id
         ]);
+
+        // Send welcome email with verification link
+        event(new Registered($user));
+        
+        // Send additional welcome email with credentials
+        Mail::to($user->email)->send(new WelcomeEmail($user, $validatedData['password']));
 
         Auth::login($user);
 
-        session()->flash('success', "Welcome! You've successfully registered. Enroll in a course to get started!");
-
-        return redirect($this->redirectTo);
+        return redirect('/email/verify')
+            ->with('success', 'Registration successful! Please check your email to verify your account.');
     }
 }
