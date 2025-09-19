@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Auth\Events\Registered;
 
+
 class RegisterController extends Controller
 {
     protected $redirectTo = '/email/verify';

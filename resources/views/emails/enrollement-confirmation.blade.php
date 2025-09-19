@@ -1,5 +1,3 @@
-<?php
-
 @component('mail::message')
 # Enrollment Request Received
 

@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Enrollment;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class NewCourseEnrollmentEmail extends Mailable implements ShouldQueue
+class WelcomeEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -18,7 +18,8 @@ class NewCourseEnrollmentEmail extends Mailable implements ShouldQueue
      * Create a new message instance.
      */
     public function __construct(
-        public Enrollment $enrollment
+        public User $user,
+        public string $password
     ) {}
 
     /**
@@ -27,7 +28,7 @@ class NewCourseEnrollmentEmail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Course Enrollment Request - Action Required',
+            subject: 'Welcome to Ministry of Health LMS - Your Account Details',
         );
     }
 
@@ -37,12 +38,11 @@ class NewCourseEnrollmentEmail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.new-enrollment-admin',
+            markdown: 'emails.welcome',
             with: [
-                'enrollment' => $this->enrollment,
-                'user' => $this->enrollment->user,
-                'course' => $this->enrollment->course,
-                'approvalUrl' => route('admin.enrollments.index'),
+                'user' => $this->user,
+                'password' => $this->password,
+                'loginUrl' => route('login'),
             ]
         );
     }

@@ -1,4 +1,3 @@
-<?php 
 
 @component('mail::message')
 # Welcome to Ministry of Health Learning Management System!

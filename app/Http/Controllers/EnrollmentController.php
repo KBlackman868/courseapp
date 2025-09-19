@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Notifications\NewCourseEnrollmentNotification;
+use App\Services\EmailNotificationService; 
 use App\Services\MoodleClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -19,11 +20,10 @@ use Illuminate\Support\Facades\Mail;
 class EnrollmentController extends Controller
 {
     private ?MoodleClient $moodleClient = null;
-    private EmailNotificationService $emailService;
+    private ?EmailNotificationService $emailService = null; // Make it nullable with ?
 
-    public function __construct(EmailNotificationService $emailService)
+    public function __construct()  // Remove the parameter - we'll inject it inside
     {
-        $this->emailService = $emailService;
         // Make MoodleClient optional - don't fail if it's not configured
         try {
             $this->moodleClient = app(MoodleClient::class);
@@ -31,6 +31,14 @@ class EnrollmentController extends Controller
             // Moodle not configured, continue without it
             $this->moodleClient = null;
             Log::info('Moodle client not configured, Moodle sync disabled');
+        }
+
+        // Make EmailNotificationService optional too
+        try {
+            $this->emailService = app(EmailNotificationService::class);
+        } catch (\Exception $e) {
+            $this->emailService = null;
+            Log::warning('EmailNotificationService not available');
         }
     }
 
@@ -58,12 +66,31 @@ class EnrollmentController extends Controller
             'status'    => 'pending',
         ]);
 
-        $this->emailService->sendEnrollmentConfirmation($enrollment);
-        
+        // Send enrollment confirmation email only if service is available
+        if ($this->emailService) {
+            try {
+                $this->emailService->sendEnrollmentConfirmation($enrollment);
+            } catch (\Exception $e) {
+                Log::error('Failed to send enrollment confirmation email', [
+                    'error' => $e->getMessage(),
+                    'enrollment_id' => $enrollment->id
+                ]);
+                // Don't fail the enrollment if email fails
+            }
+        }
+
         // Send notification email to superadmins
-        $superadmins = User::role('superadmin')->get();
-        foreach ($superadmins as $admin) {
-            Mail::to($admin->email)->send(new NewCourseEnrollmentEmail($enrollment));
+        try {
+            $superadmins = User::role('superadmin')->get();
+            foreach ($superadmins as $admin) {
+                Mail::to($admin->email)->send(new NewCourseEnrollmentEmail($enrollment));
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send admin notification email', [
+                'error' => $e->getMessage(),
+                'enrollment_id' => $enrollment->id
+            ]);
+            // Don't fail the enrollment if email notification fails
         }
 
         // Note: We don't sync to Moodle yet since enrollment is pending
@@ -90,7 +117,9 @@ class EnrollmentController extends Controller
         
         return view('admin.approval_lists', compact('enrollments', 'status', 'users'));
     }
-
+    /**
+     * Update enrollment status (approve/deny)
+     */
     /**
      * Update enrollment status (approve/deny)
      */
@@ -105,8 +134,21 @@ class EnrollmentController extends Controller
         $enrollment->status = $request->status;
         $enrollment->save();
 
-        // If enrollment is approved and course has Moodle integration, sync to Moodle
+        // Send approval email if status changed to approved
         if ($request->status === 'approved' && $oldStatus !== 'approved') {
+            // Send approval notification email
+            if ($this->emailService) {
+                try {
+                    $this->emailService->sendEnrollmentApproved($enrollment);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send enrollment approved email', [
+                        'error' => $e->getMessage(),
+                        'enrollment_id' => $enrollment->id
+                    ]);
+                }
+            }
+            
+            // Sync to Moodle
             $this->syncApprovedEnrollmentToMoodle($enrollment);
         }
 

@@ -11,6 +11,7 @@
         "laravel/breeze": "^2.3",
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.0",
+        "laravel/telescope": "^5.11",
         "laravel/tinker": "^2.9",
         "spatie/laravel-permission": "^6.16",
         "symfony/mailer": "^7.2",
