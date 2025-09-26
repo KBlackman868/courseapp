@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Auth\Events\Registered;
 
-
 class RegisterController extends Controller
 {
     protected $redirectTo = '/email/verify';
@@ -34,7 +33,7 @@ class RegisterController extends Controller
             'department' => 'required|string|max:255',
         ]);
 
-        // Create the user locally
+        // Create the user with verification tracking
         $user = User::create([
             'first_name' => $validatedData['first_name'],
             'last_name'  => $validatedData['last_name'],
@@ -42,6 +41,11 @@ class RegisterController extends Controller
             'password'   => Hash::make($validatedData['password']),
             'department' => $validatedData['department'],
             'temp_moodle_password' => encrypt($validatedData['password']),
+            // ADD THESE NEW FIELDS
+            'verification_status' => 'pending',
+            'verification_sent_at' => now(),
+            'verification_attempts' => 1,
+            'must_verify_before' => now()->addHours(48),
         ]);
 
         // Assign default role
@@ -50,20 +54,26 @@ class RegisterController extends Controller
         // Store the plain password temporarily for Moodle sync
         Cache::put('moodle_temp_password_' . $user->id, $validatedData['password'], 300);
         
-        // Log that password is cached for Moodle
-        Log::info('New user registered, password cached for Moodle sync on first enrollment', [
+        Log::info('New user registered', [
             'user_id' => $user->id,
             'email' => $user->email,
+            'verification_status' => 'pending',
+            'must_verify_before' => $user->must_verify_before,
         ]);
 
-        // Send welcome email with verification link
+        // Fire the Registered event to send verification email
         event(new Registered($user));
         
         // Send additional welcome email with credentials
         Mail::to($user->email)->send(new WelcomeEmail($user, $validatedData['password']));
 
+        // Log the user in
         Auth::login($user);
 
+        // Clear any session messages to prevent duplicates
+        session()->forget(['success', 'error', 'message']);
+
+        // Redirect to email verification page
         return redirect('/email/verify')
             ->with('success', 'Registration successful! Please check your email to verify your account.');
     }

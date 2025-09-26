@@ -2,22 +2,22 @@
 
 namespace App\Models;
 
+use App\Traits\HasEnhancedVerification; 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable; // allows the system to send notifications
-use Spatie\Permission\Traits\HasRoles; // Import the trait
+use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, 
+        Notifiable, 
+        HasRoles, 
+        HasEnhancedVerification;
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var list<string>
      */
     protected $fillable = [
         'first_name',
@@ -28,36 +28,69 @@ class User extends Authenticatable implements MustVerifyEmail
         'profile_photo',
         'moodle_user_id',
         'temp_moodle_password',
+        'verification_status',
+        'verification_sent_at',
+        'verification_attempts',
+        'must_verify_before',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
      */
     protected $hidden = [
         'password',
         'remember_token',
+        'temp_moodle_password',
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * The attributes that should be cast.
      */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // ADD THESE NEW CASTS
+            'verification_sent_at' => 'datetime',
+            'must_verify_before' => 'datetime',
+            'verification_attempts' => 'integer',
         ];
     }
-        public function hasMoodleAccount(): bool
+
+    // ADD THESE NEW SCOPES
+    /**
+     * Scope to get only verified users
+     */
+    public function scopeVerified($query)
+    {
+        return $query->whereNotNull('email_verified_at');
+    }
+    
+    /**
+     * Scope to get only unverified users
+     */
+    public function scopeUnverified($query)
+    {
+        return $query->whereNull('email_verified_at');
+    }
+    
+    /**
+     * Scope to get users pending verification
+     */
+    public function scopePendingVerification($query)
+    {
+        return $query->whereNull('email_verified_at')
+                    ->where('verification_status', 'pending');
+    }
+
+    // Your existing methods remain unchanged...
+    public function hasMoodleAccount(): bool
     {
         return !is_null($this->moodle_user_id);
     }
     
-        public function hasAnyPermission(...$permissions): bool
+    public function hasAnyPermission(...$permissions): bool
     {
         if ($this->hasRole('superadmin')) {
             return true;
@@ -67,27 +100,19 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->hasAnyPermissionViaRole($permissions);
     }
 
-    /**
-     * Get user's role display name
-     */
     public function getRoleDisplayName(): string
     {
         $role = $this->roles->first();
         return $role ? ($role->display_name ?? $role->name) : 'No Role';
     }
 
-    /**
-     * Check if user can manage course
-     */
     public function canManageCourse($course): bool
     {
         if ($this->hasRole(['superadmin', 'course_admin'])) {
             return true;
         }
         
-        // Instructors can only manage their own courses
         if ($this->hasRole('instructor')) {
-            // Add logic to check if user is instructor of this course
             return $course->instructor_id === $this->id;
         }
         

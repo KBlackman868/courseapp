@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\CreateOrLinkMoodleUser;
 use App\Jobs\EnrollUserIntoMoodleCourse;
 use App\Mail\NewCourseEnrollmentEmail;
+use App\Mail\EnrollmentConfirmationEmail;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
@@ -20,15 +21,14 @@ use Illuminate\Support\Facades\Mail;
 class EnrollmentController extends Controller
 {
     private ?MoodleClient $moodleClient = null;
-    private ?EmailNotificationService $emailService = null; // Make it nullable with ?
+    private ?EmailNotificationService $emailService = null;
 
-    public function __construct()  // Remove the parameter - we'll inject it inside
+    public function __construct()
     {
         // Make MoodleClient optional - don't fail if it's not configured
         try {
             $this->moodleClient = app(MoodleClient::class);
         } catch (\Exception $e) {
-            // Moodle not configured, continue without it
             $this->moodleClient = null;
             Log::info('Moodle client not configured, Moodle sync disabled');
         }
@@ -66,16 +66,49 @@ class EnrollmentController extends Controller
             'status'    => 'pending',
         ]);
 
-        // Send enrollment confirmation email only if service is available
+        // Send enrollment confirmation email - Method 1: Using Service
         if ($this->emailService) {
             try {
                 $this->emailService->sendEnrollmentConfirmation($enrollment);
-            } catch (\Exception $e) {
-                Log::error('Failed to send enrollment confirmation email', [
-                    'error' => $e->getMessage(),
-                    'enrollment_id' => $enrollment->id
+                Log::info('Enrollment confirmation sent via EmailService', [
+                    'enrollment_id' => $enrollment->id,
+                    'user_email' => $user->email
                 ]);
-                // Don't fail the enrollment if email fails
+            } catch (\Exception $e) {
+                Log::error('Failed to send enrollment confirmation email via service', [
+                    'error' => $e->getMessage(),
+                    'enrollment_id' => $enrollment->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                // Try direct mail as fallback
+                try {
+                    Mail::to($user->email)->send(new EnrollmentConfirmationEmail($enrollment));
+                    Log::info('Enrollment confirmation sent directly via Mail facade', [
+                        'enrollment_id' => $enrollment->id,
+                        'user_email' => $user->email
+                    ]);
+                } catch (\Exception $fallbackError) {
+                    Log::error('Direct mail also failed', [
+                        'error' => $fallbackError->getMessage(),
+                        'enrollment_id' => $enrollment->id
+                    ]);
+                }
+            }
+        } else {
+            // Method 2: Direct Mail sending if service not available
+            try {
+                Mail::to($user->email)->send(new EnrollmentConfirmationEmail($enrollment));
+                Log::info('Enrollment confirmation sent directly (no service)', [
+                    'enrollment_id' => $enrollment->id,
+                    'user_email' => $user->email
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send enrollment confirmation email directly', [
+                    'error' => $e->getMessage(),
+                    'enrollment_id' => $enrollment->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
             }
         }
 
@@ -85,18 +118,25 @@ class EnrollmentController extends Controller
             foreach ($superadmins as $admin) {
                 Mail::to($admin->email)->send(new NewCourseEnrollmentEmail($enrollment));
             }
+            Log::info('Admin notifications sent', [
+                'enrollment_id' => $enrollment->id,
+                'admin_count' => $superadmins->count()
+            ]);
         } catch (\Exception $e) {
             Log::error('Failed to send admin notification email', [
                 'error' => $e->getMessage(),
                 'enrollment_id' => $enrollment->id
             ]);
-            // Don't fail the enrollment if email notification fails
         }
 
-        // Note: We don't sync to Moodle yet since enrollment is pending
-        // Moodle sync happens when admin approves the enrollment
+        // Add a flash message about the email
+        $emailStatus = 'Your enrollment request has been submitted.';
+        if (app()->environment('local')) {
+            // In local environment, add more debugging info
+            $emailStatus .= ' Check Laravel Telescope for email activity.';
+        }
 
-        return redirect()->route('home')->with('success', 'Your enrollment request has been submitted.');
+        return redirect()->route('home')->with('success', $emailStatus);
     }
 
     /**
@@ -104,22 +144,17 @@ class EnrollmentController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the 'status' query parameter, defaulting to 'pending'
         $status = $request->query('status', 'pending');
         
-        // Retrieve enrollments with the given status along with user and course data
         $enrollments = Enrollment::where('status', $status)
                                 ->with('user', 'course')
                                 ->get();
 
-        // Retrieve all users
         $users = User::all();
         
         return view('admin.approval_lists', compact('enrollments', 'status', 'users'));
     }
-    /**
-     * Update enrollment status (approve/deny)
-     */
+
     /**
      * Update enrollment status (approve/deny)
      */
@@ -160,6 +195,8 @@ class EnrollmentController extends Controller
         return redirect()->back()->with('success', 'Enrollment status updated successfully.');
     }
 
+    // ... rest of your methods remain the same ...
+
     /**
      * View the list of courses when enrolled
      */
@@ -167,7 +204,6 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
         
-        // Retrieve enrollments for the current user where status is approved
         $enrollments = Enrollment::where('user_id', $user->id)
                                 ->where('status', 'approved')
                                 ->with('course')
@@ -183,18 +219,15 @@ class EnrollmentController extends Controller
     {
         $enrollment = Enrollment::findOrFail($enrollmentId);
         
-        // Check if user is authorized to unenroll (either the enrolled user or admin)
         if ($enrollment->user_id !== Auth::id() && !Auth::user()->hasRole(['admin', 'superadmin'])) {
             return redirect()->back()->with('error', 'Unauthorized action.');
         }
 
         $oldStatus = $enrollment->status;
         
-        // Update status to "cancelled"
         $enrollment->status = 'cancelled';
         $enrollment->save();
 
-        // If enrollment was approved and course has Moodle integration, remove from Moodle
         if ($oldStatus === 'approved') {
             $this->removeEnrollmentFromMoodle($enrollment);
         }
@@ -207,7 +240,6 @@ class EnrollmentController extends Controller
      */
     private function syncApprovedEnrollmentToMoodle(Enrollment $enrollment): void
     {
-        // Skip if Moodle client is not configured
         if (!$this->moodleClient) {
             Log::info('Moodle sync skipped - client not configured');
             return;
@@ -217,7 +249,6 @@ class EnrollmentController extends Controller
             $course = $enrollment->course;
             $user = $enrollment->user;
 
-            // Only sync if course has Moodle integration
             if (!$course->moodle_course_id) {
                 Log::info('Course not synced to Moodle, skipping enrollment sync', [
                     'course_id' => $course->id,
@@ -226,19 +257,15 @@ class EnrollmentController extends Controller
                 return;
             }
 
-            // First ensure user exists in Moodle
             if (!$user->moodle_user_id) {
                 Log::info('Creating Moodle user before enrollment', [
                     'user_id' => $user->id,
                 ]);
                 
-                // Create user synchronously to ensure it completes
                 CreateOrLinkMoodleUser::dispatchSync($user);
                 
-                // Refresh user to get the updated moodle_user_id
                 $user->refresh();
                 
-                // Check if user was successfully created
                 if (!$user->moodle_user_id) {
                     Log::error('Failed to create Moodle user', [
                         'user_id' => $user->id,
@@ -248,7 +275,6 @@ class EnrollmentController extends Controller
                 }
             }
 
-            // Now enroll the user (user definitely exists in Moodle at this point)
             EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
 
             Log::info('Moodle enrollment sync dispatched', [
@@ -264,8 +290,6 @@ class EnrollmentController extends Controller
                 'enrollment_id' => $enrollment->id,
                 'error' => $e->getMessage(),
             ]);
-            // Don't throw - we don't want to break the enrollment process
-            // Consider notifying admin about the sync failure
         }
     }
 
@@ -274,7 +298,6 @@ class EnrollmentController extends Controller
      */
     private function removeEnrollmentFromMoodle(Enrollment $enrollment): void
     {
-        // Skip if Moodle client is not configured
         if (!$this->moodleClient) {
             return;
         }
@@ -283,13 +306,10 @@ class EnrollmentController extends Controller
             $course = $enrollment->course;
             $user = $enrollment->user;
 
-            // Only proceed if both user and course have Moodle IDs
             if (!$course->moodle_course_id || !$user->moodle_user_id) {
                 return;
             }
 
-            // Call Moodle API to unenroll user
-            // Note: This requires the 'enrol_manual_unenrol_users' function in Moodle
             $unenrollData = [
                 'enrolments' => [
                     [
@@ -313,7 +333,6 @@ class EnrollmentController extends Controller
                 'enrollment_id' => $enrollment->id,
                 'error' => $e->getMessage(),
             ]);
-            // Don't throw - unenrollment in local system should still succeed
         }
     }
 
@@ -350,14 +369,10 @@ class EnrollmentController extends Controller
         $syncCount = 0;
         foreach ($approvedEnrollments as $enrollment) {
             if (!$enrollment->user->moodle_user_id) {
-                // Create user in Moodle first (synchronously)
                 CreateOrLinkMoodleUser::dispatchSync($enrollment->user);
-                
-                // Refresh to get moodle_user_id
                 $enrollment->user->refresh();
             }
             
-            // Only enroll if user was successfully created/exists
             if ($enrollment->user->moodle_user_id) {
                 EnrollUserIntoMoodleCourse::dispatch(
                     $enrollment->user, 

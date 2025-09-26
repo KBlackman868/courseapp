@@ -27,6 +27,184 @@
       50% { opacity: 0.5; }
     }
     
+    /* Thanos Animation */
+    @keyframes snap {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-5deg) scale(1.05); }
+      50% { transform: rotate(5deg) scale(1.1); filter: hue-rotate(180deg); }
+      75% { transform: rotate(-3deg) scale(1.05); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+    
+    @keyframes dust {
+      0% { opacity: 1; transform: translateY(0) rotateZ(0deg); }
+      100% { opacity: 0; transform: translateY(-20px) rotateZ(720deg); filter: blur(4px); }
+    }
+    
+    @keyframes infinity-glow {
+      0%, 100% { 
+        box-shadow: 0 0 20px rgba(147, 51, 234, 0.8), 
+                    0 0 40px rgba(147, 51, 234, 0.6),
+                    0 0 60px rgba(147, 51, 234, 0.4);
+      }
+      50% { 
+        box-shadow: 0 0 30px rgba(236, 72, 153, 0.8), 
+                    0 0 60px rgba(236, 72, 153, 0.6),
+                    0 0 90px rgba(236, 72, 153, 0.4);
+      }
+    }
+    
+    /* Thanos Badge Animation */
+    @keyframes disintegrate {
+      0% { 
+        opacity: 1; 
+        transform: scale(1) rotate(0deg);
+        filter: blur(0);
+      }
+      25% {
+        opacity: 0.8;
+        transform: scale(1.1) rotate(5deg);
+      }
+      50% {
+        opacity: 0.5;
+        transform: scale(0.9) rotate(-5deg);
+        filter: blur(1px);
+      }
+      75% {
+        opacity: 0.2;
+        transform: scale(1.2) rotate(10deg) translateY(-10px);
+        filter: blur(3px);
+      }
+      100% { 
+        opacity: 0; 
+        transform: scale(0.5) rotate(180deg) translateY(-30px);
+        filter: blur(10px);
+      }
+    }
+    
+    @keyframes reassemble {
+      0% { 
+        opacity: 0; 
+        transform: scale(0.5) rotate(180deg) translateY(-30px);
+        filter: blur(10px);
+      }
+      50% {
+        opacity: 0.5;
+        transform: scale(1.2) rotate(90deg) translateY(-15px);
+        filter: blur(5px);
+      }
+      100% { 
+        opacity: 1; 
+        transform: scale(1) rotate(0deg) translateY(0);
+        filter: blur(0);
+      }
+    }
+    
+    @keyframes particle-float {
+      0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--x), var(--y)) scale(0);
+        opacity: 0;
+      }
+    }
+    
+    .thanos-badge {
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, #9333ea, #7c3aed, #6366f1);
+      background-size: 200% 200%;
+      animation: gradient-shift 3s ease infinite;
+    }
+    
+    .thanos-badge:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 30px rgba(147, 51, 234, 0.6);
+    }
+    
+    .thanos-badge.snapped {
+      animation: disintegrate 1.5s ease-out forwards;
+      pointer-events: none;
+    }
+    
+    .thanos-badge.reforming {
+      animation: reassemble 1.5s ease-out forwards;
+      pointer-events: none;
+    }
+    
+    .thanos-badge::before {
+      content: '💎';
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 16px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .thanos-badge:hover::before {
+      opacity: 1;
+      animation: float 2s ease-in-out infinite;
+    }
+    
+    /* Particle effects */
+    .thanos-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: linear-gradient(135deg, #9333ea, #ec4899);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particle-float 1.5s ease-out forwards;
+    }
+    
+    .thanos-hover {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .thanos-hover:hover {
+      animation: snap 0.6s ease-in-out;
+      color: #9333ea;
+    }
+    
+    .thanos-hover::before {
+      content: '⚡';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .thanos-hover:hover::before {
+      opacity: 1;
+      animation: dust 1s ease-out forwards;
+    }
+    
+    .thanos-hover::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 12px;
+      background: linear-gradient(45deg, #9333ea, #ec4899, #6366f1, #9333ea);
+      opacity: 0;
+      z-index: -1;
+      transition: opacity 0.3s ease;
+      background-size: 400% 400%;
+    }
+    
+    .thanos-hover:hover::after {
+      opacity: 0.3;
+      animation: infinity-glow 2s ease-in-out infinite, gradient-shift 3s ease infinite;
+    }
+    
     .animate-float { animation: float 3s ease-in-out infinite; }
     .animate-gradient { 
       background-size: 200% 200%;
@@ -184,25 +362,34 @@
           <!-- Desktop Navigation Links -->
           <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
             
-            <!-- Home Link (visible to all authenticated users) -->
             @auth
+              <!-- Home Link with Thanos effect -->
               <a href="{{ route('home') }}" 
-                class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+                class="thanos-hover relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
                 <span class="relative z-10">Home</span>
               </a>
 
-              <!-- My Courses - Available to all authenticated users -->
-              <a href="{{ route('mycourses') }}" 
-                class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
-                <span class="relative z-10">My Courses</span>
-              </a>
+              <!-- My Courses - Only for non-admin users -->
+              @if(!auth()->user()->hasRole(['admin', 'superadmin']))
+                <a href="{{ route('mycourses') }}" 
+                  class="relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+                  <span class="relative z-10">My Courses</span>
+                </a>
+              @endif
 
               <!-- Admin and Superadmin Section -->
               @if(auth()->user()->hasRole(['admin', 'superadmin']))
                 <div class="flex items-center space-x-1 px-2 py-1 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
-                  <span class="role-badge bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 mr-2">
+                  <span x-data="{ snapped: false }" 
+                        @click="if(!snapped) { 
+                          snapped = true; 
+                          createParticles($el); 
+                          setTimeout(() => snapped = false, 5000) 
+                        }"
+                        :class="{ 'snapped': snapped, 'reforming': !snapped && $el.classList.contains('snapped') }"
+                        class="thanos-badge role-badge text-white mr-2">
                     @if(auth()->user()->hasRole('superadmin')) 
-                      Super Admin 
+                      THANOS 💎
                     @else 
                       Admin 
                     @endif
@@ -258,13 +445,6 @@
           <div class="flex items-center space-x-2 md:space-x-3">
             
             @auth
-              <!-- Search Button -->
-              <button @click="searchOpen = true" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
-                <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </button>
-              
               <!-- Notifications -->
               <button class="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
                 <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,7 +466,7 @@
               </button>
               
               <!-- Profile Dropdown -->
-              <div class="relative">
+              <div class="relative" x-data="{ profileOpen: false }">
                 <button @click="profileOpen = !profileOpen" 
                         class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
                   @php $photo = auth()->user()->profile_photo; @endphp
@@ -318,14 +498,27 @@
                         @php
                           $primaryRole = auth()->user()->getRoleNames()->first();
                           $roleColors = [
-                            'superadmin' => 'bg-purple-200 text-purple-800',
+                            'superadmin' => 'thanos-badge text-white',
                             'admin' => 'bg-indigo-200 text-indigo-800',
                             'student' => 'bg-blue-200 text-blue-800',
                             'user' => 'bg-gray-200 text-gray-800'
                           ];
+                          $roleDisplay = [
+                            'superadmin' => 'THANOS 💎',
+                            'admin' => 'Admin',
+                            'student' => 'Student',
+                            'user' => 'User'
+                          ];
                         @endphp
-                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full {{ $roleColors[$primaryRole] ?? 'bg-gray-200 text-gray-800' }}">
-                          {{ ucfirst(str_replace('_', ' ', $primaryRole)) }}
+                        <span x-data="{ snapped: false }" 
+                              @click="if('{{ $primaryRole }}' === 'superadmin' && !snapped) { 
+                                snapped = true; 
+                                createParticles($el); 
+                                setTimeout(() => snapped = false, 5000) 
+                              }"
+                              :class="{ 'snapped': snapped, 'reforming': !snapped && $el.classList.contains('snapped') }"
+                              class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full {{ $roleColors[$primaryRole] ?? 'bg-gray-200 text-gray-800' }}">
+                          {{ $roleDisplay[$primaryRole] ?? ucfirst(str_replace('_', ' ', $primaryRole)) }}
                         </span>
                       </div>
                     @endif
@@ -341,13 +534,15 @@
                       Your Profile
                     </a>
                     
-                    <a href="{{ route('mycourses') }}" 
-                       class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                      <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                      </svg>
-                      My Courses
-                    </a>
+                    @if(!auth()->user()->hasRole(['admin', 'superadmin']))
+                      <a href="{{ route('mycourses') }}" 
+                         class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                        <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        My Courses
+                      </a>
+                    @endif
                     
                     <a href="{{ route('profile.settings') }}" 
                        class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
@@ -403,13 +598,21 @@
               <div class="px-3 py-2">
                 @php
                   $primaryRole = auth()->user()->getRoleNames()->first();
+                  $roleDisplay = $primaryRole == 'superadmin' ? 'THANOS 💎' : ucfirst(str_replace('_', ' ', $primaryRole));
                 @endphp
-                <span class="role-badge 
-                  @if($primaryRole == 'superadmin') bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300
+                <span x-data="{ snapped: false }"
+                      @click="if('{{ $primaryRole }}' === 'superadmin' && !snapped) { 
+                        snapped = true; 
+                        createParticles($el); 
+                        setTimeout(() => snapped = false, 5000) 
+                      }"
+                      :class="{ 'snapped': snapped, 'reforming': !snapped && $el.classList.contains('snapped') }"
+                      class="role-badge 
+                  @if($primaryRole == 'superadmin') thanos-badge text-white
                   @elseif($primaryRole == 'admin') bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300
                   @else bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300
                   @endif">
-                  {{ ucfirst(str_replace('_', ' ', $primaryRole)) }}
+                  {{ $roleDisplay }}
                 </span>
               </div>
             @endif
@@ -420,11 +623,13 @@
               Home
             </a>
             
-            <!-- My Courses for all authenticated users -->
-            <a href="{{ route('mycourses') }}" 
-              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('mycourses') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-              My Courses
-            </a>
+            <!-- My Courses only for non-admin users -->
+            @if(!auth()->user()->hasRole(['admin', 'superadmin']))
+              <a href="{{ route('mycourses') }}" 
+                class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('mycourses') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                My Courses
+              </a>
+            @endif
             
             <!-- Admin Menu -->
             @if(auth()->user()->hasRole(['admin', 'superadmin']))
@@ -485,6 +690,10 @@
               <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
                 {{ $heading }}
               </h1>
+            @elseif(View::hasSection('title'))
+              <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
+                @yield('title')
+              </h1>
             @endif
             <!-- Breadcrumbs -->
             <nav class="flex mt-3" aria-label="Breadcrumb">
@@ -504,6 +713,15 @@
                       <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                     </svg>
                     <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">{{ $heading }}</span>
+                  </div>
+                </li>
+                @elseif(View::hasSection('title'))
+                <li>
+                  <div class="flex items-center">
+                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">@yield('title')</span>
                   </div>
                 </li>
                 @endif
@@ -532,12 +750,16 @@
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Area - THIS IS THE KEY CHANGE -->
     <main class="flex-1 pb-12 page-transition">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
         <!-- Content Card with Shadow -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
-          {{ $slot }}
+          @if(isset($slot))
+            {{ $slot }}
+          @else
+            @yield('content')
+          @endif
         </div>
       </div>
     </main>
@@ -575,7 +797,9 @@
             <ul class="space-y-2">
               <li><a href="{{ route('home') }}" class="text-gray-400 hover:text-white text-sm transition-colors">Home</a></li>
               @auth
-                <li><a href="{{ route('mycourses') }}" class="text-gray-400 hover:text-white text-sm transition-colors">My Courses</a></li>
+                @if(!auth()->user()->hasRole(['admin', 'superadmin']))
+                  <li><a href="{{ route('mycourses') }}" class="text-gray-400 hover:text-white text-sm transition-colors">My Courses</a></li>
+                @endif
                 <li><a href="{{ route('profile.show') }}" class="text-gray-400 hover:text-white text-sm transition-colors">Profile</a></li>
               @endauth
               <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Support</a></li>
@@ -605,37 +829,6 @@
     </footer>
   </div>
 
-  <!-- Search Modal -->
-  @auth
-  <div x-show="searchOpen" 
-       x-transition:enter="transition ease-out duration-300"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-200"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"
-       @keydown.escape.window="searchOpen = false"
-       class="fixed inset-0 z-50 overflow-y-auto">
-    <div class="min-h-screen px-4 text-center">
-      <div class="fixed inset-0 bg-gray-900/75 transition-opacity" @click="searchOpen = false"></div>
-      
-      <div class="inline-block w-full max-w-2xl my-8 text-left align-middle transition-all transform">
-        <div class="relative glass dark:glass-dark rounded-2xl shadow-2xl p-6">
-          <input type="text" 
-                 placeholder="Search courses, topics, or instructors..." 
-                 class="w-full px-4 py-3 bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                 autofocus>
-          <button @click="searchOpen = false" class="absolute top-8 right-8 text-gray-400 hover:text-gray-600">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  @endauth
-
   <!-- Toast Notifications Container -->
   <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-4"></div>
 
@@ -644,16 +837,25 @@
   <script>
     function layoutData() {
       return {
-        darkMode: localStorage.getItem('darkMode') === 'true' || false,
+        darkMode: false,
         scrolled: false,
         mobileMenuOpen: false,
-        profileOpen: false,
-        searchOpen: false,
         
         init() {
-          // Initialize dark mode
+          // Check localStorage for dark mode preference
+          const savedDarkMode = localStorage.getItem('darkMode');
+          if (savedDarkMode !== null) {
+            this.darkMode = savedDarkMode === 'true';
+          } else {
+            // Check system preference
+            this.darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          
+          // Apply dark mode
           if (this.darkMode) {
             document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
           }
           
           // Track scroll position
@@ -694,10 +896,51 @@
         
         toggleDarkMode() {
           this.darkMode = !this.darkMode;
-          document.documentElement.classList.toggle('dark');
-          localStorage.setItem('darkMode', this.darkMode);
+          if (this.darkMode) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          localStorage.setItem('darkMode', this.darkMode.toString());
         }
       }
+    }
+    
+    // Thanos snap particle effect
+    function createParticles(element) {
+      const rect = element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      // Create 20 particles
+      for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'thanos-particle';
+        
+        // Random position around the badge
+        const angle = (Math.PI * 2 * i) / 20;
+        const distance = 50 + Math.random() * 100;
+        const x = Math.cos(angle) * distance;
+        const y = Math.sin(angle) * distance;
+        
+        particle.style.cssText = `
+          --x: ${x}px;
+          --y: ${y}px;
+          left: ${centerX}px;
+          top: ${centerY}px;
+          animation-delay: ${Math.random() * 0.5}s;
+        `;
+        
+        document.body.appendChild(particle);
+        
+        // Remove particle after animation
+        setTimeout(() => particle.remove(), 1500);
+      }
+      
+      // Play a snap sound effect (optional - you can add an audio element)
+      const audio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+      audio.volume = 0.3;
+      audio.play().catch(() => {}); // Catch error if audio doesn't play
     }
   </script>
   

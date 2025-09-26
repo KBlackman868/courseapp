@@ -15,6 +15,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     public function register(): void
     {
         // Telescope::night();
+        
 
         $this->hideSensitiveRequestDetails();
 
@@ -29,6 +30,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                    $entry->isScheduledTask() ||
                    $entry->hasMonitoredTag();
         });
+        Telescope::routes();
     }
 
     /**
