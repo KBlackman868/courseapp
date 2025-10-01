@@ -363,6 +363,8 @@
           <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
             
             @auth
+              <!-- Authenticated User Navigation -->
+              
               <!-- Home Link with Thanos effect -->
               <a href="{{ route('home') }}" 
                 class="thanos-hover relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
@@ -388,14 +390,6 @@
                         }"
                         :class="{ 'snapped': snapped, 'reforming': !snapped && $el.classList.contains('snapped') }"
                         class="thanos-badge role-badge text-white mr-2">
-                  <a href="{{ route('admin.courses.index') }}" 
-                          class="px-3 py-1.5 rounded-lg text-sm font-medium...">
-                             Course Management
-                  </a>
-                                  <!-- Pagination -->
-                <div class="px-6 py-4 bg-gray-50">
-                    {{ $courses->links() }}
-                </div>
                     @if(auth()->user()->hasRole('superadmin')) 
                       THANOS 💎
                     @else 
@@ -413,10 +407,18 @@
                     Roles
                   </a>
                   
+                  <a href="{{ route('courses.index') }}" 
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.*') && !request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                    Courses
+                  </a>
+                  
                   <a href="{{ route('admin.enrollments.index') }}" 
                     class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
                     Pending
-                    @if(isset($pendingCount) && $pendingCount > 0)
+                    @php
+                      $pendingCount = \App\Models\Enrollment::where('status', 'pending')->count();
+                    @endphp
+                    @if($pendingCount > 0)
                       <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
                     @endif
                   </a>
@@ -434,19 +436,46 @@
                   @endif
                 </div>
               @endif
-            @endauth
-
-            <!-- Guest Links -->
-            @guest
+              
+            @else
+              <!-- Guest Navigation -->
+              <a href="{{ route('home') }}" 
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 {{ request()->routeIs('home') || request()->routeIs('welcome') ? 'text-indigo-600 dark:text-indigo-400 nav-active' : 'text-gray-700 dark:text-gray-300' }}">
+                Home
+              </a>
+              
+              <a href="#features" 
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300">
+                Features
+              </a>
+              
+              <a href="#courses" 
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300">
+                Training Modules
+              </a>
+              
+              <a href="#partners" 
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300">
+                Partners
+              </a>
+              
+              <a href="#contact" 
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300">
+                Contact
+              </a>
+              
+              <div class="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
+              
               <a href="{{ route('login') }}" 
                 class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-700 dark:text-gray-300">
                 Login
               </a>
+              
               <a href="{{ route('register') }}" 
                 class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-medium transition-all duration-300 hover:from-indigo-700 hover:to-purple-700 btn-shine">
                 Register
               </a>
-            @endguest
+            @endauth
           </div>
 
           <!-- Right Side Actions -->
@@ -601,6 +630,8 @@
         <div class="px-4 pt-2 pb-3 space-y-1">
           
           @auth
+            <!-- Authenticated Mobile Menu -->
+            
             <!-- Display Current Role -->
             @if(auth()->user()->getRoleNames()->isNotEmpty())
               <div class="px-3 py-2">
@@ -644,6 +675,7 @@
               <div class="pt-2 pb-1">
                 <p class="px-3 text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Admin Menu</p>
               </div>
+              
               <a href="{{ route('admin.users.index') }}" 
                 class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
                 Manage Users
@@ -654,10 +686,18 @@
                 Role Management
               </a>
               
+              <a href="{{ route('courses.index') }}" 
+                class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('courses.*') && !request()->routeIs('courses.create') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                Course Management
+              </a>
+              
               <a href="{{ route('admin.enrollments.index') }}" 
                 class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
                 Pending Enrollments
-                @if(isset($pendingCount) && $pendingCount > 0)
+                @php
+                  $pendingCount = \App\Models\Enrollment::where('status', 'pending')->count();
+                @endphp
+                @if($pendingCount > 0)
                   <span class="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
                 @endif
               </a>
@@ -674,12 +714,62 @@
                 </a>
               @endif
             @endif
+            
+            <hr class="my-2 border-gray-200 dark:border-gray-700">
+            
+            <!-- Profile and Settings -->
+            <a href="{{ route('profile.show') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Your Profile
+            </a>
+            
+            <a href="{{ route('profile.settings') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Settings
+            </a>
+            
+            <form method="POST" action="{{ route('logout') }}">
+              @csrf
+              <button type="submit" 
+                      class="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                Sign Out
+              </button>
+            </form>
+            
           @else
-            <!-- Guest Links -->
+            <!-- Guest Mobile Menu -->
+            <a href="{{ route('home') }}" 
+              class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('home') || request()->routeIs('welcome') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+              Home
+            </a>
+            
+            <a href="#features" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Features
+            </a>
+            
+            <a href="#courses" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Training Modules
+            </a>
+            
+            <a href="#partners" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Partners
+            </a>
+            
+            <a href="#contact" 
+              class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+              Contact
+            </a>
+            
+            <hr class="my-2 border-gray-200 dark:border-gray-700">
+            
             <a href="{{ route('login') }}" 
               class="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
               Login
             </a>
+            
             <a href="{{ route('register') }}" 
               class="block px-3 py-2 rounded-xl text-base font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
               Register
@@ -689,87 +779,105 @@
       </div>
     </nav>
 
-    <!-- Page Header with Gradient -->
-    <header class="pt-20 md:pt-24 pb-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between">
-          <div>
-            @if(isset($heading))
-              <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
-                {{ $heading }}
-              </h1>
-            @elseif(View::hasSection('title'))
-              <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
-                @yield('title')
-              </h1>
+    <!-- Conditional Page Header -->
+    @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
+      <!-- Page Header with Gradient for non-landing pages -->
+      <header class="pt-20 md:pt-24 pb-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between">
+            <div>
+              @if(isset($heading))
+                <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
+                  {{ $heading }}
+                </h1>
+              @elseif(View::hasSection('title'))
+                <h1 class="text-3xl md:text-4xl font-bold gradient-text page-transition">
+                  @yield('title')
+                </h1>
+              @endif
+              <!-- Breadcrumbs -->
+              <nav class="flex mt-3" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                  <li class="inline-flex items-center">
+                    <a href="{{ route('home') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                      <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                      </svg>
+                      Home
+                    </a>
+                  </li>
+                  @if(isset($heading))
+                  <li>
+                    <div class="flex items-center">
+                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                      <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">{{ $heading }}</span>
+                    </div>
+                  </li>
+                  @elseif(View::hasSection('title'))
+                  <li>
+                    <div class="flex items-center">
+                      <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                      <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">@yield('title')</span>
+                    </div>
+                  </li>
+                  @endif
+                </ol>
+              </nav>
+            </div>
+            
+            <!-- Quick Stats (only for admin roles) -->
+            @if(auth()->check() && auth()->user()->hasRole(['admin', 'superadmin']))
+            <div class="hidden lg:flex items-center space-x-6">
+              <div class="text-center">
+                <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  {{ \App\Models\Course::count() }}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Courses</p>
+              </div>
+              <div class="text-center">
+                <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {{ \App\Models\User::count() }}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Users</p>
+              </div>
+              <div class="text-center">
+                <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">
+                  {{ \App\Models\Enrollment::where('status', 'pending')->count() }}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+              </div>
+            </div>
             @endif
-            <!-- Breadcrumbs -->
-            <nav class="flex mt-3" aria-label="Breadcrumb">
-              <ol class="inline-flex items-center space-x-1 md:space-x-3">
-                <li class="inline-flex items-center">
-                  <a href="{{ route('home') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                    </svg>
-                    Home
-                  </a>
-                </li>
-                @if(isset($heading))
-                <li>
-                  <div class="flex items-center">
-                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">{{ $heading }}</span>
-                  </div>
-                </li>
-                @elseif(View::hasSection('title'))
-                <li>
-                  <div class="flex items-center">
-                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span class="ml-1 text-sm text-gray-700 dark:text-gray-300 font-medium md:ml-2">@yield('title')</span>
-                  </div>
-                </li>
-                @endif
-              </ol>
-            </nav>
           </div>
-          
-          <!-- Quick Stats (only for admin roles) -->
-          @if(auth()->check() && auth()->user()->hasRole(['admin', 'superadmin']))
-          <div class="hidden lg:flex items-center space-x-6">
-            <div class="text-center">
-              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ $totalCourses ?? '0' }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Courses</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ $totalUsers ?? '0' }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Users</p>
-            </div>
-            <div class="text-center">
-              <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">{{ $pendingCount ?? '0' }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Pending</p>
-            </div>
-          </div>
-          @endif
         </div>
-      </div>
-    </header>
+      </header>
+    @else
+      <!-- Minimal spacing for landing page -->
+      <div class="pt-16 md:pt-20"></div>
+    @endif
 
-    <!-- Main Content Area - THIS IS THE KEY CHANGE -->
-    <main class="flex-1 pb-12 page-transition">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-        <!-- Content Card with Shadow -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
-          @if(isset($slot))
-            {{ $slot }}
-          @else
-            @yield('content')
-          @endif
+    <!-- Main Content Area -->
+    <main class="flex-1 {{ request()->routeIs('home') || request()->routeIs('welcome') ? '' : 'pb-12' }} page-transition">
+      @if(request()->routeIs('home') || request()->routeIs('welcome'))
+        <!-- Landing page - no card wrapper -->
+        {{ $slot ?? '' }}
+        @yield('content')
+      @else
+        <!-- Other pages - with card wrapper -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
+            @if(isset($slot))
+              {{ $slot }}
+            @else
+              @yield('content')
+            @endif
+          </div>
         </div>
-      </div>
+      @endif
     </main>
 
     <!-- Modern Footer -->
@@ -860,8 +968,7 @@
           }
           
           // Apply dark mode
-          if (this.darkMode) {
-            document.documentElement.classList.add('dark');
+          if (this.darkMode) {document.documentElement.classList.add('dark');
           } else {
             document.documentElement.classList.remove('dark');
           }
