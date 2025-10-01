@@ -144,7 +144,181 @@ class MoodleCourseImportController extends Controller
             return back()->with('error', 'Export failed: ' . $e->getMessage());
         }
     }
-    
+    /**
+ * Show courses that exist in Moodle but not in local database
+ */
+public function missingCourses()
+{
+    try {
+        // Fetch all courses from Moodle
+        $moodleCourses = $this->syncService->fetchMoodleCourses();
+        
+        // Get all local course Moodle IDs
+        $localMoodleIds = Course::whereNotNull('moodle_course_id')
+            ->pluck('moodle_course_id')
+            ->toArray();
+        
+        // Find courses that exist in Moodle but not locally
+        $missingCourses = [];
+        foreach ($moodleCourses as $moodleCourse) {
+            if (!in_array($moodleCourse['id'], $localMoodleIds)) {
+                $missingCourses[] = [
+                    'moodle_id' => $moodleCourse['id'],
+                    'shortname' => $moodleCourse['shortname'] ?? 'N/A',
+                    'fullname' => $moodleCourse['fullname'] ?? 'N/A',
+                    'category' => $moodleCourse['categoryid'] ?? 'N/A',
+                    'visible' => $moodleCourse['visible'] ?? 1,
+                    'summary' => strip_tags($moodleCourse['summary'] ?? ''),
+                    'enrolled_count' => $moodleCourse['enrolledusercount'] ?? 0,
+                ];
+            }
+        }
+        
+        // Get statistics
+        $stats = [
+            'total_moodle' => count($moodleCourses),
+            'total_local' => Course::count(),
+            'synced' => count($localMoodleIds),
+            'missing' => count($missingCourses),
+        ];
+        
+        return view('admin.moodle.missing-courses', compact('missingCourses', 'stats'));
+        
+    } catch (\Exception $e) {
+        Log::error('Failed to fetch missing courses', [
+            'error' => $e->getMessage()
+        ]);
+        
+        return back()->with('error', 'Failed to fetch missing courses: ' . $e->getMessage());
+    }
+}
+
+    /**
+     * Download the import template
+     */
+    public function downloadTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="moodle_course_import_template.csv"',
+        ];
+        
+        $columns = [
+            'moodle_id',
+            'shortname',
+            'fullname',
+            'summary',
+            'visible',
+            'categoryid',
+            'format',
+            'startdate',
+            'enddate'
+        ];
+        
+        $sampleData = [
+            [
+                '123',
+                'CS101',
+                'Introduction to Computer Science',
+                'This course covers the fundamentals of computer science',
+                '1',
+                '10',
+                'topics',
+                '2025-01-01',
+                '2025-06-30'
+            ],
+            [
+                '124',
+                'MATH201',
+                'Advanced Mathematics',
+                'Advanced mathematical concepts and applications',
+                '1',
+                '11',
+                'weeks',
+                '2025-02-01',
+                '2025-07-31'
+            ]
+        ];
+        
+        $callback = function() use ($columns, $sampleData) {
+            $file = fopen('php://output', 'w');
+            
+            // Add UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Add headers
+            fputcsv($file, $columns);
+            
+            // Add sample data
+            foreach ($sampleData as $row) {
+                fputcsv($file, $row);
+            }
+            
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Get course sync status
+     */
+    public function courseStatus()
+    {
+        $courses = Course::select('id', 'title', 'moodle_course_id', 'moodle_course_shortname', 'status', 'created_at', 'updated_at')
+            ->paginate(20);
+        
+        $stats = [
+            'total' => Course::count(),
+            'synced' => Course::whereNotNull('moodle_course_id')->count(),
+            'not_synced' => Course::whereNull('moodle_course_id')->count(),
+            'active' => Course::where('status', 'active')->count(),
+            'inactive' => Course::where('status', 'inactive')->count(),
+        ];
+        
+        return view('admin.moodle.course-status', compact('courses', 'stats'));
+    }
+
+    /**
+     * Sync a single course to/from Moodle
+     */
+    public function syncSingleCourse(Request $request, Course $course)
+    {
+        try {
+            if (!$course->moodle_course_id) {
+                return back()->with('error', 'This course is not linked to Moodle');
+            }
+            
+            // Fetch course details from Moodle
+            $moodleCourses = $this->syncService->fetchMoodleCourses();
+            $moodleCourse = null;
+            
+            foreach ($moodleCourses as $mc) {
+                if ($mc['id'] == $course->moodle_course_id) {
+                    $moodleCourse = $mc;
+                    break;
+                }
+            }
+            
+            if (!$moodleCourse) {
+                return back()->with('error', 'Course not found in Moodle');
+            }
+            
+            // Update local course with Moodle data
+            $this->syncService->syncCourse($moodleCourse);
+            
+            return back()->with('success', 'Course synced successfully');
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to sync single course', [
+                'course_id' => $course->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return back()->with('error', 'Failed to sync course: ' . $e->getMessage());
+        }
+    }
+        
     /**
      * Parse uploaded file
      */

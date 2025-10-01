@@ -159,6 +159,12 @@ Route::middleware('auth')->group(function () {
                 Route::post('/bulk-assign', 'bulkAssignRoles')->name('bulkAssign');
             });
             
+            // Course Management
+            Route::prefix('courses')->name('courses.')->group(function () {
+                Route::get('/', [CourseController::class, 'adminIndex'])->name('index');
+                Route::delete('/bulk-delete', [CourseController::class, 'bulkDelete'])->name('bulkDelete');
+                Route::post('/bulk-status', [CourseController::class, 'bulkUpdateStatus'])->name('bulkStatus');
+            });
             // Enrollment Management
             Route::prefix('enrollments')->name('enrollments.')->controller(EnrollmentController::class)->group(function () {
                 Route::get('/', 'index')->name('index');

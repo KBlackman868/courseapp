@@ -388,6 +388,14 @@
                         }"
                         :class="{ 'snapped': snapped, 'reforming': !snapped && $el.classList.contains('snapped') }"
                         class="thanos-badge role-badge text-white mr-2">
+                  <a href="{{ route('admin.courses.index') }}" 
+                          class="px-3 py-1.5 rounded-lg text-sm font-medium...">
+                             Course Management
+                  </a>
+                                  <!-- Pagination -->
+                <div class="px-6 py-4 bg-gray-50">
+                    {{ $courses->links() }}
+                </div>
                     @if(auth()->user()->hasRole('superadmin')) 
                       THANOS 💎
                     @else 

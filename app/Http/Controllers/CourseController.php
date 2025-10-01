@@ -21,7 +21,11 @@ class CourseController extends Controller
     // Display a list of all courses
     public function index()
     {
-        $courses = Course::all();
+        // Server-side pagination - get 6 courses per page
+        $courses = Course::where('status', 'active')
+                        ->orderBy('created_at', 'desc')
+                        ->paginate(10); 
+        
         return view('courses.index', compact('courses'));
     }
 
@@ -177,6 +181,140 @@ class CourseController extends Controller
         return redirect()->route('courses.index')
         ->with('success', 'Course deleted successfully from local system.');
     }
+        /**
+     * Bulk delete courses
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'course_ids' => 'required|array',
+            'course_ids.*' => 'exists:courses,id'
+        ]);
+
+        try {
+            $deletedCount = 0;
+            $failedCount = 0;
+            
+            foreach ($request->course_ids as $courseId) {
+                $course = Course::find($courseId);
+                
+                // Check if course has enrollments
+                if ($course->enrollments()->exists()) {
+                    // Option 1: Skip deletion if has enrollments
+                    $failedCount++;
+                    continue;
+                    
+                    // Option 2: Delete enrollments first (uncomment if preferred)
+                    // $course->enrollments()->delete();
+                }
+                
+                // Delete the course
+                if ($course->delete()) {
+                    $deletedCount++;
+                    
+                    // Log the deletion
+                    Log::info('Course deleted', [
+                        'course_id' => $courseId,
+                        'title' => $course->title,
+                        'deleted_by' => auth()->id(),
+                        'moodle_course_id' => $course->moodle_course_id
+                    ]);
+                } else {
+                    $failedCount++;
+                }
+            }
+            
+            $message = "Deleted {$deletedCount} courses successfully.";
+            if ($failedCount > 0) {
+                $message .= " Failed to delete {$failedCount} courses (may have active enrollments).";
+            }
+            
+            return redirect()->back()->with('success', $message);
+            
+        } catch (\Exception $e) {
+            Log::error('Bulk delete courses failed', [
+                'error' => $e->getMessage(),
+                'course_ids' => $request->course_ids
+            ]);
+            
+            return redirect()->back()->with('error', 'Failed to delete courses: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Admin course management view
+     */
+    /**
+     * Admin course management view
+     */
+    public function adminIndex(Request $request)
+    {
+        $query = Course::with(['enrollments', 'category']);
+        
+        // Search functionality
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('moodle_course_shortname', 'like', "%{$search}%");
+            });
+        }
+        
+        // Filter by status
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        
+        // Filter by sync status
+        if ($request->has('sync_status')) {
+            if ($request->sync_status === 'synced') {
+                $query->whereNotNull('moodle_course_id');
+            } elseif ($request->sync_status === 'not_synced') {
+                $query->whereNull('moodle_course_id');
+            }
+        }
+        
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+        
+        // IMPORTANT: Use paginate() not get()
+        $courses = $query->paginate(20)->withQueryString();
+        
+        // Get statistics
+        $stats = [
+            'total' => Course::count(),
+            'active' => Course::where('status', 'active')->count(),
+            'inactive' => Course::where('status', 'inactive')->count(),
+            'synced' => Course::whereNotNull('moodle_course_id')->count(),
+            'not_synced' => Course::whereNull('moodle_course_id')->count(),
+        ];
+        
+        return view('admin.courses.index', compact('courses', 'stats'));
+    }
+        /**
+     * Bulk update course status
+     */
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'course_ids' => 'required|array',
+            'course_ids.*' => 'exists:courses,id',
+            'status' => 'required|in:active,inactive'
+        ]);
+
+        try {
+            $updated = Course::whereIn('id', $request->course_ids)
+                ->update(['status' => $request->status]);
+            
+            return redirect()->back()->with('success', "Updated status for {$updated} courses.");
+            
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to update course status: ' . $e->getMessage());
+        }
+}
 
     /**
      * Create a course in Moodle
