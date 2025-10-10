@@ -409,7 +409,7 @@
                   
                   <a href="{{ route('courses.index') }}" 
                     class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.*') && !request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
-                    Courses
+                    Course Management
                   </a>
                   
                   <a href="{{ route('admin.enrollments.index') }}" 

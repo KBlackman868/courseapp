@@ -47,7 +47,7 @@
                                 Create New Course
                             </a>
                         @else
-                            <a href="{{ route('courses.index') }}" class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-semibold text-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
+                            <a href="{{ route('dashboard') }}" class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-semibold text-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
                                 Browse Training Portal
                             </a>
                             <a href="{{ route('mycourses') }}" class="px-8 py-4 bg-white text-blue-600 rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
@@ -169,130 +169,185 @@
         </div>
     </section>
 
+    @php
+        // Fetch the first 3 active courses from the database
+        $featuredCourses = \App\Models\Course::where('status', 'active')
+            ->take(3)
+            ->get();
+        
+        // Define gradient classes for variety
+        $gradients = [
+            'from-red-500 to-pink-600',
+            'from-blue-500 to-indigo-600', 
+            'from-indigo-500 to-purple-600'
+        ];
+        
+        $badges = ['ESSENTIAL', 'ADVANCED', 'FOUNDATIONAL'];
+        $badgeColors = ['text-red-600', 'text-blue-600', 'text-indigo-600'];
+    @endphp
+
     <!-- Training Modules Section -->
     <section id="courses" class="py-20 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-4xl md:text-5xl font-bold mb-4">
-                    Comprehensive <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Training Modules</span>
+                    Featured <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Training Modules</span>
                 </h2>
                 <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    Specialized content developed for healthcare professionals at every level
+                    Explore our latest courses designed for healthcare professionals
                 </p>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Module Cards -->
-                <div class="group">
-                    <div class="bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
-                        <div class="relative h-48 bg-gradient-to-r from-red-500 to-pink-600 p-8 flex items-center justify-center">
-                            <svg class="w-24 h-24 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                            </svg>
-                            <div class="absolute top-4 right-4 bg-white text-red-600 px-3 py-1 rounded-full text-xs font-bold">
-                                ESSENTIAL
+                @forelse($featuredCourses as $index => $course)
+                    @php
+                        $enrollment = null;
+                        if(auth()->check()) {
+                            $enrollment = \App\Models\Enrollment::where('user_id', auth()->id())
+                                ->where('course_id', $course->id)
+                                ->first();
+                        }
+                        $isEnrolled = $enrollment && in_array($enrollment->status, ['pending', 'approved']);
+                        $enrollmentStatus = $enrollment ? $enrollment->status : null;
+                    @endphp
+                    
+                    <div class="group">
+                        <div class="bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
+                            <div class="relative h-48 bg-gradient-to-r {{ $gradients[$index % 3] }} p-8 flex items-center justify-center">
+                                @if($course->image)
+                                    <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" 
+                                         class="absolute inset-0 w-full h-full object-cover opacity-90">
+                                @else
+                                    <svg class="w-24 h-24 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                    </svg>
+                                @endif
+                                
+                                <!-- Status Badges -->
+                                <div class="absolute top-4 right-4 flex flex-col gap-2">
+                                    @if($course->moodle_course_id)
+                                        <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                            MOODLE
+                                        </span>
+                                    @endif
+                                    <span class="bg-white {{ $badgeColors[$index % 3] }} px-3 py-1 rounded-full text-xs font-bold">
+                                        {{ $badges[$index % 3] }}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="p-6">
-                            <div class="flex items-center mb-3">
-                                <span class="text-xs font-semibold text-red-600 bg-red-100 px-3 py-1 rounded-full">Clinical Training</span>
-                                <span class="ml-auto text-sm text-gray-500">45 Modules</span>
+                            <div class="p-6">
+                                <div class="flex items-center mb-3">
+                                    <span class="text-xs font-semibold {{ $badgeColors[$index % 3] }} bg-{{ str_replace('text-', '', $badgeColors[$index % 3]) }}-100 px-3 py-1 rounded-full">
+                                        @if($course->category)
+                                            {{ $course->category }}
+                                        @else
+                                            Healthcare Training
+                                        @endif
+                                    </span>
+                                    @if($isEnrolled)
+                                        @if($enrollmentStatus === 'approved')
+                                            <span class="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold">
+                                                Enrolled
+                                            </span>
+                                        @elseif($enrollmentStatus === 'pending')
+                                            <span class="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">
+                                                Pending
+                                            </span>
+                                        @endif
+                                    @endif
+                                </div>
+                                <h3 class="text-xl font-bold mb-2 line-clamp-2">{{ $course->title }}</h3>
+                                <p class="text-gray-600 mb-4 line-clamp-3">
+                                    {{ Str::limit($course->description, 100) }}
+                                </p>
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="text-sm text-gray-600">
+                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Self-paced
+                                    </div>
+                                    <span class="text-sm text-gray-500">Certificate Available</span>
+                                </div>
+                                
+                                @auth
+                                    @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                                        <a href="{{ route('courses.edit', $course) }}" class="block w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
+                                            Manage Course
+                                        </a>
+                                    @else
+                                        @if(!$isEnrolled)
+                                            <form action="{{ route('courses.enroll.store', $course) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                                    Enroll Now
+                                                </button>
+                                            </form>
+                                        @elseif($enrollmentStatus === 'approved')
+                                            <a href="{{ route('courses.show', $course) }}" class="block w-full px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-all duration-300 text-center">
+                                                Continue Learning
+                                            </a>
+                                        @else
+                                            <button disabled class="w-full px-6 py-2 bg-yellow-100 text-yellow-700 rounded-full font-semibold cursor-not-allowed">
+                                                Pending Approval
+                                            </button>
+                                        @endif
+                                    @endif
+                                @else
+                                    <a href="{{ route('register') }}" class="block w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
+                                        Get Started
+                                    </a>
+                                @endauth
                             </div>
-                            <h3 class="text-xl font-bold mb-2">HIV Care & Treatment</h3>
-                            <p class="text-gray-600 mb-4">Comprehensive HIV information resources, treatment protocols, and patient care guidelines.</p>
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="text-sm text-gray-600">For: All Healthcare Workers</div>
-                                <span class="text-sm text-gray-500">20 hours</span>
-                            </div>
-                            @auth
-                                <a href="{{ route('courses.index') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
-                                    Start Learning
-                                </a>
-                            @else
-                                <a href="{{ route('register') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
-                                    Get Started
-                                </a>
-                            @endauth
                         </div>
                     </div>
-                </div>
-                
-                <div class="group">
-                    <div class="bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
-                        <div class="relative h-48 bg-gradient-to-r from-blue-500 to-indigo-600 p-8 flex items-center justify-center">
-                            <svg class="w-24 h-24 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                            </svg>
-                            <div class="absolute top-4 right-4 bg-white text-blue-600 px-3 py-1 rounded-full text-xs font-bold">
-                                ADVANCED
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <div class="flex items-center mb-3">
-                                <span class="text-xs font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Medical Procedures</span>
-                                <span class="ml-auto text-sm text-gray-500">60 Modules</span>
-                            </div>
-                            <h3 class="text-xl font-bold mb-2">Clinical Applications & Protocols</h3>
-                            <p class="text-gray-600 mb-4">Advanced clinical procedures, diagnostic techniques, and treatment protocols for medical professionals.</p>
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="text-sm text-gray-600">For: Doctors & Nurses</div>
-                                <span class="text-sm text-gray-500">40 hours</span>
-                            </div>
-                            @auth
-                                <a href="{{ route('courses.index') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
-                                    Start Learning
+                @empty
+                    <!-- Fallback if no courses exist -->
+                    <div class="col-span-full text-center py-12">
+                        <svg class="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">No Courses Available Yet</h3>
+                        <p class="text-gray-600 mb-6">We're preparing amazing content for you. Check back soon!</p>
+                        @auth
+                            @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                                <a href="{{ route('courses.create') }}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Create First Course
                                 </a>
-                            @else
-                                <a href="{{ route('register') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
-                                    Get Started
-                                </a>
-                            @endauth
-                        </div>
+                            @endif
+                        @endauth
                     </div>
-                </div>
-                
-                <div class="group">
-                    <div class="bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
-                        <div class="relative h-48 bg-gradient-to-r from-indigo-500 to-purple-600 p-8 flex items-center justify-center">
-                            <svg class="w-24 h-24 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                            </svg>
-                            <div class="absolute top-4 right-4 bg-white text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
-                                FOUNDATIONAL
-                            </div>
-                        </div>
-                        <div class="p-6">
-                            <div class="flex items-center mb-3">
-                                <span class="text-xs font-semibold text-indigo-600 bg-indigo-100 px-3 py-1 rounded-full">Digital Skills</span>
-                                <span class="ml-auto text-sm text-gray-500">30 Modules</span>
-                            </div>
-                            <h3 class="text-xl font-bold mb-2">Computer Literacy Program</h3>
-                            <p class="text-gray-600 mb-4">Essential digital skills for healthcare information systems, EMR, and administrative tasks.</p>
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="text-sm text-gray-600">For: All Staff</div>
-                                <span class="text-sm text-gray-500">15 hours</span>
-                            </div>
-                            @auth
-                                <a href="{{ route('courses.index') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
-                                    Start Learning
-                                </a>
-                            @else
-                                <a href="{{ route('register') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
-                                    Get Started
-                                </a>
-                            @endauth
-                        </div>
-                    </div>
-                </div>
+                @endforelse
             </div>
             
             <div class="text-center mt-12">
-                <a href="{{ route('courses.index') }}" class="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-                    Browse All Training Modules
-                    <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </a>
+                @auth
+                    @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                        <a href="{{ route('courses.index') }}" class="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+                            Manage All Training Modules
+                            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    @else
+                        <a href="{{ route('dashboard') }}" class="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+                            Browse All Training Modules
+                            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    @endif
+                @else
+                    <a href="{{ route('register') }}" class="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+                        Get Started with Training
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                @endauth
             </div>
         </div>
     </section>

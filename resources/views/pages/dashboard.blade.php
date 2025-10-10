@@ -1,7 +1,7 @@
 <!-- resources/views/pages/dashboard.blade.php -->
 <x-layouts>
     <x-slot:heading>
-        Dashboard - Course Catalog
+    {{ Auth::user()->first_name }}'s Dashboard
     </x-slot:heading>
 
     @php
