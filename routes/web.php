@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\{
     CourseController,
     EnrollmentController,
@@ -66,6 +67,12 @@ Route::middleware('guest')->group(function () {
         Route::post('/register', 'register')->name('register.submit');
     });
     
+        // Google OAuth Routes
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirectToGoogle'])
+        ->name('auth.google');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])
+        ->name('auth.google.callback');
+
     // Password Reset Routes
     Route::prefix('password')->name('password.')->group(function () {
         Route::controller(ForgotPasswordController::class)->group(function () {

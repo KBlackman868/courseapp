@@ -45,9 +45,20 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+
+    'google' => [
+    'client_id' => env('GOOGLE_CLIENT_ID'),
+    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    'redirect' => env('GOOGLE_REDIRECT_URI'),
+    'allowed_domain' => env('GOOGLE_ALLOWED_DOMAIN'), // Optional: health.gov.tt
+    ],
+
     'moodle' => [
         'base_url' => env('MOODLE_BASE_URL', 'https://learnabouthealth.hin.gov.tt'),
         'token' => env('MOODLE_TOKEN', 'd6fc4e6a36c21396998527f094048936'),
+        'verify_ssl' => env('MOODLE_VERIFY_SSL', true),
+        'sso_enabled' => env('MOODLE_SSO_ENABLED', false),
+        'sso_secret' => env('MOODLE_SSO_SECRET'),
     ],
 
 ];

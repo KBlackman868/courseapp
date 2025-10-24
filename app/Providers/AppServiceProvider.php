@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Telescope\TelescopeServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\Enrollment;
@@ -21,6 +22,18 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Force HTTPS in production
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+            $this->app['request']->server->set('HTTPS', 'on');
+        }
+        
+        // Alternative: Force HTTPS based on env variable
+        if (env('FORCE_HTTPS', false)) {
+            URL::forceScheme('https');
+            $this->app['request']->server->set('HTTPS', 'on');
+        }
+
         // Share data with all views that use the layouts component
         View::composer('components.layouts', function ($view) {
             // Only calculate these for authenticated admin users

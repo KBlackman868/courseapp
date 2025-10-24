@@ -7,13 +7,16 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "aacotroneo/laravel-saml2": "^2.1",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/breeze": "^2.3",
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.23",
         "laravel/telescope": "^5.11",
         "laravel/tinker": "^2.9",
         "phpoffice/phpspreadsheet": "^5.1",
+        "socialiteproviders/google": "^4.1",
         "spatie/laravel-permission": "^6.16",
         "symfony/mailer": "^7.2",
         "tightenco/ziggy": "^2.0"
