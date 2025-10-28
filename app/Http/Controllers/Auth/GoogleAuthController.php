@@ -4,102 +4,345 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Jobs\CreateOrLinkMoodleUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Auth\Events\Registered;
 
 class GoogleAuthController extends Controller
 {
     /**
+     * Allowed email domains for Ministry of Health
+     */
+    private const ALLOWED_DOMAINS = [
+        'health.gov.tt',
+        'moh.gov.tt',
+    ];
+
+    /**
      * Redirect to Google OAuth
+     * This single method handles both login and registration
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        // Don't set intent - we'll auto-detect in callback
+        return Socialite::driver('google')
+            ->with(['hd' => 'health.gov.tt'])  // Hint domain
+            ->redirect();
+    }
+    
+    /**
+     * Alternative: Explicit registration route (optional)
+     */
+    public function redirectToGoogleForRegister()
+    {
+        session(['google_auth_intent' => 'register']);
+        return Socialite::driver('google')
+            ->with(['hd' => 'health.gov.tt'])
+            ->redirect();
     }
 
     /**
      * Handle Google OAuth callback
+     * SMART DETECTION: Automatically creates account if user doesn't exist
      */
-    public function handleGoogleCallback()
+    public function handleGoogleCallback(Request $request)
     {
         try {
-            // Get Google user data
-            $googleUser = Socialite::driver('google')->user();
+            Log::info('Google OAuth callback initiated');
             
-            Log::info('Google OAuth login attempt', [
-                'email' => $googleUser->getEmail(),
-                'name' => $googleUser->getName(),
-                'google_id' => $googleUser->getId()
-            ]);
+            // ===== SSL CERTIFICATE CONFIGURATION =====
+            $certPath = storage_path('certs/cacert.pem');
             
-            // Check if user exists by email
-            $user = User::where('email', $googleUser->getEmail())->first();
-            
-            if ($user) {
-                // User exists - update their Google ID if not set
-                if (!$user->google_id) {
-                    $user->update([
-                        'google_id' => $googleUser->getId(),
-                        'avatar' => $googleUser->getAvatar() ?? $user->avatar,
-                    ]);
-                    Log::info('Updated existing user with Google ID', ['user_id' => $user->id]);
-                }
-                
-                // Check if user is suspended
-                if ($user->is_suspended) {
-                    Log::warning('Suspended user attempted Google login', ['user_id' => $user->id]);
-                    return redirect('/login')->with('error', 'Your account has been suspended. Please contact support.');
-                }
-                
-            } else {
-                // Create new user
-                $user = User::create([
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'google_id' => $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
-                    'email_verified_at' => now(),
-                    'password' => Hash::make(Str::random(24)), // Random password since they use Google
+            if (file_exists($certPath) && is_readable($certPath)) {
+                $httpClient = new \GuzzleHttp\Client([
+                    'verify' => $certPath,
+                    'timeout' => 30,
                 ]);
-                
-                // Assign default role (student)
-                if (method_exists($user, 'assignRole')) {
-                    $user->assignRole('student');
-                }
-                
-                Log::info('Created new user via Google OAuth', ['user_id' => $user->id]);
-                
-                // Optionally dispatch job to create Moodle account
-                // if (class_exists(\App\Jobs\CreateOrLinkMoodleUser::class)) {
-                //     \App\Jobs\CreateOrLinkMoodleUser::dispatch($user);
-                // }
+            } else {
+                Log::warning('CA certificate not found - using insecure connection');
+                $httpClient = new \GuzzleHttp\Client([
+                    'verify' => false,
+                    'timeout' => 30,
+                ]);
             }
             
-            // Log the user in
-            Auth::login($user, true); // true = remember me
+            // Get Google user data
+            $googleUser = Socialite::driver('google')
+                ->stateless()
+                ->setHttpClient($httpClient)
+                ->user();
             
-            // Regenerate session for security
-            request()->session()->regenerate();
+            // ===== DOMAIN RESTRICTION CHECK =====
+            $email = $googleUser->getEmail();
+            $emailDomain = $this->getEmailDomain($email);
             
-            Log::info('User logged in successfully via Google', ['user_id' => $user->id]);
+            // Check if email domain is allowed
+            if (!$this->isDomainAllowed($emailDomain)) {
+                Log::warning('Unauthorized domain attempt', [
+                    'email' => $email,
+                    'domain' => $emailDomain,
+                ]);
+                
+                return redirect('/login')->with('error', 
+                    'Access restricted to Ministry of Health email accounts only. ' .
+                    'Please use your @health.gov.tt or @moh.gov.tt email address.'
+                );
+            }
             
-            // Redirect to intended page or dashboard
-            return redirect()->intended('/dashboard')->with('success', 'Welcome ' . $user->name . '!');
+            Log::info('Authorized MOH user authenticated', [
+                'email' => $email,
+                'domain' => $emailDomain,
+            ]);
             
-        } catch (\Laravel\Socialite\Two\InvalidStateException $e) {
-            Log::error('Google OAuth Invalid State', ['error' => $e->getMessage()]);
-            return redirect('/login')->with('error', 'Authentication failed. Please try again.');
+            // ===== EXTRACT PROPER NAMES =====
+            $googleUserArray = $googleUser->user;
+            $firstName = $googleUserArray['given_name'] ?? null;
+            $lastName = $googleUserArray['family_name'] ?? null;
+            
+            if (empty($firstName) || empty($lastName)) {
+                $nameParts = $this->parseFullName($googleUser->getName());
+                $firstName = $firstName ?: $nameParts['first_name'];
+                $lastName = $lastName ?: $nameParts['last_name'];
+            }
+            
+            // Never use TEST or generic names
+            if (strtoupper($firstName) === 'TEST' || empty(trim($firstName))) {
+                $emailParts = explode('@', $email);
+                $emailName = str_replace('.', ' ', $emailParts[0]);
+                $emailNameParts = explode(' ', $emailName);
+                $firstName = ucfirst($emailNameParts[0]);
+                $lastName = isset($emailNameParts[1]) ? ucfirst($emailNameParts[1]) : '';
+            }
+            
+            // ===== SMART USER HANDLING =====
+            // Check if user exists
+            $existingUser = User::where('email', $email)->first();
+            
+            if ($existingUser) {
+                // USER EXISTS - LOG THEM IN
+                return $this->loginExistingUser($existingUser, $googleUser, $firstName, $lastName);
+            } else {
+                // USER DOESN'T EXIST - CREATE NEW ACCOUNT
+                // This is the KEY CHANGE - we automatically create an account for valid MOH emails
+                return $this->createNewUser($googleUser, $firstName, $lastName);
+            }
             
         } catch (\Exception $e) {
             Log::error('Google OAuth Error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return redirect('/login')->with('error', 'Unable to login with Google. Please try again or use email/password.');
+            
+            return redirect('/login')->with('error', 
+                'Unable to authenticate with Google. Please try again.'
+            );
         }
+    }
+    
+    /**
+     * Create a new user account for MOH staff
+     */
+    private function createNewUser($googleUser, $firstName, $lastName)
+    {
+        Log::info('Creating new MOH user account', [
+            'email' => $googleUser->getEmail(),
+            'name' => "$firstName $lastName"
+        ]);
+        
+        // Create the user
+        $user = User::create([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => $googleUser->getEmail(),
+            'google_id' => $googleUser->getId(),
+            'profile_photo' => $googleUser->getAvatar(),
+            'email_verified_at' => now(),
+            'password' => Hash::make(Str::random(24)),
+            'department' => $this->inferDepartment($googleUser->getEmail()),
+            'organization' => 'Ministry of Health Trinidad and Tobago',
+            'verification_status' => 'verified',
+            'verification_sent_at' => now(),
+            'verification_attempts' => 0,
+            'must_verify_before' => null,
+        ]);
+        
+        // Assign default role
+        if (method_exists($user, 'assignRole')) {
+            $user->assignRole('user');
+        }
+        
+        Log::info('New MOH user created successfully', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+        
+        // Fire registration event
+        event(new Registered($user));
+        
+        // Create Moodle account if configured
+        if (class_exists(CreateOrLinkMoodleUser::class)) {
+            try {
+                CreateOrLinkMoodleUser::dispatch(
+                    $user,
+                    $user->email,
+                    $firstName,
+                    $lastName
+                );
+                Log::info('Moodle user creation job dispatched');
+            } catch (\Exception $e) {
+                Log::error('Failed to dispatch Moodle job', ['error' => $e->getMessage()]);
+            }
+        }
+        
+        // Log the user in
+        Auth::login($user, true);
+        
+        // Welcome message for new users
+        return redirect('/dashboard')->with('success', 
+            "Welcome to the Ministry of Health Learning Platform, $firstName! " .
+            "Your account has been created successfully. " .
+            "You can now access all training materials."
+        );
+    }
+    
+    /**
+     * Login an existing user
+     */
+    private function loginExistingUser($user, $googleUser, $firstName, $lastName)
+    {
+        // Check if suspended
+        if ($user->is_suspended ?? false) {
+            Log::warning('Suspended user login attempt', ['user_id' => $user->id]);
+            return redirect('/login')->with('error', 
+                'Your account has been suspended. Please contact IT support.'
+            );
+        }
+        
+        // Update user data if needed
+        $updates = [];
+        
+        // Link Google account if not linked
+        if (!$user->google_id) {
+            $updates['google_id'] = $googleUser->getId();
+            $updates['profile_photo'] = $user->profile_photo ?: $googleUser->getAvatar();
+        }
+        
+        // Fix TEST USER names
+        if (strtoupper($user->first_name) === 'TEST' || 
+            empty(trim($user->first_name)) ||
+            $user->first_name === 'User') {
+            $updates['first_name'] = $firstName;
+            $updates['last_name'] = $lastName;
+            Log::info('Updating generic name for user', [
+                'user_id' => $user->id,
+                'new_name' => "$firstName $lastName"
+            ]);
+        }
+        
+        // Verify email if not verified
+        if (!$user->email_verified_at) {
+            $updates['email_verified_at'] = now();
+            $updates['verification_status'] = 'verified';
+        }
+        
+        // Apply updates if any
+        if (!empty($updates)) {
+            $user->update($updates);
+        }
+        
+        // Log the user in
+        Auth::login($user, true);
+        
+        Log::info('MOH user logged in successfully', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+        
+        return redirect()->intended('/dashboard')->with('success', 
+            "Welcome back, $firstName!"
+        );
+    }
+    
+    /**
+     * Parse full name into first and last name
+     */
+    private function parseFullName($fullName)
+    {
+        $fullName = trim($fullName);
+        $fullName = preg_replace('/^test\s+/i', '', $fullName);
+        
+        $nameParts = explode(' ', $fullName);
+        
+        if (count($nameParts) == 1) {
+            return [
+                'first_name' => ucfirst($nameParts[0]),
+                'last_name' => '',
+            ];
+        } elseif (count($nameParts) == 2) {
+            return [
+                'first_name' => ucfirst($nameParts[0]),
+                'last_name' => ucfirst($nameParts[1]),
+            ];
+        } else {
+            $firstName = ucfirst(array_shift($nameParts));
+            $lastName = implode(' ', array_map('ucfirst', $nameParts));
+            return [
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+            ];
+        }
+    }
+    
+    /**
+     * Get domain from email address
+     */
+    private function getEmailDomain($email)
+    {
+        $parts = explode('@', $email);
+        return strtolower($parts[1] ?? '');
+    }
+    
+    /**
+     * Check if email domain is allowed
+     */
+    private function isDomainAllowed($domain)
+    {
+        return in_array($domain, array_map('strtolower', self::ALLOWED_DOMAINS));
+    }
+    
+    /**
+     * Try to infer department from email
+     */
+    private function inferDepartment($email)
+    {
+        $emailParts = explode('@', $email);
+        $localPart = $emailParts[0] ?? '';
+        
+        $departments = [
+            'cardiology' => 'Cardiology',
+            'emergency' => 'Emergency Medicine',
+            'pediatrics' => 'Pediatrics',
+            'surgery' => 'Surgery',
+            'nursing' => 'Nursing',
+            'pharmacy' => 'Pharmacy',
+            'lab' => 'Laboratory Services',
+            'admin' => 'Administration',
+            'it' => 'Information Technology',
+            'hr' => 'Human Resources',
+            'finance' => 'Finance',
+        ];
+        
+        foreach ($departments as $keyword => $department) {
+            if (stripos($localPart, $keyword) !== false) {
+                return $department;
+            }
+        }
+        
+        return 'Ministry of Health';
     }
 }

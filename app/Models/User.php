@@ -32,6 +32,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'verification_sent_at',
         'verification_attempts',
         'must_verify_before',
+        'google_id',
+        'is_suspended',
     ];
 
     /**
