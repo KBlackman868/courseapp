@@ -10,8 +10,9 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Notifications\NewCourseEnrollmentNotification;
-use App\Services\EmailNotificationService; 
+use App\Services\EmailNotificationService;
 use App\Services\MoodleClient;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +57,19 @@ class EnrollmentController extends Controller
             ->first();
 
         if ($existingEnrollment) {
+            // Log duplicate attempt
+            ActivityLogger::logEnrollment('duplicate_attempt', $existingEnrollment,
+                "User attempted duplicate enrollment in course: {$course->title}",
+                [
+                    'course_id' => $course->id,
+                    'course_title' => $course->title,
+                    'existing_status' => $existingEnrollment->status,
+                    'user_email' => $user->email
+                ],
+                'failed',
+                'warning'
+            );
+            
             return redirect()->back()->with('error', 'You are already enrolled in this course.');
         }
 
@@ -66,6 +80,18 @@ class EnrollmentController extends Controller
             'status'    => 'pending',
         ]);
 
+        // Log enrollment request
+        ActivityLogger::logEnrollment('requested', $enrollment, 
+            "User requested enrollment in course: {$course->title}",
+            [
+                'course_id' => $course->id,
+                'course_title' => $course->title,
+                'user_email' => $user->email,
+                'user_name' => "{$user->first_name} {$user->last_name}",
+                'department' => $user->department
+            ]
+        );
+
         // Send enrollment confirmation email - Method 1: Using Service
         if ($this->emailService) {
             try {
@@ -74,12 +100,26 @@ class EnrollmentController extends Controller
                     'enrollment_id' => $enrollment->id,
                     'user_email' => $user->email
                 ]);
+                
+                // Log email sent
+                ActivityLogger::logSystem('email_sent', 
+                    "Enrollment confirmation email sent to {$user->email}",
+                    ['enrollment_id' => $enrollment->id]
+                );
             } catch (\Exception $e) {
                 Log::error('Failed to send enrollment confirmation email via service', [
                     'error' => $e->getMessage(),
                     'enrollment_id' => $enrollment->id,
                     'trace' => $e->getTraceAsString()
                 ]);
+                
+                // Log email failure
+                ActivityLogger::logSystem('email_failed',
+                    "Failed to send enrollment confirmation to {$user->email}",
+                    ['error' => $e->getMessage()],
+                    'failed',
+                    'error'
+                );
                 
                 // Try direct mail as fallback
                 try {
@@ -122,6 +162,15 @@ class EnrollmentController extends Controller
                 'enrollment_id' => $enrollment->id,
                 'admin_count' => $superadmins->count()
             ]);
+            
+            // Log admin notification
+            ActivityLogger::logSystem('admin_notification_sent',
+                "Admin notifications sent for new enrollment",
+                [
+                    'enrollment_id' => $enrollment->id,
+                    'admin_count' => $superadmins->count()
+                ]
+            );
         } catch (\Exception $e) {
             Log::error('Failed to send admin notification email', [
                 'error' => $e->getMessage(),
@@ -152,6 +201,16 @@ class EnrollmentController extends Controller
 
         $users = User::all();
         
+        // Log admin viewing enrollments
+        ActivityLogger::logSystem('enrollment_list_viewed',
+            "Admin viewed {$status} enrollments",
+            [
+                'status_filter' => $status,
+                'count' => $enrollments->count(),
+                'admin' => auth()->user()->email
+            ]
+        );
+        
         return view('admin.approval_lists', compact('enrollments', 'status', 'users'));
     }
 
@@ -169,22 +228,64 @@ class EnrollmentController extends Controller
         $enrollment->status = $request->status;
         $enrollment->save();
 
-        // Send approval email if status changed to approved
+        // Log status changes
         if ($request->status === 'approved' && $oldStatus !== 'approved') {
-            // Send approval notification email
+            // Log approval
+            ActivityLogger::logEnrollment('approved', $enrollment,
+                "Enrollment approved for {$enrollment->user->email} in {$enrollment->course->title}",
+                [
+                    'approved_by' => auth()->user()->email,
+                    'user_id' => $enrollment->user_id,
+                    'course_id' => $enrollment->course_id,
+                    'old_status' => $oldStatus,
+                    'user_name' => "{$enrollment->user->first_name} {$enrollment->user->last_name}"
+                ]
+            );
+            
+            // Send approval email if status changed to approved
             if ($this->emailService) {
                 try {
                     $this->emailService->sendEnrollmentApproved($enrollment);
+                    
+                    // Log email sent
+                    ActivityLogger::logSystem('approval_email_sent',
+                        "Approval email sent to {$enrollment->user->email}",
+                        ['enrollment_id' => $enrollment->id]
+                    );
                 } catch (\Exception $e) {
                     Log::error('Failed to send enrollment approved email', [
                         'error' => $e->getMessage(),
                         'enrollment_id' => $enrollment->id
                     ]);
+                    
+                    // Log email failure
+                    ActivityLogger::logSystem('approval_email_failed',
+                        "Failed to send approval email to {$enrollment->user->email}",
+                        ['error' => $e->getMessage()],
+                        'failed',
+                        'error'
+                    );
                 }
             }
             
             // Sync to Moodle
             $this->syncApprovedEnrollmentToMoodle($enrollment);
+        }
+        
+        if ($request->status === 'denied' && $oldStatus !== 'denied') {
+            // Log denial
+            ActivityLogger::logEnrollment('denied', $enrollment,
+                "Enrollment denied for {$enrollment->user->email} in {$enrollment->course->title}",
+                [
+                    'denied_by' => auth()->user()->email,
+                    'user_id' => $enrollment->user_id,
+                    'course_id' => $enrollment->course_id,
+                    'old_status' => $oldStatus,
+                    'user_name' => "{$enrollment->user->first_name} {$enrollment->user->last_name}"
+                ],
+                'success',
+                'warning'
+            );
         }
 
         // If enrollment was previously approved but now denied/cancelled, remove from Moodle
@@ -194,8 +295,6 @@ class EnrollmentController extends Controller
 
         return redirect()->back()->with('success', 'Enrollment status updated successfully.');
     }
-
-    // ... rest of your methods remain the same ...
 
     /**
      * View the list of courses when enrolled
@@ -209,6 +308,15 @@ class EnrollmentController extends Controller
                                 ->with('course')
                                 ->get();
 
+        // Log user viewing their courses
+        ActivityLogger::logSystem('my_courses_viewed',
+            "User viewed their enrolled courses",
+            [
+                'user_id' => $user->id,
+                'course_count' => $enrollments->count()
+            ]
+        );
+
         return view('courses.mycourses', compact('enrollments'));
     }
 
@@ -220,6 +328,18 @@ class EnrollmentController extends Controller
         $enrollment = Enrollment::findOrFail($enrollmentId);
         
         if ($enrollment->user_id !== Auth::id() && !Auth::user()->hasRole(['admin', 'superadmin'])) {
+            // Log unauthorized attempt
+            ActivityLogger::logEnrollment('unenroll_blocked', $enrollment,
+                "Unauthorized unenroll attempt",
+                [
+                    'attempted_by' => auth()->user()->email,
+                    'enrollment_id' => $enrollmentId,
+                    'enrollment_user' => $enrollment->user->email
+                ],
+                'failed',
+                'warning'
+            );
+            
             return redirect()->back()->with('error', 'Unauthorized action.');
         }
 
@@ -227,6 +347,17 @@ class EnrollmentController extends Controller
         
         $enrollment->status = 'cancelled';
         $enrollment->save();
+
+        // Log cancellation
+        ActivityLogger::logEnrollment('cancelled', $enrollment,
+            "Enrollment cancelled for {$enrollment->user->email} in {$enrollment->course->title}",
+            [
+                'cancelled_by' => auth()->user()->email,
+                'old_status' => $oldStatus,
+                'self_cancelled' => $enrollment->user_id === Auth::id(),
+                'course_title' => $enrollment->course->title
+            ]
+        );
 
         if ($oldStatus === 'approved') {
             $this->removeEnrollmentFromMoodle($enrollment);
@@ -271,6 +402,15 @@ class EnrollmentController extends Controller
                         'user_id' => $user->id,
                         'enrollment_id' => $enrollment->id,
                     ]);
+                    
+                    // Log Moodle sync failure
+                    ActivityLogger::logMoodle('enrollment_sync_failed',
+                        "Failed to create Moodle user for enrollment",
+                        $enrollment,
+                        ['user_id' => $user->id],
+                        'failed',
+                        'error'
+                    );
                     return;
                 }
             }
@@ -284,12 +424,31 @@ class EnrollmentController extends Controller
                 'course_id' => $course->id,
                 'moodle_course_id' => $course->moodle_course_id,
             ]);
+            
+            // Log successful Moodle sync
+            ActivityLogger::logMoodle('enrollment_synced',
+                "Enrollment synced to Moodle for {$user->email}",
+                $enrollment,
+                [
+                    'moodle_user_id' => $user->moodle_user_id,
+                    'moodle_course_id' => $course->moodle_course_id
+                ]
+            );
 
         } catch (\Exception $e) {
             Log::error('Failed to sync enrollment to Moodle', [
                 'enrollment_id' => $enrollment->id,
                 'error' => $e->getMessage(),
             ]);
+            
+            // Log Moodle sync error
+            ActivityLogger::logMoodle('enrollment_sync_error',
+                "Error syncing enrollment to Moodle",
+                $enrollment,
+                ['error' => $e->getMessage()],
+                'failed',
+                'error'
+            );
         }
     }
 
@@ -327,12 +486,31 @@ class EnrollmentController extends Controller
                 'course_id' => $course->id,
                 'moodle_course_id' => $course->moodle_course_id,
             ]);
+            
+            // Log Moodle unenrollment
+            ActivityLogger::logMoodle('user_unenrolled',
+                "User removed from Moodle course",
+                $enrollment,
+                [
+                    'moodle_user_id' => $user->moodle_user_id,
+                    'moodle_course_id' => $course->moodle_course_id
+                ]
+            );
 
         } catch (\Exception $e) {
             Log::error('Failed to unenroll user from Moodle', [
                 'enrollment_id' => $enrollment->id,
                 'error' => $e->getMessage(),
             ]);
+            
+            // Log Moodle unenrollment error
+            ActivityLogger::logMoodle('unenroll_error',
+                "Failed to remove user from Moodle course",
+                $enrollment,
+                ['error' => $e->getMessage()],
+                'failed',
+                'error'
+            );
         }
     }
 
@@ -346,6 +524,13 @@ class EnrollmentController extends Controller
         if ($enrollment->status !== 'approved') {
             return redirect()->back()->with('error', 'Only approved enrollments can be synced to Moodle.');
         }
+
+        // Log manual sync attempt
+        ActivityLogger::logMoodle('manual_sync_initiated',
+            "Admin manually initiated Moodle sync for enrollment",
+            $enrollment,
+            ['admin' => auth()->user()->email]
+        );
 
         $this->syncApprovedEnrollmentToMoodle($enrollment);
 
@@ -367,6 +552,8 @@ class EnrollmentController extends Controller
             ->get();
 
         $syncCount = 0;
+        $failCount = 0;
+        
         foreach ($approvedEnrollments as $enrollment) {
             if (!$enrollment->user->moodle_user_id) {
                 CreateOrLinkMoodleUser::dispatchSync($enrollment->user);
@@ -383,8 +570,21 @@ class EnrollmentController extends Controller
                 Log::error('Failed to create Moodle user for bulk sync', [
                     'user_id' => $enrollment->user->id
                 ]);
+                $failCount++;
             }
         }
+        
+        // Log bulk sync
+        ActivityLogger::logMoodle('bulk_enrollment_sync',
+            "Bulk sync enrollments to Moodle for course: {$course->title}",
+            $course,
+            [
+                'total_enrollments' => $approvedEnrollments->count(),
+                'synced' => $syncCount,
+                'failed' => $failCount,
+                'admin' => auth()->user()->email
+            ]
+        );
 
         return redirect()->back()->with('success', "Initiated Moodle sync for {$syncCount} enrollments.");
     }

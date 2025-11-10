@@ -372,7 +372,10 @@ Route::middleware('auth')->group(function () {
 |==========================================================================
 */
 Route::middleware(['auth', 'verified', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
-    // Add superadmin-only routes here if needed
+    Route::get('/', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('index');
+    Route::get('/live', [\App\Http\Controllers\Admin\ActivityLogController::class, 'live'])->name('live');
+    Route::get('/export', [\App\Http\Controllers\Admin\ActivityLogController::class, 'export'])->name('export');
+    Route::get('/{log}', [\App\Http\Controllers\Admin\ActivityLogController::class, 'show'])->name('show');
 });
 
 /*

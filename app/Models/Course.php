@@ -18,6 +18,7 @@ class Course extends Model
         'moodle_course_id',
         'moodle_course_shortname',
         'category_id',
+        'creator_id'
     ];
 
     protected $casts = [

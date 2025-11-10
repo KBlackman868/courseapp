@@ -714,7 +714,12 @@
                 </a>
               @endif
             @endif
-            
+            @role('superadmin')
+                <a href="{{ route('admin.activity-logs.index') }}" 
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    🔍 Activity Logs
+                </a>
+            @endrole
             <hr class="my-2 border-gray-200 dark:border-gray-700">
             
             <!-- Profile and Settings -->

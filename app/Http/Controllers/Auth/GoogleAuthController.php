@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Jobs\CreateOrLinkMoodleUser;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -88,6 +89,13 @@ class GoogleAuthController extends Controller
                     'domain' => $emailDomain,
                 ]);
                 
+                // Log failed attempt
+                ActivityLogger::logAuth('google_login_blocked', "Unauthorized domain login attempt", [
+                    'email' => $email,
+                    'domain' => $emailDomain,
+                    'ip_address' => $request->ip()
+                ], 'failed', 'warning');
+                
                 return redirect('/login')->with('error', 
                     'Access restricted to Ministry of Health email accounts only. ' .
                     'Please use your @health.gov.tt or @moh.gov.tt email address.'
@@ -138,6 +146,12 @@ class GoogleAuthController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
+            // Log the error
+            ActivityLogger::logAuth('google_oauth_error', "Google OAuth authentication failed", [
+                'error' => $e->getMessage(),
+                'ip_address' => $request->ip()
+            ], 'failed', 'error');
+            
             return redirect('/login')->with('error', 
                 'Unable to authenticate with Google. Please try again.'
             );
@@ -181,6 +195,16 @@ class GoogleAuthController extends Controller
             'email' => $user->email,
         ]);
         
+        // Log the registration
+        ActivityLogger::logAuth('google_register', "New MOH user registered via Google OAuth", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'domain' => $this->getEmailDomain($user->email),
+            'organization' => 'Ministry of Health Trinidad and Tobago',
+            'google_id' => $googleUser->getId(),
+            'ip_address' => request()->ip()
+        ]);
+        
         // Fire registration event
         event(new Registered($user));
         
@@ -194,8 +218,24 @@ class GoogleAuthController extends Controller
                     $lastName
                 );
                 Log::info('Moodle user creation job dispatched');
+                
+                // Log Moodle sync attempt
+                ActivityLogger::logMoodle('user_sync_dispatched', 
+                    "Moodle user creation job dispatched for new user", 
+                    $user,
+                    ['email' => $user->email]
+                );
             } catch (\Exception $e) {
                 Log::error('Failed to dispatch Moodle job', ['error' => $e->getMessage()]);
+                
+                // Log Moodle sync failure
+                ActivityLogger::logMoodle('user_sync_failed',
+                    "Failed to dispatch Moodle user creation",
+                    $user,
+                    ['error' => $e->getMessage()],
+                    'failed',
+                    'error'
+                );
             }
         }
         
@@ -218,6 +258,15 @@ class GoogleAuthController extends Controller
         // Check if suspended
         if ($user->is_suspended ?? false) {
             Log::warning('Suspended user login attempt', ['user_id' => $user->id]);
+            
+            // Log the blocked login
+            ActivityLogger::logAuth('login_blocked', "Suspended user attempted login", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'reason' => 'suspended',
+                'ip_address' => request()->ip()
+            ], 'failed', 'warning');
+            
             return redirect('/login')->with('error', 
                 'Your account has been suspended. Please contact IT support.'
             );
@@ -261,6 +310,17 @@ class GoogleAuthController extends Controller
         Log::info('MOH user logged in successfully', [
             'user_id' => $user->id,
             'email' => $user->email,
+        ]);
+        
+        // Log successful login
+        $emailDomain = $this->getEmailDomain($user->email);
+        ActivityLogger::logAuth('google_login', "User logged in via Google OAuth", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'domain' => $emailDomain,
+            'google_id' => $googleUser->getId(),
+            'ip_address' => request()->ip(),
+            'profile_updated' => !empty($updates)
         ]);
         
         return redirect()->intended('/dashboard')->with('success', 
