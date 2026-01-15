@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Jobs\CreateOrLinkMoodleUser;
 use App\Mail\WelcomeEmail;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,13 @@ use Illuminate\Auth\Events\Registered;
 
 class RegisterController extends Controller
 {
-    protected $redirectTo = '/email/verify';
+    protected $redirectTo = '/auth/otp/verify';
+    protected OtpService $otpService;
+
+    public function __construct(OtpService $otpService)
+    {
+        $this->otpService = $otpService;
+    }
 
     public function showRegistrationForm()
     {
@@ -41,19 +48,19 @@ class RegisterController extends Controller
             'password'   => Hash::make($validatedData['password']),
             'department' => $validatedData['department'],
             'temp_moodle_password' => encrypt($validatedData['password']),
-            // ADD THESE NEW FIELDS
             'verification_status' => 'pending',
             'verification_sent_at' => now(),
             'verification_attempts' => 1,
             'must_verify_before' => now()->addHours(48),
+            'initial_otp_completed' => false,
         ]);
 
         // Assign default role
         $user->assignRole('user');
-        
+
         // Store the plain password temporarily for Moodle sync
         Cache::put('moodle_temp_password_' . $user->id, $validatedData['password'], 300);
-        
+
         Log::info('New user registered', [
             'user_id' => $user->id,
             'email' => $user->email,
@@ -61,20 +68,28 @@ class RegisterController extends Controller
             'must_verify_before' => $user->must_verify_before,
         ]);
 
-        // Fire the Registered event to send verification email
-        event(new Registered($user));
-        
-        // Send additional welcome email with credentials
-        Mail::to($user->email)->send(new WelcomeEmail($user, $validatedData['password']));
+        // Send OTP for verification instead of email link
+        $otpResult = $this->otpService->sendOtp($user);
 
-        // Log the user in
-        Auth::login($user);
+        if (!$otpResult['success']) {
+            Log::error('Failed to send OTP during registration', [
+                'user_id' => $user->id,
+                'error' => $otpResult['message']
+            ]);
+        }
+
+        // Store user ID in session for OTP verification (don't log them in yet)
+        session(['otp_user_id' => $user->id]);
+        session(['registration_pending' => true]);
+
+        // Send welcome email with credentials (queued)
+        Mail::to($user->email)->queue(new WelcomeEmail($user, $validatedData['password']));
 
         // Clear any session messages to prevent duplicates
         session()->forget(['success', 'error', 'message']);
 
-        // Redirect to email verification page
-        return redirect('/email/verify')
-            ->with('success', 'Registration successful! Please check your email to verify your account.');
+        // Redirect to OTP verification page
+        return redirect()->route('auth.otp.verify')
+            ->with('success', 'Registration successful! Please enter the verification code sent to your email.');
     }
 }

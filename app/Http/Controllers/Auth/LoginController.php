@@ -246,22 +246,43 @@ class LoginController extends Controller
             return back()->withErrors(['otp' => $result['message']]);
         }
 
+        // Check if this is a new registration - also verify email
+        $isNewRegistration = session('registration_pending', false);
+        if ($isNewRegistration) {
+            $user->update([
+                'email_verified_at' => now(),
+                'verification_status' => 'verified',
+            ]);
+
+            Log::info('New user email verified via OTP', [
+                'user_id' => $user->id,
+                'email' => $user->email
+            ]);
+        }
+
         // Clear session
-        session()->forget('otp_user_id');
+        session()->forget(['otp_user_id', 'registration_pending']);
 
         // Log the user in
         Auth::login($user, true);
 
         if (class_exists(ActivityLogger::class)) {
-            ActivityLogger::logAuth('otp_verified', 'User completed OTP verification', [
+            $action = $isNewRegistration ? 'registration_verified' : 'otp_verified';
+            $message = $isNewRegistration ? 'New user completed registration verification' : 'User completed OTP verification';
+
+            ActivityLogger::logAuth($action, $message, [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'ip_address' => $request->ip()
             ]);
         }
 
+        $welcomeMessage = $isNewRegistration
+            ? "Welcome, {$user->first_name}! Your account has been created and verified."
+            : "Welcome back, {$user->first_name}! Your account has been verified.";
+
         return redirect()->intended($this->redirectTo)
-            ->with('success', "Welcome, {$user->first_name}! Your account has been verified.");
+            ->with('success', $welcomeMessage);
     }
 
     /**
