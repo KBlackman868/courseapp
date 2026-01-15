@@ -246,22 +246,56 @@ class LoginController extends Controller
             return back()->withErrors(['otp' => $result['message']]);
         }
 
-        // Clear session
-        session()->forget('otp_user_id');
+        // Check if this is a new registration completing verification
+        $isNewRegistration = session('registration_pending', false);
+
+        // Clear session flags
+        session()->forget(['otp_user_id', 'registration_pending']);
 
         // Log the user in
         Auth::login($user, true);
+        $request->session()->regenerate();
 
         if (class_exists(ActivityLogger::class)) {
-            ActivityLogger::logAuth('otp_verified', 'User completed OTP verification', [
+            $action = $isNewRegistration ? 'registration_verified' : 'otp_verified';
+            $description = $isNewRegistration
+                ? 'New user completed email verification'
+                : 'User completed OTP verification';
+
+            ActivityLogger::logAuth($action, $description, [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'ip_address' => $request->ip()
             ]);
         }
 
+        // For new registrations, send welcome email and trigger Moodle sync
+        if ($isNewRegistration) {
+            try {
+                // Send welcome email with credentials
+                $tempPassword = \Illuminate\Support\Facades\Cache::get('moodle_temp_password_' . $user->id);
+                if ($tempPassword && class_exists(\App\Mail\WelcomeEmail::class)) {
+                    \Illuminate\Support\Facades\Mail::to($user->email)
+                        ->send(new \App\Mail\WelcomeEmail($user, $tempPassword));
+                }
+
+                // Queue Moodle user creation
+                if (class_exists(\App\Jobs\CreateOrLinkMoodleUser::class)) {
+                    \App\Jobs\CreateOrLinkMoodleUser::dispatch($user);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Post-verification tasks failed', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            return redirect()->intended($this->redirectTo)
+                ->with('success', "Welcome, {$user->first_name}! Your email has been verified and your account is now active.");
+        }
+
         return redirect()->intended($this->redirectTo)
-            ->with('success', "Welcome, {$user->first_name}! Your account has been verified.");
+            ->with('success', "Welcome back, {$user->first_name}! Your identity has been verified.");
     }
 
     /**

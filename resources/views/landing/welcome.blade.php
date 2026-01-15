@@ -39,7 +39,18 @@
                             Explore Modules
                         </a>
                     @else
-                        @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                        @php
+                            $isVerified = auth()->user()->hasVerifiedEmail() || auth()->user()->initial_otp_completed;
+                        @endphp
+                        @if(!$isVerified)
+                            {{-- Unverified user - show verification prompt --}}
+                            <a href="{{ route('verification.notice') }}" class="px-8 py-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-full font-semibold text-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
+                                Verify Your Email
+                            </a>
+                            <span class="px-8 py-4 bg-gray-200 text-gray-500 rounded-full font-semibold text-lg cursor-not-allowed">
+                                Access Pending Verification
+                            </span>
+                        @elseif(auth()->user()->hasRole(['admin', 'superadmin']))
                             <a href="{{ route('courses.index') }}" class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-semibold text-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
                                 Manage Training Modules
                             </a>
@@ -271,7 +282,15 @@
                                 </div>
                                 
                                 @auth
-                                    @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                                    @php
+                                        $userVerified = auth()->user()->hasVerifiedEmail() || auth()->user()->initial_otp_completed;
+                                    @endphp
+                                    @if(!$userVerified)
+                                        {{-- Unverified user cannot enroll --}}
+                                        <a href="{{ route('verification.notice') }}" class="block w-full px-6 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
+                                            Verify Email to Enroll
+                                        </a>
+                                    @elseif(auth()->user()->hasRole(['admin', 'superadmin']))
                                         <a href="{{ route('courses.index', $course) }}" class="block w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
                                             Manage Course
                                         </a>
@@ -325,7 +344,17 @@
             
             <div class="text-center mt-12">
                 @auth
-                    @if(auth()->user()->hasRole(['admin', 'superadmin']))
+                    @php
+                        $bottomVerified = auth()->user()->hasVerifiedEmail() || auth()->user()->initial_otp_completed;
+                    @endphp
+                    @if(!$bottomVerified)
+                        <a href="{{ route('verification.notice') }}" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+                            Verify Your Email to Continue
+                            <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    @elseif(auth()->user()->hasRole(['admin', 'superadmin']))
                         <a href="{{ route('courses.index') }}" class="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
                             Manage All Training Modules
                             <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
