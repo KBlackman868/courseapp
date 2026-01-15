@@ -242,11 +242,13 @@ Route::middleware('auth')->group(function () {
             // User Management
             Route::prefix('users')->name('users.')->controller(UserManagementController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
+                // IMPORTANT: Static routes MUST come before dynamic {user} routes
+                Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
+                // Dynamic routes with {user} parameter
                 Route::post('/{user}/role', 'updateRole')->name('updateRole');
                 Route::delete('/{user}', 'destroy')->name('destroy');
                 Route::patch('/{user}/suspend', 'suspend')->name('suspend');
                 Route::patch('/{user}/reactivate', 'reactivate')->name('reactivate');
-                Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
             });
             
             // Role Management

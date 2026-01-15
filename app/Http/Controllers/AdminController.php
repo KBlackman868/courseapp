@@ -11,10 +11,16 @@ use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
-    // List pending enrollment requests
-    public function enrollmentRequests()
+    // List pending enrollment requests with server-side pagination
+    public function enrollmentRequests(Request $request)
     {
-        $enrollments = Enrollment::where('status', 'pending')->with('user', 'course')->get();
+        $perPage = $request->query('per_page', 20);
+
+        $enrollments = Enrollment::where('status', 'pending')
+            ->with('user', 'course')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
         return view('admin.enrollments.index', compact('enrollments'));
     }
 
