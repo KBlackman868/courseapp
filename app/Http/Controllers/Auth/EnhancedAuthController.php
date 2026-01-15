@@ -93,6 +93,7 @@ class EnhancedAuthController extends Controller
 
         // Login the user
         Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate(); // SECURITY: Prevent session fixation attacks
 
         // Log successful login
         ActivityLogger::logAuth('ldap_login', "Internal user logged in via LDAP", [
@@ -169,6 +170,7 @@ class EnhancedAuthController extends Controller
 
         // Login the user
         Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate(); // SECURITY: Prevent session fixation attacks
 
         // Log successful login
         ActivityLogger::logAuth('login', "External user logged in", [
@@ -361,12 +363,13 @@ class EnhancedAuthController extends Controller
             ]);
         }
 
-        // Clear session
+        // Clear session data but preserve CSRF token
         $remember = Session::get('otp_remember', false);
         Session::forget(['otp_user_id', 'otp_remember']);
 
         // Login the user
         Auth::login($user, $remember);
+        request()->session()->regenerate(); // SECURITY: Prevent session fixation attacks
 
         // Log successful verification
         ActivityLogger::logAuth('otp_verified', "OTP verification successful - initial login completed", [

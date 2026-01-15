@@ -45,6 +45,7 @@ class EnrollmentController extends Controller
 
     /**
      * Store a new enrollment request
+     * Internal MOH users are auto-approved, external users require approval
      */
     public function store(Request $request, Course $course)
     {
@@ -69,16 +70,40 @@ class EnrollmentController extends Controller
                 'failed',
                 'warning'
             );
-            
+
             return redirect()->back()->with('error', 'You are already enrolled in this course.');
         }
 
-        // Create the enrollment record with status pending
+        // Determine enrollment status based on user type
+        // Internal MOH users are auto-approved, external users need approval
+        $isInternal = $user->isInternal();
+        $initialStatus = $isInternal ? 'approved' : 'pending';
+
+        // Create the enrollment record
         $enrollment = Enrollment::create([
             'user_id'   => $user->id,
             'course_id' => $course->id,
-            'status'    => 'pending',
+            'status'    => $initialStatus,
         ]);
+
+        // Auto-approved internal users: sync to Moodle immediately
+        if ($isInternal && $initialStatus === 'approved') {
+            ActivityLogger::logEnrollment('auto_approved', $enrollment,
+                "MOH staff auto-approved for enrollment in course: {$course->title}",
+                [
+                    'course_id' => $course->id,
+                    'course_title' => $course->title,
+                    'user_email' => $user->email,
+                    'user_type' => 'internal'
+                ]
+            );
+
+            // Sync to Moodle
+            $this->syncApprovedEnrollmentToMoodle($enrollment);
+
+            return redirect()->route('courses.show', $course)
+                ->with('success', 'You have been enrolled in this course. You can now access the course content.');
+        }
 
         // Log enrollment request
         ActivityLogger::logEnrollment('requested', $enrollment, 
@@ -152,29 +177,35 @@ class EnrollmentController extends Controller
             }
         }
 
-        // Send notification email to superadmins
+        // Send notification email to course administrators
+        // Routes to: Course creator > Course admins > General admins > Superadmins
         try {
-            $superadmins = User::role('superadmin')->get();
-            foreach ($superadmins as $admin) {
+            $courseAdmins = $course->getEnrollmentAdmins();
+            foreach ($courseAdmins as $admin) {
                 Mail::to($admin->email)->send(new NewCourseEnrollmentEmail($enrollment));
             }
-            Log::info('Admin notifications sent', [
+            Log::info('Course admin notifications sent', [
                 'enrollment_id' => $enrollment->id,
-                'admin_count' => $superadmins->count()
+                'admin_count' => $courseAdmins->count(),
+                'admin_emails' => $courseAdmins->pluck('email')->toArray()
             ]);
-            
+
             // Log admin notification
             ActivityLogger::logSystem('admin_notification_sent',
-                "Admin notifications sent for new enrollment",
+                "Course admin notifications sent for enrollment request",
                 [
                     'enrollment_id' => $enrollment->id,
-                    'admin_count' => $superadmins->count()
+                    'admin_count' => $courseAdmins->count(),
+                    'course_id' => $course->id,
+                    'course_title' => $course->title,
+                    'user_type' => $user->user_type
                 ]
             );
         } catch (\Exception $e) {
-            Log::error('Failed to send admin notification email', [
+            Log::error('Failed to send course admin notification email', [
                 'error' => $e->getMessage(),
-                'enrollment_id' => $enrollment->id
+                'enrollment_id' => $enrollment->id,
+                'course_id' => $course->id
             ]);
         }
 

@@ -38,27 +38,162 @@ class CourseController extends Controller
     public function show($id)
     {
         $course = Course::findOrFail($id);
-        
+        $user = auth()->user();
+
+        // Get user's enrollment status for this course
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->first();
+
+        // Determine access level based on user type
+        $accessLevel = $this->determineAccessLevel($user, $course, $enrollment);
+
         // Log course view
         ActivityLogger::logCourse('viewed', $course,
             "User viewed course details: {$course->title}",
-            ['user_id' => auth()->id()]
+            [
+                'user_id' => $user->id,
+                'user_type' => $user->user_type,
+                'enrollment_status' => $enrollment?->status
+            ]
         );
-        
-        return view('courses.show', compact('course'));
+
+        return view('courses.show', compact('course', 'enrollment', 'accessLevel'));
+    }
+
+    /**
+     * Determine course access level for a user
+     * Returns: 'direct_access' | 'enrolled' | 'pending' | 'request_access' | 'enroll' | 'denied'
+     */
+    private function determineAccessLevel($user, Course $course, ?Enrollment $enrollment): array
+    {
+        $isInternal = $user->isInternal();
+        $hasMoodleSync = $course->moodle_course_id !== null;
+
+        // Check enrollment status first
+        if ($enrollment) {
+            switch ($enrollment->status) {
+                case 'approved':
+                    return [
+                        'level' => 'enrolled',
+                        'can_access_moodle' => $hasMoodleSync && $user->moodle_user_id,
+                        'message' => 'You are enrolled in this course.',
+                        'action' => $hasMoodleSync ? 'access_course' : 'view_content'
+                    ];
+                case 'pending':
+                    return [
+                        'level' => 'pending',
+                        'can_access_moodle' => false,
+                        'message' => 'Your enrollment request is pending approval.',
+                        'action' => 'wait'
+                    ];
+                case 'denied':
+                    return [
+                        'level' => 'denied',
+                        'can_access_moodle' => false,
+                        'message' => 'Your enrollment request was not approved. Contact the course administrator.',
+                        'action' => 'contact'
+                    ];
+            }
+        }
+
+        // No enrollment - determine action based on user type
+        if ($isInternal) {
+            // MOH staff: Direct enrollment path
+            return [
+                'level' => 'enroll',
+                'can_access_moodle' => false,
+                'message' => 'As Ministry of Health staff, you can enroll directly.',
+                'action' => 'enroll_direct',
+                'button_text' => 'Enroll Now',
+                'button_style' => 'primary'
+            ];
+        } else {
+            // External users: Request-approval path
+            return [
+                'level' => 'request_access',
+                'can_access_moodle' => false,
+                'message' => 'External users require approval to access this course.',
+                'action' => 'request_access',
+                'button_text' => 'Request Access',
+                'button_style' => 'secondary'
+            ];
+        }
+    }
+
+    /**
+     * Direct access to Moodle course for enrolled users
+     * MOH users with approved enrollment are redirected directly to Moodle via SSO
+     */
+    public function accessMoodle($id)
+    {
+        $course = Course::findOrFail($id);
+        $user = auth()->user();
+
+        // Verify user has approved enrollment
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('status', 'approved')
+            ->first();
+
+        if (!$enrollment) {
+            ActivityLogger::logCourse('access_denied', $course,
+                "User attempted to access Moodle course without enrollment",
+                ['user_id' => $user->id, 'user_email' => $user->email]
+            );
+
+            return redirect()->route('courses.show', $course)
+                ->with('error', 'You must be enrolled in this course to access it.');
+        }
+
+        // Verify course has Moodle integration
+        if (!$course->moodle_course_id) {
+            return redirect()->route('courses.show', $course)
+                ->with('error', 'This course is not yet available in Moodle.');
+        }
+
+        // Ensure user has Moodle account
+        if (!$user->moodle_user_id) {
+            // Trigger Moodle user creation if needed
+            \App\Jobs\CreateOrLinkMoodleUser::dispatchSync($user);
+            $user->refresh();
+
+            if (!$user->moodle_user_id) {
+                return redirect()->route('courses.show', $course)
+                    ->with('info', 'Your Moodle account is being set up. Please try again in a few moments.');
+            }
+        }
+
+        // Log Moodle access
+        ActivityLogger::logMoodle('course_accessed',
+            "User accessed Moodle course: {$course->title}",
+            $course,
+            [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'user_type' => $user->user_type,
+                'moodle_user_id' => $user->moodle_user_id
+            ]
+        );
+
+        // Build Moodle URL and redirect
+        $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
+        $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+
+        return redirect()->away($moodleUrl);
     }
 
     // Display the registration page for a specific course (GET)
     public function register($id)
     {
         $course = Course::findOrFail($id);
-        
+
         // Log registration page view
         ActivityLogger::logCourse('registration_viewed', $course,
             "User viewed registration page for: {$course->title}",
             ['user_id' => auth()->id()]
         );
-        
+
         return view('courses.register', compact('course'));
     }
 
