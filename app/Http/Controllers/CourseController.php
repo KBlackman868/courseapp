@@ -330,20 +330,31 @@ class CourseController extends Controller
             $failedCount = 0;
             $deletedCourses = [];
             $skippedCourses = [];
-            
+
+            // PERFORMANCE FIX: Load all courses at once with enrollment count
+            $courses = Course::whereIn('id', $request->course_ids)
+                ->withCount('enrollments')
+                ->get()
+                ->keyBy('id');
+
             foreach ($request->course_ids as $courseId) {
-                $course = Course::find($courseId);
-                
-                // Check if course has enrollments
-                if ($course->enrollments()->exists()) {
+                $course = $courses->get($courseId);
+
+                if (!$course) {
+                    $failedCount++;
+                    continue;
+                }
+
+                // Check if course has enrollments using pre-loaded count
+                if ($course->enrollments_count > 0) {
                     $failedCount++;
                     $skippedCourses[] = $course->title;
-                    
+
                     // Log skipped deletion
                     ActivityLogger::logCourse('delete_skipped', $course,
                         "Course deletion skipped due to active enrollments: {$course->title}",
                         [
-                            'enrollment_count' => $course->enrollments()->count(),
+                            'enrollment_count' => $course->enrollments_count,
                             'attempted_by' => auth()->user()->email
                         ],
                         'failed',
@@ -351,13 +362,13 @@ class CourseController extends Controller
                     );
                     continue;
                 }
-                
+
                 // Delete the course
                 $courseTitle = $course->title;
                 if ($course->delete()) {
                     $deletedCount++;
                     $deletedCourses[] = $courseTitle;
-                    
+
                     // Log successful deletion
                     ActivityLogger::logCourse('bulk_deleted', null,
                         "Course deleted in bulk operation: {$courseTitle}",
@@ -496,11 +507,14 @@ class CourseController extends Controller
         $errors = [];
         $syncedCourses = [];
         $failedCourses = [];
-        
+
+        // PERFORMANCE FIX: Load all courses at once
+        $courses = Course::whereIn('id', $request->course_ids)->get()->keyBy('id');
+
         foreach ($request->course_ids as $courseId) {
             try {
-                $course = Course::find($courseId);
-                
+                $course = $courses->get($courseId);
+
                 if (!$course) {
                     $failedCount++;
                     continue;
@@ -623,13 +637,21 @@ class CourseController extends Controller
         // IMPORTANT: Use paginate() not get()
         $courses = $query->paginate(20)->withQueryString();
         
-        // Get statistics
+        // PERFORMANCE FIX: Get all statistics in a single query
+        $statsRaw = DB::table('courses')
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive")
+            ->selectRaw('SUM(CASE WHEN moodle_course_id IS NOT NULL THEN 1 ELSE 0 END) as synced')
+            ->selectRaw('SUM(CASE WHEN moodle_course_id IS NULL THEN 1 ELSE 0 END) as not_synced')
+            ->first();
+
         $stats = [
-            'total' => Course::count(),
-            'active' => Course::where('status', 'active')->count(),
-            'inactive' => Course::where('status', 'inactive')->count(),
-            'synced' => Course::whereNotNull('moodle_course_id')->count(),
-            'not_synced' => Course::whereNull('moodle_course_id')->count(),
+            'total' => (int) $statsRaw->total,
+            'active' => (int) $statsRaw->active,
+            'inactive' => (int) $statsRaw->inactive,
+            'synced' => (int) $statsRaw->synced,
+            'not_synced' => (int) $statsRaw->not_synced,
         ];
         
         // Log admin viewing courses
