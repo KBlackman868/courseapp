@@ -54,27 +54,33 @@ Route::get('/home', fn() => redirect('/'));
 | GUEST ONLY ROUTES
 |==========================================================================
 */
+/*
+|----------------------------------------------------------------------
+| OTP VERIFICATION ROUTES (Accessible without full authentication)
+|----------------------------------------------------------------------
+| These routes are for the OTP verification flow. They must be accessible
+| to users who have registered but not yet verified (session-based auth).
+*/
+Route::controller(LoginController::class)->prefix('auth/otp')->name('auth.otp.')->group(function () {
+    Route::get('/verify', 'showOtpForm')->name('verify');
+    Route::post('/verify', 'verifyOtp')->name('submit');
+    Route::post('/resend', 'resendOtp')->name('resend');
+});
+
 Route::middleware('guest')->group(function () {
     // Authentication Routes
     Route::controller(LoginController::class)->group(function () {
         Route::get('/login', 'showLoginForm')->name('login');
         Route::post('/login', 'login')->name('login.submit');
-        Route::get('/login', 'showLoginForm')->name('login');
-        Route::post('/login', 'login')->name('login.submit');
-        
-        // OTP Verification Routes
-        Route::get('/auth/otp/verify', 'showOtpForm')->name('auth.otp.verify');
-        Route::post('/auth/otp/verify', 'verifyOtp')->name('auth.otp.submit');
-        Route::post('/auth/otp/resend', 'resendOtp')->name('auth.otp.resend');
     });
-    
+
     // Registration Routes
     Route::controller(RegisterController::class)->group(function () {
         Route::get('/register', 'showRegistrationForm')->name('register');
         Route::post('/register', 'register')->name('register.submit');
     });
-    
-        // Google OAuth Routes
+
+    // Google OAuth Routes
     Route::get('/auth/google', [GoogleAuthController::class, 'redirectToGoogle'])
         ->name('auth.google');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])
@@ -86,7 +92,7 @@ Route::middleware('guest')->group(function () {
             Route::get('/reset', 'showLinkRequestForm')->name('request');
             Route::post('/email', 'sendResetLinkEmail')->name('email');
         });
-        
+
         Route::controller(ResetPasswordController::class)->group(function () {
             Route::get('/reset/{token}', 'showResetForm')->name('reset');
             Route::post('/reset', 'reset')->name('update');
@@ -106,28 +112,40 @@ Route::middleware('auth')->group(function () {
     
     /*
     |----------------------------------------------------------------------
-    | Email Verification Routes
+    | Email Verification Routes (OTP-Based)
     |----------------------------------------------------------------------
+    | These routes handle the OTP-based email verification for authenticated
+    | users who haven't completed verification yet.
     */
     Route::prefix('email')->name('verification.')->group(function () {
-        Route::get('/verify', fn() => view('auth.verify-email'))->name('notice');
-        
-        Route::get('/verify/{id}/{hash}', function (\Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
-            $request->fulfill();
-            return redirect()->route('dashboard')->with('success', 'Email verified successfully!');
-        })->middleware('signed')->name('verify');
-        
+        // Verification notice page - shows OTP entry or initiates OTP
+        Route::get('/verify', [\App\Http\Controllers\Auth\VerificationController::class, 'notice'])
+            ->name('notice');
+
+        // Initiate OTP verification for logged-in users
+        Route::post('/verify/initiate', [\App\Http\Controllers\Auth\VerificationController::class, 'initiateOtp'])
+            ->middleware('throttle:6,1')
+            ->name('initiate');
+
+        // API endpoint to check verification status
         Route::get('/verification-check', fn() => response()->json([
             'verified' => auth()->user()->hasVerifiedEmail(),
+            'otp_verified' => auth()->user()->initial_otp_completed ?? false,
             'status' => auth()->user()->verification_status ?? null,
             'can_resend' => auth()->user()->canRequestVerification() ?? false,
             'seconds_until_resend' => auth()->user()->seconds_until_can_request ?? 0,
         ]))->name('check');
-        
-        Route::post('/verification-notification', function (\Illuminate\Http\Request $request) {
-            $request->user()->sendEmailVerificationNotification();
-            return back()->with('message', 'Verification link sent!');
-        })->middleware('throttle:6,1')->name('send');
+
+        // Resend OTP code (replaces old email link resend)
+        Route::post('/verification-notification', [\App\Http\Controllers\Auth\VerificationController::class, 'resendOtp'])
+            ->middleware('throttle:6,1')
+            ->name('send');
+
+        // Legacy: Handle old email verification links gracefully
+        // Redirect to OTP verification instead of using signed URL verification
+        Route::get('/verify/{id}/{hash}', [\App\Http\Controllers\Auth\VerificationController::class, 'handleLegacyVerification'])
+            ->middleware('signed')
+            ->name('verify');
     });
     
     /*
