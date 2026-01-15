@@ -53,6 +53,10 @@ class EnsureEmailVerified
             return $next($request);
         }
 
+        // IMPORTANT: Refresh user from database to get latest verification status
+        // This prevents stale cached data from blocking recently-verified users
+        $user->refresh();
+
         // User is verified - allow access
         if ($this->isUserVerified($user)) {
             return $next($request);

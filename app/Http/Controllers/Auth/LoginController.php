@@ -246,6 +246,9 @@ class LoginController extends Controller
             return back()->withErrors(['otp' => $result['message']]);
         }
 
+        // CRITICAL: Refresh the user model to get updated verification status
+        $user->refresh();
+
         // Check if this is a new registration completing verification
         $isNewRegistration = session('registration_pending', false);
 
