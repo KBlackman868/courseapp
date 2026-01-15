@@ -69,8 +69,6 @@ class EnsureEmailVerified
      * A user is considered verified if EITHER:
      * - email_verified_at is set (legacy users verified via link)
      * - initial_otp_completed is true (new OTP-based verification)
-     *
-     * For NEW users going forward, we require initial_otp_completed.
      */
     protected function isUserVerified($user): bool
     {
@@ -80,8 +78,7 @@ class EnsureEmailVerified
         }
 
         // Secondary check: Email verified (for legacy compatibility)
-        // AND user was created before OTP system was introduced
-        if ($user->email_verified_at && $user->created_at < now()->subDays(1)) {
+        if ($user->hasVerifiedEmail()) {
             return true;
         }
 
