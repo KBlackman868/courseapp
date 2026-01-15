@@ -415,10 +415,7 @@
                   <a href="{{ route('admin.enrollments.index') }}" 
                     class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
                     Pending
-                    @php
-                      $pendingCount = \App\Models\Enrollment::where('status', 'pending')->count();
-                    @endphp
-                    @if($pendingCount > 0)
+                    @if(isset($pendingCount) && $pendingCount > 0)
                       <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
                     @endif
                   </a>
@@ -697,11 +694,7 @@
               
               <a href="{{ route('admin.enrollments.index') }}" 
                 class="block px-3 py-2 rounded-xl text-base font-medium {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }}">
-                Pending Enrollments
-                @php
-                  $pendingCount = \App\Models\Enrollment::where('status', 'pending')->count();
-                @endphp
-                @if($pendingCount > 0)
+                @if(isset($pendingCount) && $pendingCount > 0)
                   <span class="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
                 @endif
               </a>
@@ -842,21 +835,21 @@
             @if(auth()->check() && auth()->user()->hasRole(['admin', 'superadmin']))
             <div class="hidden lg:flex items-center space-x-6">
               <div class="text-center">
-                <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                  {{ \App\Models\Course::count() }}
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Courses</p>
+              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                {{ $totalCourses ?? 0 }}
+              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Courses</p>
               </div>
               <div class="text-center">
-                <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {{ \App\Models\User::count() }}
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Users</p>
+              <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                {{ $totalUsers ?? 0 }}
+              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Users</p>
               </div>
               <div class="text-center">
-                <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">
-                  {{ \App\Models\Enrollment::where('status', 'pending')->count() }}
-                </p>
+              <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">
+                {{ $pendingCount ?? 0 }}
+              </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Pending</p>
               </div>
             </div>

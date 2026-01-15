@@ -23,7 +23,7 @@ class CourseController extends Controller
     // Display a list of all courses
     public function index()
     {
-        $courses = Course::paginate(12);
+        $courses = Course::with('enrollments')->paginate(12);
         
         // Log viewing courses
         ActivityLogger::logSystem('courses_viewed',

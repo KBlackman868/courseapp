@@ -281,4 +281,4 @@ class OtpService
         $resendCount = Cache::get("otp_resend_count_{$user->id}", 0);
         return max(0, self::MAX_RESENDS - $resendCount);
     }
-}s
+}
