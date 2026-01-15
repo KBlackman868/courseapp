@@ -173,6 +173,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/{course}', [CourseController::class, 'show'])->name('show');
             Route::get('/{course}/register', [CourseController::class, 'register'])->name('register');
             Route::post('/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store');
+            Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle');
             
             // Admin dynamic routes
             Route::middleware('role:admin|superadmin')->group(function () {
