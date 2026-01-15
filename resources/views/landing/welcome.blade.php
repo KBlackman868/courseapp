@@ -213,30 +213,45 @@
                 @forelse($featuredCourses as $index => $course)
                     @php
                         $enrollment = null;
+                        $isInternal = false;
                         if(auth()->check()) {
                             $enrollment = \App\Models\Enrollment::where('user_id', auth()->id())
                                 ->where('course_id', $course->id)
                                 ->first();
+                            $isInternal = auth()->user()->isInternal(); // MOH staff @health.gov.tt
                         }
                         $isEnrolled = $enrollment && in_array($enrollment->status, ['pending', 'approved']);
                         $enrollmentStatus = $enrollment ? $enrollment->status : null;
+                        $isPending = $enrollmentStatus === 'pending';
+                        $isApproved = $enrollmentStatus === 'approved';
                     @endphp
-                    
+
                     <div class="group">
-                        <div class="bg-white rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
-                            <div class="relative h-48 bg-gradient-to-r {{ $gradients[$index % 3] }} p-8 flex items-center justify-center">
+                        {{-- Grey out the entire card if enrollment is pending --}}
+                        <div class="rounded-3xl overflow-hidden shadow-xl transition-all duration-500
+                            {{ $isPending ? 'bg-gray-100 opacity-75' : 'bg-white hover:shadow-2xl transform hover:scale-105' }}">
+                            <div class="relative h-48 bg-gradient-to-r {{ $gradients[$index % 3] }} p-8 flex items-center justify-center {{ $isPending ? 'grayscale' : '' }}">
                                 @if($course->image)
-                                    <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" 
-                                         class="absolute inset-0 w-full h-full object-cover opacity-90">
+                                    <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}"
+                                         class="absolute inset-0 w-full h-full object-cover {{ $isPending ? 'opacity-50 grayscale' : 'opacity-90' }}">
                                 @else
-                                    <svg class="w-24 h-24 text-white opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-24 h-24 text-white {{ $isPending ? 'opacity-30' : 'opacity-50' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                                     </svg>
                                 @endif
-                                
+
                                 <!-- Status Badges -->
                                 <div class="absolute top-4 right-4 flex flex-col gap-2">
-                                    @if($course->moodle_course_id)
+                                    @if($isPending)
+                                        <span class="bg-yellow-500 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                                            PENDING APPROVAL
+                                        </span>
+                                    @elseif($isApproved)
+                                        <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                                            ENROLLED
+                                        </span>
+                                    @endif
+                                    @if($course->moodle_course_id && !$isPending)
                                         <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
                                             MOODLE
                                         </span>
@@ -255,32 +270,26 @@
                                             Healthcare Training
                                         @endif
                                     </span>
-                                    @if($isEnrolled)
-                                        @if($enrollmentStatus === 'approved')
-                                            <span class="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold">
-                                                Enrolled
-                                            </span>
-                                        @elseif($enrollmentStatus === 'pending')
-                                            <span class="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">
-                                                Pending
-                                            </span>
-                                        @endif
+                                    @if($isInternal && auth()->check())
+                                        <span class="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold" title="MOH Staff - Auto-approved access">
+                                            MOH Staff
+                                        </span>
                                     @endif
                                 </div>
-                                <h3 class="text-xl font-bold mb-2 line-clamp-2">{{ $course->title }}</h3>
-                                <p class="text-gray-600 mb-4 line-clamp-3">
+                                <h3 class="text-xl font-bold mb-2 line-clamp-2 {{ $isPending ? 'text-gray-500' : '' }}">{{ $course->title }}</h3>
+                                <p class="mb-4 line-clamp-3 {{ $isPending ? 'text-gray-400' : 'text-gray-600' }}">
                                     {{ Str::limit($course->description, 100) }}
                                 </p>
                                 <div class="flex items-center justify-between mb-4">
-                                    <div class="text-sm text-gray-600">
+                                    <div class="text-sm {{ $isPending ? 'text-gray-400' : 'text-gray-600' }}">
                                         <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                         Self-paced
                                     </div>
-                                    <span class="text-sm text-gray-500">Certificate Available</span>
+                                    <span class="text-sm {{ $isPending ? 'text-gray-400' : 'text-gray-500' }}">Certificate Available</span>
                                 </div>
-                                
+
                                 @auth
                                     @php
                                         $userVerified = auth()->user()->hasVerifiedEmail() || auth()->user()->initial_otp_completed;
@@ -295,21 +304,65 @@
                                             Manage Course
                                         </a>
                                     @else
-                                        @if(!$isEnrolled)
-                                            <form action="{{ route('courses.enroll.store', $course) }}" method="POST">
-                                                @csrf
-                                                <button type="submit" class="w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300">
-                                                    Enroll Now
-                                                </button>
-                                            </form>
-                                        @elseif($enrollmentStatus === 'approved')
-                                            <a href="{{ route('courses.show', $course) }}" class="block w-full px-6 py-2 bg-gray-100 text-gray-700 rounded-full font-semibold hover:bg-gray-200 transition-all duration-300 text-center">
-                                                Continue Learning
-                                            </a>
+                                        @if($isApproved)
+                                            {{-- Approved enrollment - show "Let's Begin" --}}
+                                            @if($course->moodle_course_id)
+                                                <a href="{{ route('courses.access-moodle', $course) }}" class="block w-full px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
+                                                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    Let's Begin
+                                                </a>
+                                            @else
+                                                <a href="{{ route('courses.show', $course) }}" class="block w-full px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
+                                                    <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    Let's Begin
+                                                </a>
+                                            @endif
+                                        @elseif($isPending)
+                                            {{-- Pending enrollment - show greyed out status --}}
+                                            <div class="w-full px-6 py-2 bg-gray-200 text-gray-500 rounded-full font-semibold text-center cursor-not-allowed">
+                                                <svg class="w-5 h-5 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                Request Sent - Pending Approval
+                                            </div>
+                                            <p class="text-xs text-gray-400 mt-2 text-center">
+                                                You will receive an email once approved
+                                            </p>
                                         @else
-                                            <button disabled class="w-full px-6 py-2 bg-yellow-100 text-yellow-700 rounded-full font-semibold cursor-not-allowed">
-                                                Pending Approval
-                                            </button>
+                                            {{-- Not enrolled yet --}}
+                                            @if($isInternal)
+                                                {{-- MOH Internal Users - Direct access, auto-approved --}}
+                                                <form action="{{ route('courses.enroll.store', $course) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="w-full px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                        </svg>
+                                                        Let's Begin
+                                                    </button>
+                                                </form>
+                                            @else
+                                                {{-- External Users - Need to request enrollment --}}
+                                                <form action="{{ route('courses.enroll.store', $course) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300">
+                                                        <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                        </svg>
+                                                        Request Enrollment
+                                                    </button>
+                                                </form>
+                                                <p class="text-xs text-gray-500 mt-2 text-center">
+                                                    Requires administrator approval
+                                                </p>
+                                            @endif
                                         @endif
                                     @endif
                                 @else
