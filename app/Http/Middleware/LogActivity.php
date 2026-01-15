@@ -1,183 +1,132 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Middleware;
 
-use App\Http\Controllers\Controller;
-use App\Models\ActivityLog;
-use App\Models\User;
+use Closure;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\Response;
+use App\Services\ActivityLogger;
 
-class ActivityLogController extends Controller
+class LogActivity
 {
-    public function __construct()
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
     {
-        $this->middleware('role:superadmin');
+        $response = $next($request);
+
+        // Log page views and significant actions (skip static assets and AJAX polling)
+        if ($this->shouldLog($request)) {
+            $this->logActivity($request, $response);
+        }
+
+        return $response;
     }
 
     /**
-     * Display activity logs with live updates
+     * Determine if the request should be logged
      */
-    public function index(Request $request)
+    protected function shouldLog(Request $request): bool
     {
-        $query = ActivityLog::with('user')->latest();
-        
-        // Filters
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
+        // Skip static assets
+        $skipExtensions = ['js', 'css', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'svg', 'woff', 'woff2', 'ttf'];
+        $extension = pathinfo($request->path(), PATHINFO_EXTENSION);
+        if (in_array(strtolower($extension), $skipExtensions)) {
+            return false;
         }
-        
-        if ($request->filled('action')) {
-            $query->where('action', 'like', '%' . $request->action . '%');
+
+        // Skip AJAX polling requests (live updates)
+        if ($request->ajax() && str_contains($request->path(), '/live')) {
+            return false;
         }
-        
-        if ($request->filled('date_from')) {
-            $query->where('created_at', '>=', Carbon::parse($request->date_from));
+
+        // Skip health checks
+        if ($request->path() === 'up' || $request->path() === 'health') {
+            return false;
         }
-        
-        if ($request->filled('date_to')) {
-            $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
-        }
-        
-        if ($request->filled('severity')) {
-            $query->where('severity', $request->severity);
-        }
-        
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-        
-        // For AJAX requests (live updates)
-        if ($request->ajax()) {
-            $logs = $query->take(50)->get();
-            return response()->json([
-                'logs' => $logs->map(function ($log) {
-                    return [
-                        'id' => $log->id,
-                        'icon' => $log->action_icon,
-                        'action' => $log->formatted_action,
-                        'description' => $log->description,
-                        'user' => $log->user_name ?? 'System',
-                        'time' => $log->created_at->diffForHumans(),
-                        'timestamp' => $log->created_at->format('Y-m-d H:i:s'),
-                        'severity' => $log->severity,
-                        'severity_color' => $log->severity_color,
-                        'status' => $log->status,
-                        'status_color' => $log->status_color,
-                        'ip' => $log->ip_address,
-                        'url' => $log->url,
-                    ];
-                }),
-                'last_id' => $logs->first()?->id,
-            ]);
-        }
-        
-        $logs = $query->paginate(50);
-        $users = User::select('id', 'first_name', 'last_name', 'email')->get();
-        
-        // Get statistics
-        $stats = [
-            'total_today' => ActivityLog::whereDate('created_at', today())->count(),
-            'failed_today' => ActivityLog::whereDate('created_at', today())->where('status', 'failed')->count(),
-            'unique_users_today' => ActivityLog::whereDate('created_at', today())->distinct('user_id')->count('user_id'),
-            'critical_events' => ActivityLog::whereDate('created_at', today())->where('severity', 'critical')->count(),
-        ];
-        
-        return view('admin.activity-logs.index', compact('logs', 'users', 'stats'));
+
+        // Only log authenticated user actions
+        return auth()->check();
     }
 
     /**
-     * Get new logs for live updates
+     * Log the activity
      */
-    public function live(Request $request)
+    protected function logActivity(Request $request, Response $response): void
     {
-        $lastId = $request->get('last_id', 0);
-        
-        $newLogs = ActivityLog::with('user')
-            ->where('id', '>', $lastId)
-            ->latest()
-            ->take(20)
-            ->get();
-        
-        return response()->json([
-            'logs' => $newLogs->map(function ($log) {
-                return [
-                    'id' => $log->id,
-                    'icon' => $log->action_icon,
-                    'action' => $log->formatted_action,
-                    'description' => $log->description,
-                    'user' => $log->user_name ?? 'System',
-                    'time' => $log->created_at->diffForHumans(),
-                    'timestamp' => $log->created_at->format('Y-m-d H:i:s'),
-                    'severity' => $log->severity,
-                    'severity_color' => $log->severity_color,
-                    'status' => $log->status,
-                    'status_color' => $log->status_color,
-                ];
-            }),
-            'count' => $newLogs->count(),
-        ]);
-    }
+        try {
+            $action = $this->determineAction($request);
 
-    /**
-     * Show detailed log entry
-     */
-    public function show(ActivityLog $log)
-    {
-        return view('admin.activity-logs.show', compact('log'));
-    }
-
-    /**
-     * Export logs to CSV
-     */
-    public function export(Request $request)
-    {
-        $query = ActivityLog::with('user');
-        
-        // Apply same filters as index
-        if ($request->filled('date_from')) {
-            $query->where('created_at', '>=', Carbon::parse($request->date_from));
-        }
-        
-        if ($request->filled('date_to')) {
-            $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
-        }
-        
-        $logs = $query->get();
-        
-        $filename = 'activity_logs_' . now()->format('Y-m-d_His') . '.csv';
-        
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-        
-        $callback = function() use ($logs) {
-            $file = fopen('php://output', 'w');
-            
-            // Add headers
-            fputcsv($file, [
-                'ID', 'Date/Time', 'User', 'Action', 'Description', 
-                'Status', 'Severity', 'IP Address', 'URL'
-            ]);
-            
-            foreach ($logs as $log) {
-                fputcsv($file, [
-                    $log->id,
-                    $log->created_at->format('Y-m-d H:i:s'),
-                    $log->user_name ?? 'System',
-                    $log->action,
-                    $log->description,
-                    $log->status,
-                    $log->severity,
-                    $log->ip_address,
-                    $log->url,
-                ]);
+            // Skip logging for very frequent actions
+            if (in_array($action, ['api_call', 'polling'])) {
+                return;
             }
-            
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
+
+            ActivityLogger::logSystem(
+                $action,
+                $this->buildDescription($request),
+                [
+                    'method' => $request->method(),
+                    'url' => $request->fullUrl(),
+                    'status_code' => $response->getStatusCode(),
+                    'user_agent' => substr($request->userAgent() ?? '', 0, 255),
+                ]
+            );
+        } catch (\Exception $e) {
+            // Silently fail - don't break the app if logging fails
+            \Log::debug('Activity logging failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Determine the action type based on the request
+     */
+    protected function determineAction(Request $request): string
+    {
+        $method = $request->method();
+        $path = $request->path();
+
+        // Auth actions
+        if (str_contains($path, 'login')) return 'login_page';
+        if (str_contains($path, 'logout')) return 'logout';
+        if (str_contains($path, 'register')) return 'register_page';
+
+        // Admin actions
+        if (str_contains($path, 'admin/')) {
+            if (str_contains($path, 'users')) return 'admin_users';
+            if (str_contains($path, 'roles')) return 'admin_roles';
+            if (str_contains($path, 'enrollments')) return 'admin_enrollments';
+            if (str_contains($path, 'activity-logs')) return 'admin_logs';
+            return 'admin_page';
+        }
+
+        // Course actions
+        if (str_contains($path, 'courses')) {
+            if ($method === 'POST' && str_contains($path, 'enroll')) return 'course_enroll';
+            if ($method === 'POST') return 'course_create';
+            if ($method === 'PUT' || $method === 'PATCH') return 'course_update';
+            if ($method === 'DELETE') return 'course_delete';
+            return 'course_view';
+        }
+
+        // Profile actions
+        if (str_contains($path, 'profile')) return 'profile_view';
+
+        // Default
+        return $method === 'GET' ? 'page_view' : 'action';
+    }
+
+    /**
+     * Build a description for the log entry
+     */
+    protected function buildDescription(Request $request): string
+    {
+        $user = auth()->user();
+        $name = $user ? "{$user->first_name} {$user->last_name}" : 'Anonymous';
+
+        return "{$name} accessed {$request->path()}";
     }
 }
