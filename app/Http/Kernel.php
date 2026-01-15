@@ -21,12 +21,14 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            // CRITICAL: TrustProxies MUST be first so Laravel knows the real scheme/host
+            // before session/CSRF handling. This fixes 419 errors behind reverse proxies.
+            \App\Http\Middleware\TrustProxies::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
-            \App\Http\Middleware\TrustProxies::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \App\Http\Middleware\VerifyCsrfToken::class, // CRITICAL: CSRF protection - must be after session start
+            \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\CheckSuspended::class,
             \App\Http\Middleware\LogActivity::class,
