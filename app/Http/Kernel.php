@@ -55,5 +55,9 @@ class Kernel extends HttpKernel
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class, // corrected line
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'permission.check' => \App\Http\Middleware\CheckPermission::class,
+        'user.type' => \App\Http\Middleware\CheckUserType::class,
+        'course.creator' => \App\Http\Middleware\CheckCourseCreator::class,
+        'otp.verified' => \App\Http\Middleware\EnsureOtpVerified::class,
     ];
+    
 }

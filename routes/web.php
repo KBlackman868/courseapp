@@ -59,6 +59,13 @@ Route::middleware('guest')->group(function () {
     Route::controller(LoginController::class)->group(function () {
         Route::get('/login', 'showLoginForm')->name('login');
         Route::post('/login', 'login')->name('login.submit');
+        Route::get('/login', 'showLoginForm')->name('login');
+        Route::post('/login', 'login')->name('login.submit');
+        
+        // OTP Verification Routes
+        Route::get('/auth/otp/verify', 'showOtpForm')->name('auth.otp.verify');
+        Route::post('/auth/otp/verify', 'verifyOtp')->name('auth.otp.submit');
+        Route::post('/auth/otp/resend', 'resendOtp')->name('auth.otp.resend');
     });
     
     // Registration Routes
@@ -228,6 +235,13 @@ Route::middleware('auth')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/assign/{user}', 'assignRole')->name('assign');
                 Route::post('/bulk-assign', 'bulkAssignRoles')->name('bulkAssign');
+            });
+            // Activity Logs Management (Superadmin only)
+            Route::middleware('role:superadmin')->prefix('activity-logs')->name('activity-logs.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('index');
+                Route::get('/live', [\App\Http\Controllers\Admin\ActivityLogController::class, 'live'])->name('live');
+                Route::get('/export', [\App\Http\Controllers\Admin\ActivityLogController::class, 'export'])->name('export');
+                Route::get('/{log}', [\App\Http\Controllers\Admin\ActivityLogController::class, 'show'])->name('show');
             });
             
             // Moodle Integration

@@ -112,6 +112,52 @@
       pointer-events: none;
     }
 
+    /* Tab styles */
+    .tab-btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-align: center;
+      border-bottom: 3px solid transparent;
+      color: #6b7280;
+      transition: all 0.3s;
+      cursor: pointer;
+      background: transparent;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    .tab-btn:hover {
+      color: #667eea;
+    }
+
+    .tab-btn.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    /* Info boxes */
+    .info-box {
+      padding: 0.875rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .info-box-internal {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+      border-left: 4px solid #667eea;
+    }
+
+    .info-box-external {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+      border-left: 4px solid #10b981;
+    }
+
     /* Button styles */
     .btn-primary {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -201,11 +247,37 @@
       display: none;
     }
 
+    /* User type badge */
+    .user-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    .badge-internal {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .badge-external {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 640px) {
       .glass-card {
         margin: 1rem;
         padding: 1.5rem;
+      }
+      
+      .tab-btn {
+        font-size: 0.75rem;
+        padding: 0.625rem 0.5rem;
       }
     }
   </style>
@@ -254,6 +326,15 @@
           </div>
         @endif
 
+        @if(session('info'))
+          <div class="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg flex items-start">
+            <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span class="text-blue-700 text-sm">{{ session('info') }}</span>
+          </div>
+        @endif
+
         @if($errors->any())
           <div class="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg">
             @foreach($errors->all() as $error)
@@ -262,10 +343,56 @@
           </div>
         @endif
 
-        <!-- Welcome Text -->
+        <!-- Welcome Text with User Type Badge -->
         <div class="mb-6">
-          <h2 class="text-2xl font-bold text-gray-900">Welcome back</h2>
+          <h2 class="text-2xl font-bold text-gray-900 flex items-center">
+            Welcome back
+            <span id="user-type-badge" class="user-type-badge badge-internal">MOH Staff</span>
+          </h2>
           <p class="text-gray-600 mt-1">Please sign in to your account</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200 mb-4" id="login-tabs">
+          <button type="button" 
+                  class="tab-btn active"
+                  data-tab="internal"
+                  id="tab-internal">
+            <svg class="w-4 h-4 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            MOH Staff
+          </button>
+          <button type="button" 
+                  class="tab-btn"
+                  data-tab="external"
+                  id="tab-external">
+            <svg class="w-4 h-4 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            External User
+          </button>
+        </div>
+
+        <!-- Info Boxes -->
+        <div id="internal-info" class="info-box info-box-internal">
+          <svg class="w-5 h-5 text-purple-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <span class="font-semibold text-purple-700">MOH Staff:</span>
+            <span class="text-purple-600"> Use your Ministry email (@health.gov.tt) and network password.</span>
+          </div>
+        </div>
+
+        <div id="external-info" class="info-box info-box-external hidden">
+          <svg class="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <span class="font-semibold text-green-700">External Users:</span>
+            <span class="text-green-600"> Use your registered email and password.</span>
+          </div>
         </div>
 
         <!-- Login Form -->
@@ -275,7 +402,7 @@
           <!-- Email Input -->
           <div class="input-group">
             <input 
-              type="email" 
+              type="test" 
               name="email" 
               id="email"
               value="{{ old('email') }}"
@@ -285,7 +412,6 @@
               class="form-input @error('email') border-red-500 @enderror"
             >
             <svg class="input-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 00-8 0c0 1.283.884 2.362 2.083 2.657V16a1 1 0 001.834 0v-1.343c1.2-.295 2.083-1.374 2.083-2.657z"></path>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
             </svg>
           </div>
@@ -344,6 +470,7 @@
         </div>
 
         <!-- Google Sign In -->
+        @if(Route::has('auth.google'))
         <a href="{{ route('auth.google') }}" class="btn-google">
           <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -351,30 +478,9 @@
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Sign in with Google
+          Sign in with Google (MOH Only)
         </a>
-
-        <!-- Additional OAuth Options (Optional) -->
-        <div class="mt-3 grid grid-cols-2 gap-3">
-          <!-- Microsoft Button -->
-          <button type="button" class="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
-            <svg class="w-4 h-4 mr-2" viewBox="0 0 21 21">
-              <path fill="#f25022" d="M0 0h10v10H0z"/>
-              <path fill="#00a4ef" d="M11 0h10v10H11z"/>
-              <path fill="#7fba00" d="M0 11h10v10H0z"/>
-              <path fill="#ffb900" d="M11 11h10v10H11z"/>
-            </svg>
-            Microsoft
-          </button>
-
-          <!-- Apple Button -->
-          <button type="button" class="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
-            <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.71 19.5C18.33 20.3 17.88 21.05 17.35 21.76C16.63 22.72 16.04 23.38 15.6 23.74C14.91 24.35 14.18 24.67 13.39 24.69C12.82 24.69 12.13 24.53 11.34 24.2C10.52 23.88 9.77 23.72 9.08 23.72C8.36 23.72 7.59 23.88 6.77 24.2C5.94 24.53 5.29 24.7 4.8 24.72C4.03 24.75 3.27 24.42 2.51 23.74C2.03 23.35 1.43 22.67 0.71 21.68C-0.07 20.61 -0.7 19.36 -0.7 17.92C-0.7 16.26 -0.29 14.81 0.54 13.59C1.19 12.62 2.04 11.85 3.1 11.29C4.15 10.73 5.28 10.44 6.49 10.42C7.09 10.42 7.89 10.6 8.91 10.94C9.9 11.29 10.55 11.47 10.85 11.47C11.08 11.47 11.82 11.27 13.04 10.86C14.19 10.49 14.85 10.33 15.44 10.35C17.19 10.48 18.5 11.21 19.35 12.56C17.79 13.54 17.02 14.9 17.03 16.62C17.04 18 17.58 19.15 18.64 20.04C19.11 20.45 19.64 20.77 20.24 21L20.23 21.01C20.07 21.45 19.89 21.87 19.7 22.28L18.71 19.5ZM15.54 0.81C16.04 0.21 16.67 -0.21 17.42 -0.45C18.17 -0.7 18.87 -0.84 19.54 -0.81C19.66 0.03 19.81 0.88 19.97 1.74C20.13 2.6 20.07 3.47 19.8 4.35C19.52 5.09 19.11 5.76 18.57 6.35C18.08 6.91 17.45 7.33 16.68 7.6C16 7.83 15.35 7.95 14.73 7.95C14.61 7.13 14.64 6.27 14.84 5.38C15.12 4.14 15.68 3.11 16.53 2.29L15.54 0.81Z"/>
-            </svg>
-            Apple
-          </button>
-        </div>
+        @endif
 
         <!-- Sign Up Link -->
         <div class="mt-6 pt-6 border-t border-gray-200">
@@ -403,6 +509,50 @@
 
   <!-- JavaScript -->
   <script>
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab-btn');
+    const internalInfo = document.getElementById('internal-info');
+    const externalInfo = document.getElementById('external-info');
+    const userTypeBadge = document.getElementById('user-type-badge');
+    const emailInput = document.getElementById('email');
+
+    function switchTab(tab) {
+      // Update tab styles
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // Update info boxes and badge
+      if (tab.dataset.tab === 'internal') {
+        internalInfo.classList.remove('hidden');
+        externalInfo.classList.add('hidden');
+        userTypeBadge.textContent = 'MOH Staff';
+        userTypeBadge.classList.remove('badge-external');
+        userTypeBadge.classList.add('badge-internal');
+      } else {
+        internalInfo.classList.add('hidden');
+        externalInfo.classList.remove('hidden');
+        userTypeBadge.textContent = 'External';
+        userTypeBadge.classList.remove('badge-internal');
+        userTypeBadge.classList.add('badge-external');
+      }
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        switchTab(this);
+      });
+    });
+
+    // Auto-detect tab based on email domain
+    emailInput.addEventListener('input', function() {
+      const email = this.value.toLowerCase();
+      if (email.includes('@health.gov.tt') || email.includes('@moh.gov.tt')) {
+        switchTab(document.getElementById('tab-internal'));
+      } else if (email.includes('@') && email.indexOf('@') < email.length - 1) {
+        switchTab(document.getElementById('tab-external'));
+      }
+    });
+
     // Toggle password visibility
     function togglePassword() {
       const passwordInput = document.getElementById('password');
@@ -425,9 +575,9 @@
       document.getElementById('loginBtn').classList.add('loading');
     });
 
-    // Auto-hide alerts
+    // Auto-hide alerts after 5 seconds
     setTimeout(() => {
-      const alerts = document.querySelectorAll('.bg-red-100, .bg-green-100');
+      const alerts = document.querySelectorAll('.bg-red-100, .bg-green-100, .bg-blue-100');
       alerts.forEach(alert => {
         alert.style.transition = 'opacity 0.5s ease-out';
         alert.style.opacity = '0';

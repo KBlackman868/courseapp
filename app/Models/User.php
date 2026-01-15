@@ -34,6 +34,19 @@ class User extends Authenticatable implements MustVerifyEmail
         'must_verify_before',
         'google_id',
         'is_suspended',
+        'user_type',
+        'is_course_creator',
+        'ldap_guid',
+        'ldap_username',
+        'ldap_synced_at',
+        'otp_code',
+        'otp_expires_at',
+        'otp_verified',
+        'otp_verified_at',
+        'otp_attempts',
+        'initial_otp_completed',
+        'initial_otp_completed_at',
+        'auth_method',
     ];
 
     /**
@@ -43,6 +56,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'remember_token',
         'temp_moodle_password',
+        'otp_code',
     ];
 
     /**
@@ -53,10 +67,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            // ADD THESE NEW CASTS
             'verification_sent_at' => 'datetime',
             'must_verify_before' => 'datetime',
             'verification_attempts' => 'integer',
+            'otp_expires_at' => 'datetime',
+            'otp_verified_at' => 'datetime',
+            'ldap_synced_at' => 'datetime',
+            'initial_otp_completed_at' => 'datetime',
+            'is_course_creator' => 'boolean',
+            'otp_verified' => 'boolean',
+            'initial_otp_completed' => 'boolean',
         ];
     }
 
@@ -120,4 +140,55 @@ class User extends Authenticatable implements MustVerifyEmail
         
         return false;
     }
+            // Constants
+        public const TYPE_INTERNAL = 'internal';
+        public const TYPE_EXTERNAL = 'external';
+
+        // Check methods
+        public function isInternal(): bool
+        {
+            return $this->user_type === self::TYPE_INTERNAL;
+        }
+
+        public function isExternal(): bool
+        {
+            return $this->user_type === self::TYPE_EXTERNAL;
+        }
+
+        public function canCreateCourses(): bool
+        {
+            return $this->is_course_creator || $this->hasRole('superadmin');
+        }
+
+        public function hasCompletedOtp(): bool
+        {
+            return $this->initial_otp_completed;
+        }
+
+        // Scopes
+        public function scopeInternal($query)
+        {
+            return $query->where('user_type', self::TYPE_INTERNAL);
+        }
+
+        public function scopeExternal($query)
+        {
+            return $query->where('user_type', self::TYPE_EXTERNAL);
+        }
+
+        public function scopeCourseCreators($query)
+        {
+            return $query->where('is_course_creator', true);
+        }
+
+        // Actions
+        public function grantCourseCreatorStatus(): void
+        {
+            $this->update(['is_course_creator' => true]);
+        }
+
+        public function revokeCourseCreatorStatus(): void
+        {
+            $this->update(['is_course_creator' => false]);
+        }
 }

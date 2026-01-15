@@ -272,7 +272,7 @@
                                 
                                 @auth
                                     @if(auth()->user()->hasRole(['admin', 'superadmin']))
-                                        <a href="{{ route('courses.edit', $course) }}" class="block w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
+                                        <a href="{{ route('courses.index', $course) }}" class="block w-full px-6 py-2 bg-gradient-to-r {{ $gradients[$index % 3] }} text-white rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-center">
                                             Manage Course
                                         </a>
                                     @else
