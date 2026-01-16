@@ -221,23 +221,28 @@ class EnrollmentController extends Controller
 
     /**
      * Display list of enrollments for admin approval
+     * Uses server-side pagination for large datasets
      */
     public function index(Request $request)
     {
         $status = $request->query('status', 'pending');
-        
+        $perPage = $request->query('per_page', 20);
+
         $enrollments = Enrollment::where('status', $status)
                                 ->with('user', 'course')
-                                ->get();
+                                ->orderBy('created_at', 'desc')
+                                ->paginate($perPage)
+                                ->withQueryString(); // Preserve filters in pagination links
 
-        $users = User::all();
-        
+        // For dropdown selections, get only necessary fields
+        $users = User::select('id', 'first_name', 'last_name', 'email')->get();
+
         // Log admin viewing enrollments
         ActivityLogger::logSystem('enrollment_list_viewed',
             "Admin viewed {$status} enrollments",
             [
                 'status_filter' => $status,
-                'count' => $enrollments->count(),
+                'count' => $enrollments->total(),
                 'admin' => auth()->user()->email
             ]
         );

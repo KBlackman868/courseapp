@@ -401,9 +401,9 @@
           
           <!-- Email Input -->
           <div class="input-group">
-            <input 
-              type="test" 
-              name="email" 
+            <input
+              type="email"
+              name="email"
               id="email"
               value="{{ old('email') }}"
               required
