@@ -174,6 +174,16 @@ class UserManagementController extends Controller
         $currentUserId = auth()->id();
         $deletedCount = 0;
         $failedCount = 0;
+        $isSuperadmin = auth()->user()->hasRole('superadmin');
+
+        // PERFORMANCE FIX: Load all users at once with their roles
+        $users = User::whereIn('id', $request->user_ids)
+            ->with('roles')
+            ->get()
+            ->keyBy('id');
+
+        // Collect user IDs that can be deleted for batch enrollment deletion
+        $deletableUserIds = [];
 
         foreach ($request->user_ids as $userId) {
             // Skip current user
@@ -182,19 +192,34 @@ class UserManagementController extends Controller
                 continue;
             }
 
-            $user = User::find($userId);
-            
-            // Skip superadmins unless current user is superadmin
-            if ($user->hasRole('superadmin') && !auth()->user()->hasRole('superadmin')) {
+            $user = $users->get($userId);
+
+            if (!$user) {
                 $failedCount++;
                 continue;
             }
 
+            // Skip superadmins unless current user is superadmin
+            if ($user->hasRole('superadmin') && !$isSuperadmin) {
+                $failedCount++;
+                continue;
+            }
+
+            $deletableUserIds[] = $userId;
+        }
+
+        // PERFORMANCE FIX: Batch delete enrollments for all deletable users
+        if (!empty($deletableUserIds)) {
+            Enrollment::whereIn('user_id', $deletableUserIds)->delete();
+        }
+
+        // Now delete users and queue Moodle deletions
+        foreach ($deletableUserIds as $userId) {
+            $user = $users->get($userId);
+
             try {
                 $moodleUserId = $user->moodle_user_id;
-                
-                // Delete enrollments and user
-                Enrollment::where('user_id', $user->id)->delete();
+
                 $user->delete();
 
                 // Queue Moodle deletion

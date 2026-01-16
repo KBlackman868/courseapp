@@ -152,27 +152,28 @@ class EnrollmentController extends Controller
             }
         }
 
-        // Send notification email to superadmins
+        // PERFORMANCE FIX: Queue notification emails to superadmins instead of sending synchronously
         try {
             $superadmins = User::role('superadmin')->get();
             foreach ($superadmins as $admin) {
-                Mail::to($admin->email)->send(new NewCourseEnrollmentEmail($enrollment));
+                // Use queue() instead of send() to prevent blocking the request
+                Mail::to($admin->email)->queue(new NewCourseEnrollmentEmail($enrollment));
             }
-            Log::info('Admin notifications sent', [
+            Log::info('Admin notifications queued', [
                 'enrollment_id' => $enrollment->id,
                 'admin_count' => $superadmins->count()
             ]);
-            
+
             // Log admin notification
-            ActivityLogger::logSystem('admin_notification_sent',
-                "Admin notifications sent for new enrollment",
+            ActivityLogger::logSystem('admin_notification_queued',
+                "Admin notifications queued for new enrollment",
                 [
                     'enrollment_id' => $enrollment->id,
                     'admin_count' => $superadmins->count()
                 ]
             );
         } catch (\Exception $e) {
-            Log::error('Failed to send admin notification email', [
+            Log::error('Failed to queue admin notification email', [
                 'error' => $e->getMessage(),
                 'enrollment_id' => $enrollment->id
             ]);
@@ -553,16 +554,33 @@ class EnrollmentController extends Controller
 
         $syncCount = 0;
         $failCount = 0;
-        
-        foreach ($approvedEnrollments as $enrollment) {
-            if (!$enrollment->user->moodle_user_id) {
-                CreateOrLinkMoodleUser::dispatchSync($enrollment->user);
-                $enrollment->user->refresh();
+
+        // PERFORMANCE FIX: First, create Moodle users for all users that don't have one
+        $usersNeedingMoodle = $approvedEnrollments
+            ->filter(fn($e) => !$e->user->moodle_user_id)
+            ->pluck('user');
+
+        foreach ($usersNeedingMoodle as $user) {
+            CreateOrLinkMoodleUser::dispatchSync($user);
+        }
+
+        // PERFORMANCE FIX: Batch refresh users that needed Moodle accounts
+        if ($usersNeedingMoodle->isNotEmpty()) {
+            $userIds = $usersNeedingMoodle->pluck('id');
+            $refreshedUsers = User::whereIn('id', $userIds)->get()->keyBy('id');
+
+            // Update the user objects in the enrollments collection
+            foreach ($approvedEnrollments as $enrollment) {
+                if ($refreshedUsers->has($enrollment->user_id)) {
+                    $enrollment->setRelation('user', $refreshedUsers->get($enrollment->user_id));
+                }
             }
-            
+        }
+
+        foreach ($approvedEnrollments as $enrollment) {
             if ($enrollment->user->moodle_user_id) {
                 EnrollUserIntoMoodleCourse::dispatch(
-                    $enrollment->user, 
+                    $enrollment->user,
                     $course->moodle_course_id
                 );
                 $syncCount++;

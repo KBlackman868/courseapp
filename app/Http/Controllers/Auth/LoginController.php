@@ -246,23 +246,29 @@ class LoginController extends Controller
             return back()->withErrors(['otp' => $result['message']]);
         }
 
-        // Check if this is a new registration completing verification
+        // Check if this is a new registration - also verify email
         $isNewRegistration = session('registration_pending', false);
+        if ($isNewRegistration) {
+            $user->update([
+                'email_verified_at' => now(),
+                'verification_status' => 'verified',
+            ]);
 
-        // Clear session flags
-        session()->forget(['otp_user_id', 'registration_pending']);
+            Log::info('New user email verified via OTP', [
+                'user_id' => $user->id,
+                'email' => $user->email
+            ]);
+        }
+
+        // Clear session
+        session()->forget('otp_user_id');
 
         // Log the user in
         Auth::login($user, true);
         $request->session()->regenerate();
 
         if (class_exists(ActivityLogger::class)) {
-            $action = $isNewRegistration ? 'registration_verified' : 'otp_verified';
-            $description = $isNewRegistration
-                ? 'New user completed email verification'
-                : 'User completed OTP verification';
-
-            ActivityLogger::logAuth($action, $description, [
+            ActivityLogger::logAuth('otp_verified', 'User completed OTP verification', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'ip_address' => $request->ip()
@@ -294,8 +300,12 @@ class LoginController extends Controller
                 ->with('success', "Welcome, {$user->first_name}! Your email has been verified and your account is now active.");
         }
 
+        $welcomeMessage = $isNewRegistration
+            ? "Welcome, {$user->first_name}! Your account has been created and verified."
+            : "Welcome back, {$user->first_name}! Your account has been verified.";
+
         return redirect()->intended($this->redirectTo)
-            ->with('success', "Welcome back, {$user->first_name}! Your identity has been verified.");
+            ->with('success', "Welcome, {$user->first_name}! Your account has been verified.");
     }
 
     /**

@@ -7,7 +7,10 @@ use App\Models\User;
 use App\Jobs\CreateOrLinkMoodleUser;
 use App\Mail\WelcomeEmail;
 use App\Services\OtpService;
+<<<<<<< HEAD
 use App\Services\ActivityLogger;
+=======
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +22,10 @@ use Illuminate\Auth\Events\Registered;
 class RegisterController extends Controller
 {
     protected $redirectTo = '/auth/otp/verify';
+<<<<<<< HEAD
 
+=======
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
     protected OtpService $otpService;
 
     public function __construct(OtpService $otpService)
@@ -50,16 +56,23 @@ class RegisterController extends Controller
             'password'   => Hash::make($validatedData['password']),
             'department' => $validatedData['department'],
             'temp_moodle_password' => encrypt($validatedData['password']),
+<<<<<<< HEAD
             'user_type' => 'external',
             'auth_method' => 'local',
             // Verification tracking fields
+=======
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
             'verification_status' => 'pending',
             'verification_sent_at' => now(),
             'verification_attempts' => 1,
             'must_verify_before' => now()->addHours(48),
+<<<<<<< HEAD
             // OTP fields - start as unverified
             'initial_otp_completed' => false,
             'otp_verified' => false,
+=======
+            'initial_otp_completed' => false,
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
         ]);
 
         // Assign default role
@@ -75,6 +88,7 @@ class RegisterController extends Controller
             'must_verify_before' => $user->must_verify_before,
         ]);
 
+<<<<<<< HEAD
         // Log registration activity
         if (class_exists(ActivityLogger::class)) {
             ActivityLogger::logAuth('registration', 'New user registered', [
@@ -87,11 +101,17 @@ class RegisterController extends Controller
         // Send OTP verification code instead of email link
         $otpResult = $this->otpService->sendOtp($user);
 
+=======
+        // Send OTP for verification instead of email link
+        $otpResult = $this->otpService->sendOtp($user);
+
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
         if (!$otpResult['success']) {
             Log::error('Failed to send OTP during registration', [
                 'user_id' => $user->id,
                 'error' => $otpResult['message']
             ]);
+<<<<<<< HEAD
 
             // Still allow registration but show error
             return redirect()->route('login')
@@ -101,11 +121,25 @@ class RegisterController extends Controller
         // Store user ID in session for OTP verification (NOT logging them in)
         session(['otp_user_id' => $user->id]);
         session(['registration_pending' => true]);
+=======
+        }
+
+        // Store user ID in session for OTP verification (don't log them in yet)
+        session(['otp_user_id' => $user->id]);
+        session(['registration_pending' => true]);
+
+        // Send welcome email with credentials (queued)
+        Mail::to($user->email)->queue(new WelcomeEmail($user, $validatedData['password']));
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
 
         // Clear any session messages to prevent duplicates
         session()->forget(['success', 'error', 'message']);
 
+<<<<<<< HEAD
         // Redirect to OTP verification page (user is NOT authenticated yet)
+=======
+        // Redirect to OTP verification page
+>>>>>>> 426a34f062f37b5e0582465c5e927a8f0910c4b6
         return redirect()->route('auth.otp.verify')
             ->with('success', 'Registration successful! Please enter the verification code sent to your email.');
     }
