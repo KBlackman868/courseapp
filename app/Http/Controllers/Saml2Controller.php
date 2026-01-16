@@ -73,12 +73,13 @@ class Saml2Controller extends Controller
 
         // Get SAML attributes
         $attributes = $this->samlAuth->getAttributes();
-        
+
         // Find or create user based on SAML attributes
         $user = $this->findOrCreateUser($attributes);
-        
+
         // Login the user
         Auth::login($user, true);
+        request()->session()->regenerate(); // SECURITY: Prevent session fixation attacks
 
         // Redirect to intended destination
         return redirect($returnTo);
