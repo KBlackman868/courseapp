@@ -169,8 +169,8 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
-    'same_site' => 'lax',
+    // Auto-detect HTTPS - will be true if request is secure (works with TrustProxies)
+    'secure' => env('SESSION_SECURE_COOKIE', null),
 
     /*
     |--------------------------------------------------------------------------
