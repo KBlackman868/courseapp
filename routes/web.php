@@ -29,6 +29,16 @@ use App\Http\Controllers\Admin\{
 
 /*
 |==========================================================================
+| HEALTH CHECK ROUTES (For load balancers and monitoring)
+|==========================================================================
+*/
+Route::prefix('health')->group(function () {
+    Route::get('/ping', [\App\Http\Controllers\HealthCheckController::class, 'ping'])->name('health.ping');
+    Route::get('/', [\App\Http\Controllers\HealthCheckController::class, 'health'])->name('health.check');
+});
+
+/*
+|==========================================================================
 | PUBLIC ROUTES (Landing Page)
 |==========================================================================
 */
@@ -63,21 +73,21 @@ Route::get('/home', fn() => redirect('/'));
 */
 Route::controller(LoginController::class)->prefix('auth/otp')->name('auth.otp.')->group(function () {
     Route::get('/verify', 'showOtpForm')->name('verify');
-    Route::post('/verify', 'verifyOtp')->name('submit');
-    Route::post('/resend', 'resendOtp')->name('resend');
+    Route::post('/verify', 'verifyOtp')->middleware('throttle:5,1')->name('submit');
+    Route::post('/resend', 'resendOtp')->middleware('throttle:3,1')->name('resend');
 });
 
 Route::middleware('guest')->group(function () {
-    // Authentication Routes
+    // Authentication Routes (rate limited to prevent brute force)
     Route::controller(LoginController::class)->group(function () {
         Route::get('/login', 'showLoginForm')->name('login');
-        Route::post('/login', 'login')->name('login.submit');
+        Route::post('/login', 'login')->middleware('throttle:5,1')->name('login.submit');
     });
 
-    // Registration Routes
+    // Registration Routes (rate limited to prevent abuse)
     Route::controller(RegisterController::class)->group(function () {
         Route::get('/register', 'showRegistrationForm')->name('register');
-        Route::post('/register', 'register')->name('register.submit');
+        Route::post('/register', 'register')->middleware('throttle:3,1')->name('register.submit');
     });
 
     // Google OAuth Routes
@@ -86,16 +96,16 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])
         ->name('auth.google.callback');
 
-    // Password Reset Routes
+    // Password Reset Routes (rate limited to prevent abuse)
     Route::prefix('password')->name('password.')->group(function () {
         Route::controller(ForgotPasswordController::class)->group(function () {
             Route::get('/reset', 'showLinkRequestForm')->name('request');
-            Route::post('/email', 'sendResetLinkEmail')->name('email');
+            Route::post('/email', 'sendResetLinkEmail')->middleware('throttle:3,1')->name('email');
         });
 
         Route::controller(ResetPasswordController::class)->group(function () {
             Route::get('/reset/{token}', 'showResetForm')->name('reset');
-            Route::post('/reset', 'reset')->name('update');
+            Route::post('/reset', 'reset')->middleware('throttle:5,1')->name('update');
         });
     });
 });
