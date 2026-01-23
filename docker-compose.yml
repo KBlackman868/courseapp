@@ -1,0 +1,234 @@
+# Ministry of Health Course Application
+# Docker Compose Configuration
+#
+# Usage:
+#   Production:  docker-compose up -d
+#   Development: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   Logs:        docker-compose logs -f app
+#   Shell:       docker-compose exec app sh
+#   Artisan:     docker-compose exec app php artisan <command>
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # Laravel Application
+  # ==========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: moh_courseapp
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    environment:
+      - APP_NAME=${APP_NAME:-MOH Course App}
+      - APP_ENV=${APP_ENV:-production}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_URL=${APP_URL:-http://localhost:8000}
+      - APP_TIMEZONE=${APP_TIMEZONE:-America/Port_of_Spain}
+      # Database
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-courseapp}
+      - DB_USERNAME=${DB_USERNAME:-courseapp}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-null}
+      # Cache & Session
+      - CACHE_STORE=${CACHE_STORE:-redis}
+      - SESSION_DRIVER=${SESSION_DRIVER:-redis}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
+      # Mail
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_HOST=${MAIL_HOST:-mailhog}
+      - MAIL_PORT=${MAIL_PORT:-1025}
+      - MAIL_USERNAME=${MAIL_USERNAME:-null}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-null}
+      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-null}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@health.gov.tt}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-MOH Learning Platform}
+      # Google OAuth
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8000/auth/google/callback}
+      # Moodle Integration
+      - MOODLE_BASE_URL=${MOODLE_BASE_URL:-https://learnabouthealth.hin.gov.tt}
+      - MOODLE_TOKEN=${MOODLE_TOKEN}
+      - MOODLE_VERIFY_SSL=${MOODLE_VERIFY_SSL:-true}
+      - MOODLE_AUTO_CREATE_USERS=${MOODLE_AUTO_CREATE_USERS:-true}
+      - MOODLE_SEND_CREDENTIALS_EMAIL=${MOODLE_SEND_CREDENTIALS_EMAIL:-true}
+    volumes:
+      - app_storage:/var/www/html/storage/app
+      - app_logs:/var/www/html/storage/logs
+      - ./storage/certs:/var/www/html/storage/certs:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - courseapp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================================================
+  # Queue Worker
+  # ==========================================================================
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: moh_courseapp_queue
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    environment:
+      - APP_NAME=${APP_NAME:-MOH Course App}
+      - APP_ENV=${APP_ENV:-production}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-courseapp}
+      - DB_USERNAME=${DB_USERNAME:-courseapp}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}
+      - MOODLE_BASE_URL=${MOODLE_BASE_URL}
+      - MOODLE_TOKEN=${MOODLE_TOKEN}
+    volumes:
+      - app_storage:/var/www/html/storage/app
+      - app_logs:/var/www/html/storage/logs
+    depends_on:
+      - app
+      - mysql
+      - redis
+    networks:
+      - courseapp_network
+
+  # ==========================================================================
+  # Scheduler (Cron)
+  # ==========================================================================
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: moh_courseapp_scheduler
+    restart: unless-stopped
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    environment:
+      - APP_NAME=${APP_NAME:-MOH Course App}
+      - APP_ENV=${APP_ENV:-production}
+      - APP_KEY=${APP_KEY}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-courseapp}
+      - DB_USERNAME=${DB_USERNAME:-courseapp}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      - REDIS_HOST=redis
+    volumes:
+      - app_storage:/var/www/html/storage/app
+      - app_logs:/var/www/html/storage/logs
+    depends_on:
+      - app
+      - mysql
+    networks:
+      - courseapp_network
+
+  # ==========================================================================
+  # MySQL Database
+  # ==========================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: moh_courseapp_mysql
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-rootsecret}
+      - MYSQL_DATABASE=${DB_DATABASE:-courseapp}
+      - MYSQL_USER=${DB_USERNAME:-courseapp}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-secret}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - courseapp_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # ==========================================================================
+  # Redis Cache/Queue
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: moh_courseapp_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - courseapp_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # ==========================================================================
+  # Mailhog (Development only - for email testing)
+  # ==========================================================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: moh_courseapp_mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_PORT:-8025}:8025"  # Web UI
+      - "1025:1025"                    # SMTP
+    networks:
+      - courseapp_network
+    profiles:
+      - development
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  courseapp_network:
+    driver: bridge
+    name: moh_courseapp_network
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  mysql_data:
+    name: moh_courseapp_mysql_data
+  redis_data:
+    name: moh_courseapp_redis_data
+  app_storage:
+    name: moh_courseapp_storage
+  app_logs:
+    name: moh_courseapp_logs

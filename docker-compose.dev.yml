@@ -1,0 +1,59 @@
+# Ministry of Health Course Application
+# Docker Compose Development Overrides
+#
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      target: development
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=mailhog
+      - MAIL_PORT=1025
+    volumes:
+      # Mount source code for hot reloading
+      - .:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+    ports:
+      - "5173:5173"  # Vite dev server
+
+  # Enable Mailhog for email testing
+  mailhog:
+    profiles: []  # Remove profile restriction for dev
+
+  # phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: moh_courseapp_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_USER=${DB_USERNAME:-courseapp}
+      - PMA_PASSWORD=${DB_PASSWORD:-secret}
+      - UPLOAD_LIMIT=50M
+    depends_on:
+      - mysql
+    networks:
+      - courseapp_network
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: moh_courseapp_redis_commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - courseapp_network
