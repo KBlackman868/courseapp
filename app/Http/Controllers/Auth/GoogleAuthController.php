@@ -17,9 +17,9 @@ use Illuminate\Auth\Events\Registered;
 class GoogleAuthController extends Controller
 {
     /**
-     * Allowed email domains for Ministry of Health
+     * Internal MOH email domains - users with these domains get automatic course access
      */
-    private const ALLOWED_DOMAINS = [
+    private const INTERNAL_DOMAINS = [
         'health.gov.tt',
         'moh.gov.tt',
     ];
@@ -27,38 +27,37 @@ class GoogleAuthController extends Controller
     /**
      * Redirect to Google OAuth
      * This single method handles both login and registration
+     * Now accepts all Google accounts (internal MOH and external users)
      */
     public function redirectToGoogle()
     {
-        // Don't set intent - we'll auto-detect in callback
-        return Socialite::driver('google')
-            ->with(['hd' => 'health.gov.tt'])  // Hint domain
-            ->redirect();
+        // Don't restrict to specific domain - allow all Google accounts
+        return Socialite::driver('google')->redirect();
     }
-    
+
     /**
      * Alternative: Explicit registration route (optional)
      */
     public function redirectToGoogleForRegister()
     {
         session(['google_auth_intent' => 'register']);
-        return Socialite::driver('google')
-            ->with(['hd' => 'health.gov.tt'])
-            ->redirect();
+        return Socialite::driver('google')->redirect();
     }
 
     /**
      * Handle Google OAuth callback
      * SMART DETECTION: Automatically creates account if user doesn't exist
+     * Users with @health.gov.tt are marked as internal (direct course access)
+     * All other users are marked as external (require approval for courses)
      */
     public function handleGoogleCallback(Request $request)
     {
         try {
             Log::info('Google OAuth callback initiated');
-            
+
             // ===== SSL CERTIFICATE CONFIGURATION =====
             $certPath = storage_path('certs/cacert.pem');
-            
+
             if (file_exists($certPath) && is_readable($certPath)) {
                 $httpClient = new \GuzzleHttp\Client([
                     'verify' => $certPath,
@@ -71,53 +70,35 @@ class GoogleAuthController extends Controller
                     'timeout' => 30,
                 ]);
             }
-            
+
             // Get Google user data
             $googleUser = Socialite::driver('google')
                 ->stateless()
                 ->setHttpClient($httpClient)
                 ->user();
-            
-            // ===== DOMAIN RESTRICTION CHECK =====
+
+            // ===== DETERMINE USER TYPE BASED ON EMAIL DOMAIN =====
             $email = $googleUser->getEmail();
             $emailDomain = $this->getEmailDomain($email);
-            
-            // Check if email domain is allowed
-            if (!$this->isDomainAllowed($emailDomain)) {
-                Log::warning('Unauthorized domain attempt', [
-                    'email' => $email,
-                    'domain' => $emailDomain,
-                ]);
-                
-                // Log failed attempt
-                ActivityLogger::logAuth('google_login_blocked', "Unauthorized domain login attempt", [
-                    'email' => $email,
-                    'domain' => $emailDomain,
-                    'ip_address' => $request->ip()
-                ], 'failed', 'warning');
-                
-                return redirect('/login')->with('error', 
-                    'Access restricted to Ministry of Health email accounts only. ' .
-                    'Please use your @health.gov.tt or @moh.gov.tt email address.'
-                );
-            }
-            
-            Log::info('Authorized MOH user authenticated', [
+            $isInternal = $this->isInternalDomain($emailDomain);
+
+            Log::info('Google user authenticated', [
                 'email' => $email,
                 'domain' => $emailDomain,
+                'user_type' => $isInternal ? 'internal' : 'external',
             ]);
             
             // ===== EXTRACT PROPER NAMES =====
             $googleUserArray = $googleUser->user;
             $firstName = $googleUserArray['given_name'] ?? null;
             $lastName = $googleUserArray['family_name'] ?? null;
-            
+
             if (empty($firstName) || empty($lastName)) {
                 $nameParts = $this->parseFullName($googleUser->getName());
                 $firstName = $firstName ?: $nameParts['first_name'];
                 $lastName = $lastName ?: $nameParts['last_name'];
             }
-            
+
             // Never use TEST or generic names
             if (strtoupper($firstName) === 'TEST' || empty(trim($firstName))) {
                 $emailParts = explode('@', $email);
@@ -126,18 +107,18 @@ class GoogleAuthController extends Controller
                 $firstName = ucfirst($emailNameParts[0]);
                 $lastName = isset($emailNameParts[1]) ? ucfirst($emailNameParts[1]) : '';
             }
-            
+
             // ===== SMART USER HANDLING =====
             // Check if user exists
             $existingUser = User::where('email', $email)->first();
-            
+
             if ($existingUser) {
                 // USER EXISTS - LOG THEM IN
-                return $this->loginExistingUser($existingUser, $googleUser, $firstName, $lastName);
+                return $this->loginExistingUser($existingUser, $googleUser, $firstName, $lastName, $isInternal);
             } else {
                 // USER DOESN'T EXIST - CREATE NEW ACCOUNT
-                // This is the KEY CHANGE - we automatically create an account for valid MOH emails
-                return $this->createNewUser($googleUser, $firstName, $lastName);
+                // Create account for any Google user (internal MOH or external)
+                return $this->createNewUser($googleUser, $firstName, $lastName, $isInternal);
             }
             
         } catch (\Exception $e) {
@@ -159,57 +140,73 @@ class GoogleAuthController extends Controller
     }
     
     /**
-     * Create a new user account for MOH staff
+     * Create a new user account
+     * Internal MOH users get direct course access
+     * External users require approval for course enrollment
      */
-    private function createNewUser($googleUser, $firstName, $lastName)
+    private function createNewUser($googleUser, $firstName, $lastName, bool $isInternal)
     {
-        Log::info('Creating new MOH user account', [
-            'email' => $googleUser->getEmail(),
-            'name' => "$firstName $lastName"
+        $email = $googleUser->getEmail();
+        $userType = $isInternal ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL;
+
+        Log::info('Creating new user account', [
+            'email' => $email,
+            'name' => "$firstName $lastName",
+            'user_type' => $userType,
         ]);
-        
+
+        // Determine organization based on user type
+        $organization = $isInternal
+            ? 'Ministry of Health Trinidad and Tobago'
+            : $this->inferOrganizationFromEmail($email);
+
         // Create the user
         $user = User::create([
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'email' => $googleUser->getEmail(),
+            'email' => $email,
             'google_id' => $googleUser->getId(),
             'profile_photo' => $googleUser->getAvatar(),
             'email_verified_at' => now(),
             'password' => Hash::make(Str::random(24)),
-            'department' => $this->inferDepartment($googleUser->getEmail()),
-            'organization' => 'Ministry of Health Trinidad and Tobago',
+            'department' => $isInternal ? $this->inferDepartment($email) : null,
+            'organization' => $organization,
             'verification_status' => 'verified',
             'verification_sent_at' => now(),
             'verification_attempts' => 0,
             'must_verify_before' => null,
+            'user_type' => $userType,
+            'auth_method' => 'google',
         ]);
-        
+
         // Assign default role
         if (method_exists($user, 'assignRole')) {
             $user->assignRole('user');
         }
-        
-        Log::info('New MOH user created successfully', [
+
+        Log::info('New user created successfully', [
             'user_id' => $user->id,
             'email' => $user->email,
+            'user_type' => $userType,
         ]);
-        
+
         // Log the registration
-        ActivityLogger::logAuth('google_register', "New MOH user registered via Google OAuth", [
+        ActivityLogger::logAuth('google_register', "New user registered via Google OAuth", [
             'user_id' => $user->id,
             'email' => $user->email,
             'domain' => $this->getEmailDomain($user->email),
-            'organization' => 'Ministry of Health Trinidad and Tobago',
+            'user_type' => $userType,
+            'organization' => $organization,
             'google_id' => $googleUser->getId(),
             'ip_address' => request()->ip()
         ]);
-        
+
         // Fire registration event
         event(new Registered($user));
-        
-        // Create Moodle account if configured
-        if (class_exists(CreateOrLinkMoodleUser::class)) {
+
+        // Create Moodle account for internal users immediately
+        // External users will get Moodle account when their enrollment is approved
+        if ($isInternal && class_exists(CreateOrLinkMoodleUser::class)) {
             try {
                 CreateOrLinkMoodleUser::dispatch(
                     $user,
@@ -217,18 +214,16 @@ class GoogleAuthController extends Controller
                     $firstName,
                     $lastName
                 );
-                Log::info('Moodle user creation job dispatched');
-                
-                // Log Moodle sync attempt
-                ActivityLogger::logMoodle('user_sync_dispatched', 
-                    "Moodle user creation job dispatched for new user", 
+                Log::info('Moodle user creation job dispatched for internal user');
+
+                ActivityLogger::logMoodle('user_sync_dispatched',
+                    "Moodle user creation job dispatched for new internal user",
                     $user,
                     ['email' => $user->email]
                 );
             } catch (\Exception $e) {
                 Log::error('Failed to dispatch Moodle job', ['error' => $e->getMessage()]);
-                
-                // Log Moodle sync failure
+
                 ActivityLogger::logMoodle('user_sync_failed',
                     "Failed to dispatch Moodle user creation",
                     $user,
@@ -238,51 +233,74 @@ class GoogleAuthController extends Controller
                 );
             }
         }
-        
+
         // Log the user in
         Auth::login($user, true);
-        
-        // Welcome message for new users
-        return redirect('/dashboard')->with('success', 
-            "Welcome to the Ministry of Health Learning Platform, $firstName! " .
-            "Your account has been created successfully. " .
-            "You can now access all training materials."
-        );
+
+        // Welcome message based on user type
+        if ($isInternal) {
+            return redirect('/mycourses')->with('success',
+                "Welcome to the Ministry of Health Learning Platform, $firstName! " .
+                "Your account has been created successfully. " .
+                "As MOH staff, you have direct access to all courses."
+            );
+        } else {
+            return redirect('/dashboard')->with('success',
+                "Welcome to the Ministry of Health Learning Platform, $firstName! " .
+                "Your account has been created successfully. " .
+                "As an external user, course enrollment requires administrator approval."
+            );
+        }
     }
     
     /**
      * Login an existing user
      */
-    private function loginExistingUser($user, $googleUser, $firstName, $lastName)
+    private function loginExistingUser($user, $googleUser, $firstName, $lastName, bool $isInternal)
     {
         // Check if suspended
         if ($user->is_suspended ?? false) {
             Log::warning('Suspended user login attempt', ['user_id' => $user->id]);
-            
-            // Log the blocked login
+
             ActivityLogger::logAuth('login_blocked', "Suspended user attempted login", [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'reason' => 'suspended',
                 'ip_address' => request()->ip()
             ], 'failed', 'warning');
-            
-            return redirect('/login')->with('error', 
+
+            return redirect('/login')->with('error',
                 'Your account has been suspended. Please contact IT support.'
             );
         }
-        
+
         // Update user data if needed
         $updates = [];
-        
+
         // Link Google account if not linked
         if (!$user->google_id) {
             $updates['google_id'] = $googleUser->getId();
             $updates['profile_photo'] = $user->profile_photo ?: $googleUser->getAvatar();
         }
-        
+
+        // Update user type if not set or if it changed
+        $expectedUserType = $isInternal ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL;
+        if (empty($user->user_type) || $user->user_type !== $expectedUserType) {
+            $updates['user_type'] = $expectedUserType;
+            Log::info('Updating user type', [
+                'user_id' => $user->id,
+                'old_type' => $user->user_type,
+                'new_type' => $expectedUserType
+            ]);
+        }
+
+        // Update auth method if not set
+        if (empty($user->auth_method)) {
+            $updates['auth_method'] = 'google';
+        }
+
         // Fix TEST USER names
-        if (strtoupper($user->first_name) === 'TEST' || 
+        if (strtoupper($user->first_name) === 'TEST' ||
             empty(trim($user->first_name)) ||
             $user->first_name === 'User') {
             $updates['first_name'] = $firstName;
@@ -292,40 +310,49 @@ class GoogleAuthController extends Controller
                 'new_name' => "$firstName $lastName"
             ]);
         }
-        
+
         // Verify email if not verified
         if (!$user->email_verified_at) {
             $updates['email_verified_at'] = now();
             $updates['verification_status'] = 'verified';
         }
-        
+
         // Apply updates if any
         if (!empty($updates)) {
             $user->update($updates);
         }
-        
+
         // Log the user in
         Auth::login($user, true);
-        
-        Log::info('MOH user logged in successfully', [
+
+        Log::info('User logged in successfully', [
             'user_id' => $user->id,
             'email' => $user->email,
+            'user_type' => $user->user_type,
         ]);
-        
+
         // Log successful login
         $emailDomain = $this->getEmailDomain($user->email);
         ActivityLogger::logAuth('google_login', "User logged in via Google OAuth", [
             'user_id' => $user->id,
             'email' => $user->email,
             'domain' => $emailDomain,
+            'user_type' => $user->user_type,
             'google_id' => $googleUser->getId(),
             'ip_address' => request()->ip(),
             'profile_updated' => !empty($updates)
         ]);
-        
-        return redirect()->intended('/dashboard')->with('success', 
-            "Welcome back, $firstName!"
-        );
+
+        // Redirect internal users to My Courses, external users to dashboard
+        if ($isInternal) {
+            return redirect()->intended('/mycourses')->with('success',
+                "Welcome back, $firstName!"
+            );
+        } else {
+            return redirect()->intended('/dashboard')->with('success',
+                "Welcome back, $firstName!"
+            );
+        }
     }
     
     /**
@@ -368,21 +395,21 @@ class GoogleAuthController extends Controller
     }
     
     /**
-     * Check if email domain is allowed
+     * Check if email domain is an internal MOH domain
      */
-    private function isDomainAllowed($domain)
+    private function isInternalDomain($domain)
     {
-        return in_array($domain, array_map('strtolower', self::ALLOWED_DOMAINS));
+        return in_array(strtolower($domain), array_map('strtolower', self::INTERNAL_DOMAINS));
     }
-    
+
     /**
-     * Try to infer department from email
+     * Try to infer department from email (for internal users)
      */
     private function inferDepartment($email)
     {
         $emailParts = explode('@', $email);
         $localPart = $emailParts[0] ?? '';
-        
+
         $departments = [
             'cardiology' => 'Cardiology',
             'emergency' => 'Emergency Medicine',
@@ -396,13 +423,36 @@ class GoogleAuthController extends Controller
             'hr' => 'Human Resources',
             'finance' => 'Finance',
         ];
-        
+
         foreach ($departments as $keyword => $department) {
             if (stripos($localPart, $keyword) !== false) {
                 return $department;
             }
         }
-        
+
         return 'Ministry of Health';
+    }
+
+    /**
+     * Try to infer organization from email domain (for external users)
+     */
+    private function inferOrganizationFromEmail($email)
+    {
+        $domain = $this->getEmailDomain($email);
+
+        // Common email providers - return generic organization
+        $genericProviders = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com'];
+        if (in_array($domain, $genericProviders)) {
+            return 'External Organization';
+        }
+
+        // Try to extract organization name from domain
+        $domainParts = explode('.', $domain);
+        if (count($domainParts) >= 2) {
+            // Get the main part of the domain (e.g., "company" from "company.com")
+            return ucfirst($domainParts[0]);
+        }
+
+        return 'External Organization';
     }
 }

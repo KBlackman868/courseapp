@@ -25,6 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'department',
+        'organization',
         'profile_photo',
         'moodle_user_id',
         'temp_moodle_password',

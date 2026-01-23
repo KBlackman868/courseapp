@@ -334,26 +334,61 @@ class EnrollmentController extends Controller
 
     /**
      * View the list of courses when enrolled
+     * MOH users see all available courses and can enroll directly
+     * External users see only their enrolled courses
      */
     public function myCourses()
     {
         $user = Auth::user();
-        
+        $isInternal = $user->isInternal();
+
+        // Get user's enrollments (for both internal and external users)
         $enrollments = Enrollment::where('user_id', $user->id)
-                                ->where('status', 'approved')
-                                ->with('course')
-                                ->get();
+            ->with('course')
+            ->get()
+            ->keyBy('course_id');
+
+        // For internal MOH users, also get all available courses
+        $allCourses = collect();
+        if ($isInternal) {
+            $allCourses = Course::where('status', 'active')
+                ->orderBy('title')
+                ->get();
+        }
+
+        // Get enrolled courses for display
+        $enrolledCourses = Enrollment::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->with('course')
+            ->get()
+            ->pluck('course');
+
+        // Get pending courses
+        $pendingCourses = Enrollment::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->with('course')
+            ->get()
+            ->pluck('course');
 
         // Log user viewing their courses
         ActivityLogger::logSystem('my_courses_viewed',
             "User viewed their enrolled courses",
             [
                 'user_id' => $user->id,
-                'course_count' => $enrollments->count()
+                'user_type' => $user->user_type,
+                'enrolled_count' => $enrolledCourses->count(),
+                'pending_count' => $pendingCourses->count(),
+                'all_courses_shown' => $isInternal
             ]
         );
 
-        return view('courses.mycourses', compact('enrollments'));
+        return view('courses.mycourses', compact(
+            'enrollments',
+            'allCourses',
+            'enrolledCourses',
+            'pendingCourses',
+            'isInternal'
+        ));
     }
 
     /**

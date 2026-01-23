@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+bitbucket-pipelines.yml
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# PHP
+vendor
+
+# Laravel
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/debugbar/*
+bootstrap/cache/*
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.docker
+
+# Testing
+tests
+phpunit.xml
+phpunit.xml.dist
+.phpunit.result.cache
+coverage
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Misc
+.editorconfig
+.styleci.yml
+Makefile
