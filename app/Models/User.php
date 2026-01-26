@@ -36,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id',
         'is_suspended',
         'user_type',
+        'account_status',
         'is_course_creator',
         'ldap_guid',
         'ldap_username',
@@ -141,20 +142,69 @@ class User extends Authenticatable implements MustVerifyEmail
         
         return false;
     }
-            // Constants
-        public const TYPE_INTERNAL = 'internal';
-        public const TYPE_EXTERNAL = 'external';
+    // User type constants
+    public const TYPE_INTERNAL = 'internal';
+    public const TYPE_EXTERNAL = 'external';
 
-        // Check methods
-        public function isInternal(): bool
-        {
-            return $this->user_type === self::TYPE_INTERNAL;
-        }
+    // Account status constants
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_INACTIVE = 'inactive';
 
-        public function isExternal(): bool
-        {
-            return $this->user_type === self::TYPE_EXTERNAL;
-        }
+    // User type check methods
+    public function isInternal(): bool
+    {
+        return $this->user_type === self::TYPE_INTERNAL;
+    }
+
+    public function isExternal(): bool
+    {
+        return $this->user_type === self::TYPE_EXTERNAL;
+    }
+
+    // Account status check methods
+    public function isPending(): bool
+    {
+        return $this->account_status === self::STATUS_PENDING;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->account_status === self::STATUS_ACTIVE;
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->account_status === self::STATUS_INACTIVE;
+    }
+
+    // Account status scopes
+    public function scopePendingApproval($query)
+    {
+        return $query->where('account_status', self::STATUS_PENDING);
+    }
+
+    public function scopeActiveAccounts($query)
+    {
+        return $query->where('account_status', self::STATUS_ACTIVE);
+    }
+
+    public function scopeInactiveAccounts($query)
+    {
+        return $query->where('account_status', self::STATUS_INACTIVE);
+    }
+
+    // Enrollment requests relationship
+    public function enrollmentRequests()
+    {
+        return $this->hasMany(EnrollmentRequest::class);
+    }
+
+    // Get full name accessor
+    public function getFullNameAttribute(): string
+    {
+        return "{$this->first_name} {$this->last_name}";
+    }
 
         public function canCreateCourses(): bool
         {

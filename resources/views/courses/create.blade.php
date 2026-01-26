@@ -62,6 +62,54 @@
             @enderror
         </div>
 
+        {{-- Access Control Section --}}
+        <div class="border-t pt-4 mt-4">
+            <h3 class="text-lg font-bold text-gray-700 mb-4">Access Control</h3>
+
+            <!-- Audience Type -->
+            <div class="mb-4">
+                <label for="audience_type" class="block text-gray-700 font-bold mb-2">Target Audience:</label>
+                <select name="audience_type" id="audience_type"
+                        class="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-300 @error('audience_type') border-red-500 @enderror">
+                    <option value="moh" {{ old('audience_type', 'moh') == 'moh' ? 'selected' : '' }}>MOH Staff Only</option>
+                    <option value="external" {{ old('audience_type') == 'external' ? 'selected' : '' }}>External Users Only</option>
+                    <option value="all" {{ old('audience_type') == 'all' ? 'selected' : '' }}>All Users</option>
+                </select>
+                <p class="text-gray-500 text-sm mt-1">Who can view and enroll in this course</p>
+                @error('audience_type')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <!-- Enrollment Type -->
+            <div class="mb-4">
+                <label class="block text-gray-700 font-bold mb-2">Enrollment Type:</label>
+                <div class="space-y-2">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="is_free" value="1"
+                               class="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                               {{ old('is_free', '0') == '1' ? 'checked' : '' }}>
+                        <span class="text-gray-700">
+                            <span class="font-medium">Open Enrollment</span>
+                            <span class="text-sm text-gray-500 ml-2">- Users can enroll directly without approval</span>
+                        </span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="is_free" value="0"
+                               class="mr-2 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                               {{ old('is_free', '0') == '0' ? 'checked' : '' }}>
+                        <span class="text-gray-700">
+                            <span class="font-medium">Requires Approval</span>
+                            <span class="text-sm text-gray-500 ml-2">- Users must request access and wait for admin approval</span>
+                        </span>
+                    </label>
+                </div>
+                @error('is_free')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
         {{-- Moodle Integration Section --}}
         <div class="border-t pt-4 mt-6">
             <h3 class="text-lg font-bold text-gray-700 mb-4">Moodle LMS Integration (Optional)</h3>

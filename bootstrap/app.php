@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\CheckSuspended::class,
+            \App\Http\Middleware\CheckAccountStatus::class,
             \App\Http\Middleware\LogActivity::class,
         ]);
     })
