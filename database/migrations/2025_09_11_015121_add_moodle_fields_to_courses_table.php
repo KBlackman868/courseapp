@@ -9,17 +9,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('courses', function (Blueprint $table) {
-            $table->unsignedBigInteger('moodle_course_id')->nullable()->index()
-                ->after('id');
-            $table->string('moodle_course_shortname')->nullable()->unique()
-                ->after('moodle_course_id');
+            if (!Schema::hasColumn('courses', 'moodle_course_id')) {
+                $table->unsignedBigInteger('moodle_course_id')->nullable()->index();
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('courses', function (Blueprint $table) {
-            $table->dropColumn(['moodle_course_id', 'moodle_course_shortname']);
+            $table->dropColumn('moodle_course_id');
         });
     }
 };

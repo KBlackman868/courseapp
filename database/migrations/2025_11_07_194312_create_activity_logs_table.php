@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up()
-    {
+    {   
+        if (!Schema::hasTable('activity_logs')) {
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
@@ -34,6 +35,7 @@ return new class extends Migration
             $table->index('severity');
             $table->index('status');
         });
+    }
     }
 
     public function down()

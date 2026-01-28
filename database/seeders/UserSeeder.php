@@ -15,11 +15,11 @@ class UserSeeder extends Seeder
     {
         // Create a superadmin user
         $superadmin = User::factory()->create([
-            'first_name' => 'Super',
-            'last_name'  => 'Admin',
-            'email'      => 'superadmin@example.com',
+            'first_name' => 'Kyle',
+            'last_name'  => 'Blackman',
+            'email'      => 'kyle.blackman@health.gov.tt',
             'department' => 'Administration',
-            'password'   => Hash::make('password123'),
+            'password'   => Hash::make('H3@lth100%'),
         ]);
         $superadmin->assignRole('superadmin');
 
