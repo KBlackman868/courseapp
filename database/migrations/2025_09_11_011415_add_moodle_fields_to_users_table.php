@@ -9,22 +9,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->unsignedBigInteger('moodle_user_id')->nullable()->index();
+            if (!Schema::hasColumn('users', 'moodle_user_id')) {
+                $table->unsignedBigInteger('moodle_user_id')->nullable()->index();
+            }
         });
-
-        // Schema::table('courses', function (Blueprint $table) {
-        //     $table->unsignedBigInteger('moodle_course_id')->nullable()->index();
-        // });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('moodle_user_id');
+            if (Schema::hasColumn('users', 'moodle_user_id')) {
+                $table->dropColumn('moodle_user_id');
+            }
         });
-
-        // Schema::table('courses', function (Blueprint $table) {
-        //     $table->dropColumn('moodle_course_id');
-        // });
     }
 };
