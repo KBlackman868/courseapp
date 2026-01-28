@@ -110,7 +110,7 @@
     }
   </style>
 </head>
-<body class="animated-gradient min-h-screen flex items-center justify-center relative overflow-hidden py-12">
+<body class="animated-gradient min-h-screen flex items-center justify-center relative overflow-y-auto py-12">
   
   <!-- Animated background elements -->
   <div class="absolute inset-0 overflow-hidden">
