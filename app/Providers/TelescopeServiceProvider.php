@@ -56,7 +56,18 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewTelescope', function ($user) {
+        Gate::define('viewTelescope', function ($user = null) {
+            // Allow open access for debugging if env var is set
+            // Set TELESCOPE_OPEN_ACCESS=true in .env to bypass auth (REMOVE IN PRODUCTION!)
+            if (env('TELESCOPE_OPEN_ACCESS', false)) {
+                return true;
+            }
+
+            // If no user, deny access
+            if (!$user) {
+                return false;
+            }
+
             // Allow access for specific emails
             $authorizedEmails = [
                 'kyle.blackman@health.gov.tt',
