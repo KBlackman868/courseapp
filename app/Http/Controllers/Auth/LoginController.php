@@ -46,19 +46,7 @@ class LoginController extends Controller
         $email = $request->email;
         $password = $request->password;
 
-        // Check if user exists with local auth method (bypass LDAP for admins/local users)
-        $existingUser = User::where('email', $email)->first();
-        if ($existingUser && $existingUser->auth_method === 'local') {
-            return $this->handleExternalLogin($request, $email, $password);
-        }
-
-        // Check if internal (MOH) user
-        $isInternal = $this->ldapService->isInternalDomain($email);
-
-        if ($isInternal && $this->ldapService->isEnabled()) {
-            return $this->handleInternalLogin($request, $email, $password);
-        }
-
+        // Use local password authentication for all users
         return $this->handleExternalLogin($request, $email, $password);
     }
 
