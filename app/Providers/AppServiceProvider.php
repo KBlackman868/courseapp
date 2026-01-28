@@ -20,32 +20,26 @@ class AppServiceProvider extends ServiceProvider
         }
     }
 
-    public function boot(): void
-    {
-        // Force HTTPS in production
-        if ($this->app->environment('production')) {
-            URL::forceScheme('https');
-            $this->app['request']->server->set('HTTPS', 'on');
-        }
-        
-        // Alternative: Force HTTPS based on env variable
-        if (env('FORCE_HTTPS', false)) {
-            URL::forceScheme('https');
-            $this->app['request']->server->set('HTTPS', 'on');
-        }
-
-        // Share data with all views that use the layouts component
-        View::composer('components.layouts', function ($view) {
-            // Only calculate these for authenticated admin users
-            if (auth()->check() && auth()->user()->hasRole(['admin', 'superadmin'])) {
-                $view->with([
-                    'totalCourses' => Course::count(),
-                    'totalUsers' => User::count(),
-                    'pendingCount' => Enrollment::where('status', 'pending')->count(),
-                ]);
-            }
-        });
-        
-        Vite::prefetch(concurrency: 3);
+public function boot(): void
+{
+    // Only force HTTPS when explicitly enabled via env
+    if (config('app.force_https', false)) {
+        URL::forceScheme('https');
+        $this->app['request']->server->set('HTTPS', 'on');
     }
+
+    // Share data with all views that use the layouts component
+    View::composer('components.layouts', function ($view) {
+        // Only calculate these for authenticated admin users
+        if (auth()->check() && auth()->user()->hasRole(['admin', 'superadmin'])) {
+            $view->with([
+                'totalCourses' => Course::count(),
+                'totalUsers' => User::count(),
+                'pendingCount' => Enrollment::where('status', 'pending')->count(),
+            ]);
+        }
+    });
+
+    Vite::prefetch(concurrency: 3);
+}
 }

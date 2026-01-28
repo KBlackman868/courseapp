@@ -128,5 +128,9 @@ return [
         ],
 
     ],
+    'bugsnag' => [
+        'driver' => 'bugsnag',
+        'level' => env('LOG_LEVEL', 'debug'),
+    ],
 
 ];
