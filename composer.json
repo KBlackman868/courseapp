@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "aacotroneo/laravel-saml2": "^2.1",
+        "bugsnag/bugsnag-laravel": "^2.0",
         "codegreencreative/laravel-samlidp": "^5.3",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/breeze": "^2.3",
