@@ -96,20 +96,27 @@
                     <p class="text-blue-100">Manage, organize and sync your courses with Moodle LMS</p>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ route('courses.create') }}" 
+                    <a href="{{ route('courses.create') }}"
                        class="bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:scale-105 transition-all flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
                         Create Course
                     </a>
-                    <a href="{{ route('admin.moodle.courses.import') }}" 
+                    <a href="{{ route('admin.moodle.courses.import') }}"
                        class="bg-white/20 backdrop-blur border-2 border-white text-white px-6 py-3 rounded-xl font-bold hover:bg-white hover:text-blue-600 transition-all flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
                         Sync Moodle
                     </a>
+                    <button onclick="showDeleteAllModal()"
+                       class="bg-red-500/80 backdrop-blur border-2 border-red-400 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-600 transition-all flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete All
+                    </button>
                 </div>
             </div>
         </div>
@@ -460,6 +467,57 @@
         </div>
     </div>
 
+    <!-- Delete All Confirmation Modal -->
+    <div id="deleteAllModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm hidden z-50">
+        <div class="relative top-20 mx-auto p-5 w-full max-w-md animate-fadeInUp">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="bg-gradient-to-r from-red-500 to-red-600 p-6">
+                    <div class="flex items-center">
+                        <svg class="w-8 h-8 text-white mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Delete All Courses</h3>
+                            <p class="text-red-100 text-sm mt-1">This action cannot be undone!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                        <p class="text-red-800 text-sm">
+                            <strong>Warning:</strong> You are about to delete <strong>ALL {{ $stats['total'] ?? 0 }} courses</strong> from the system.
+                            This will also remove all associated enrollments and data. This action is permanent and cannot be reversed.
+                        </p>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Type <strong>"DELETE ALL"</strong> to confirm:
+                        </label>
+                        <input type="text" id="deleteConfirmInput"
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                               placeholder="DELETE ALL"
+                               autocomplete="off">
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button onclick="closeDeleteAllModal()"
+                                class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all">
+                            Cancel
+                        </button>
+                        <button onclick="confirmDeleteAll()"
+                                id="confirmDeleteBtn"
+                                class="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all opacity-50 cursor-not-allowed"
+                                disabled>
+                            Delete All Courses
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden Forms -->
     <form id="bulkDeleteForm" action="{{ route('admin.courses.bulkDelete') }}" method="POST" class="hidden">
         @csrf
@@ -468,6 +526,11 @@
 
     <form id="bulkStatusForm" action="{{ route('admin.courses.bulkStatus') }}" method="POST" class="hidden">
         @csrf
+    </form>
+
+    <form id="deleteAllForm" action="{{ route('admin.courses.deleteAll') }}" method="POST" class="hidden">
+        @csrf
+        @method('DELETE')
     </form>
 
     <script>
@@ -574,11 +637,54 @@
             form.submit();
         }
 
+        // Delete All Modal Functions
+        function showDeleteAllModal() {
+            document.getElementById('deleteAllModal').classList.remove('hidden');
+            document.getElementById('deleteConfirmInput').value = '';
+            document.getElementById('confirmDeleteBtn').disabled = true;
+            document.getElementById('confirmDeleteBtn').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function closeDeleteAllModal() {
+            document.getElementById('deleteAllModal').classList.add('hidden');
+            document.getElementById('deleteConfirmInput').value = '';
+        }
+
+        // Enable delete button only when "DELETE ALL" is typed
+        document.getElementById('deleteConfirmInput')?.addEventListener('input', function() {
+            const btn = document.getElementById('confirmDeleteBtn');
+            if (this.value === 'DELETE ALL') {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        });
+
+        function confirmDeleteAll() {
+            const input = document.getElementById('deleteConfirmInput');
+            if (input.value !== 'DELETE ALL') {
+                alert('Please type "DELETE ALL" to confirm.');
+                return;
+            }
+
+            // Final confirmation
+            if (confirm('FINAL WARNING: Are you absolutely sure you want to delete ALL courses? This cannot be undone!')) {
+                document.getElementById('deleteAllForm').submit();
+            }
+        }
+
         // Close modal on outside click
         window.onclick = function(event) {
-            const modal = document.getElementById('statusModal');
-            if (event.target == modal) {
+            const statusModal = document.getElementById('statusModal');
+            const deleteAllModal = document.getElementById('deleteAllModal');
+
+            if (event.target == statusModal) {
                 closeStatusModal();
+            }
+            if (event.target == deleteAllModal) {
+                closeDeleteAllModal();
             }
         }
     </script>

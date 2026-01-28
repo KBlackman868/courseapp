@@ -287,10 +287,31 @@
                                 <div class="ml-4 flex-1">
                                     <h4 class="text-lg font-semibold text-gray-900">Check Missing</h4>
                                     <p class="text-gray-600 text-sm mt-1 mb-4">Find courses not yet imported</p>
-                                    <a href="{{ route('admin.moodle.courses.missing') }}" 
+                                    <a href="{{ route('admin.moodle.courses.missing') }}"
                                        class="block text-center w-full bg-gradient-to-r from-yellow-600 to-yellow-700 text-white px-4 py-2 rounded-lg hover:from-yellow-700 hover:to-yellow-800 transition-all transform hover:scale-105 font-medium shadow-lg">
                                         View Missing
                                     </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Import Individual Course -->
+                        <div class="gradient-border rounded-xl p-6 hover:shadow-xl transition-shadow">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="ml-4 flex-1">
+                                    <h4 class="text-lg font-semibold text-gray-900">Import Single Course</h4>
+                                    <p class="text-gray-600 text-sm mt-1 mb-4">Import a specific course by Moodle ID</p>
+                                    <button onclick="showSingleCourseImport()"
+                                            class="w-full bg-gradient-to-r from-teal-600 to-teal-700 text-white px-4 py-2 rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all transform hover:scale-105 font-medium shadow-lg">
+                                        Import Course
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -506,21 +527,56 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Category ID
                         </label>
-                        <input type="number" id="categoryId" 
-                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all" 
+                        <input type="number" id="categoryId"
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                placeholder="Enter category ID" required>
                         <p class="mt-2 text-sm text-gray-500">
                             You can find category IDs in your Moodle admin panel
                         </p>
                     </div>
                     <div class="flex gap-3">
-                        <button type="button" onclick="closeCategoryModal()" 
+                        <button type="button" onclick="closeCategoryModal()"
                                 class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all">
                             Cancel
                         </button>
-                        <button type="submit" 
+                        <button type="submit"
                                 class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-purple-800 transition-all">
                             Sync Category
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Single Course Import Modal -->
+    <div id="singleCourseModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 overflow-y-auto">
+        <div class="relative top-20 mx-auto p-5 w-full max-w-md">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="bg-gradient-to-r from-teal-600 to-teal-700 p-6">
+                    <h3 class="text-xl font-bold text-white">Import Single Course</h3>
+                    <p class="text-teal-100 text-sm mt-1">Import a specific course from Moodle</p>
+                </div>
+                <form onsubmit="importSingleCourse(event)" class="p-6">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Moodle Course ID
+                        </label>
+                        <input type="number" id="singleCourseId"
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                               placeholder="Enter Moodle course ID" required>
+                        <p class="mt-2 text-sm text-gray-500">
+                            You can find the course ID in the Moodle course URL (e.g., course/view.php?id=<strong>123</strong>)
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeSingleCourseModal()"
+                                class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="flex-1 px-4 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-xl font-semibold hover:from-teal-700 hover:to-teal-800 transition-all">
+                            Import Course
                         </button>
                     </div>
                 </form>
@@ -675,11 +731,63 @@
             });
         }
 
+        // Single Course Import Functions
+        function showSingleCourseImport() {
+            document.getElementById('singleCourseModal').classList.remove('hidden');
+        }
+
+        function closeSingleCourseModal() {
+            document.getElementById('singleCourseModal').classList.add('hidden');
+            document.getElementById('singleCourseId').value = '';
+        }
+
+        function importSingleCourse(event) {
+            event.preventDefault();
+            const courseId = document.getElementById('singleCourseId').value;
+
+            if (!courseId) {
+                alert('Please enter a Moodle course ID');
+                return;
+            }
+
+            document.getElementById('sync-progress').classList.remove('hidden');
+            closeSingleCourseModal();
+
+            fetch('{{ route("admin.moodle.courses.sync.single") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ course_id: courseId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('sync-progress').classList.add('hidden');
+
+                if (data.status === 'success') {
+                    alert(`Course imported successfully!\n\nCourse: ${data.course.title || data.course.fullname}`);
+                    location.reload();
+                } else {
+                    alert('Import failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                document.getElementById('sync-progress').classList.add('hidden');
+                alert('Error: ' + error);
+            });
+        }
+
         // Close modal on outside click
         window.onclick = function(event) {
-            const modal = document.getElementById('categorySyncModal');
-            if (event.target == modal) {
+            const categoryModal = document.getElementById('categorySyncModal');
+            const singleCourseModal = document.getElementById('singleCourseModal');
+
+            if (event.target == categoryModal) {
                 closeCategoryModal();
+            }
+            if (event.target == singleCourseModal) {
+                closeSingleCourseModal();
             }
         }
     </script>

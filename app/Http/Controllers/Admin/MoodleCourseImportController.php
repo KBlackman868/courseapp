@@ -280,6 +280,84 @@ public function missingCourses()
     }
 
     /**
+     * Import a single course from Moodle by course ID
+     */
+    public function importSingleCourse(Request $request)
+    {
+        $request->validate([
+            'course_id' => 'required|integer',
+        ]);
+
+        try {
+            $moodleCourseId = $request->course_id;
+
+            // Check if course already exists locally
+            $existing = Course::where('moodle_course_id', $moodleCourseId)->first();
+            if ($existing) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This course has already been imported (ID: ' . $existing->id . ')'
+                ], 400);
+            }
+
+            // Fetch all courses from Moodle and find the one we want
+            $moodleCourses = $this->syncService->fetchMoodleCourses();
+            $targetCourse = null;
+
+            foreach ($moodleCourses as $course) {
+                if ($course['id'] == $moodleCourseId) {
+                    $targetCourse = $course;
+                    break;
+                }
+            }
+
+            if (!$targetCourse) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Course not found in Moodle with ID: ' . $moodleCourseId
+                ], 404);
+            }
+
+            // Create the course locally
+            $newCourse = Course::create([
+                'moodle_course_id' => $targetCourse['id'],
+                'moodle_course_shortname' => $targetCourse['shortname'] ?? null,
+                'title' => $targetCourse['fullname'] ?? $targetCourse['shortname'] ?? 'Untitled Course',
+                'description' => strip_tags($targetCourse['summary'] ?? ''),
+                'status' => ($targetCourse['visible'] ?? 1) ? 'active' : 'inactive',
+            ]);
+
+            Log::info('Single course imported from Moodle', [
+                'local_course_id' => $newCourse->id,
+                'moodle_course_id' => $moodleCourseId,
+                'title' => $newCourse->title
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Course imported successfully',
+                'course' => [
+                    'id' => $newCourse->id,
+                    'title' => $newCourse->title,
+                    'moodle_course_id' => $newCourse->moodle_course_id,
+                    'fullname' => $targetCourse['fullname'] ?? null,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to import single course', [
+                'course_id' => $request->course_id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to import course: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Sync a single course to/from Moodle
      */
     public function syncSingleCourse(Request $request, Course $course)

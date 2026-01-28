@@ -562,6 +562,72 @@ class CourseController extends Controller
     }
 
     /**
+     * Delete all courses from the system
+     */
+    public function deleteAll(Request $request)
+    {
+        try {
+            $totalCourses = Course::count();
+
+            if ($totalCourses === 0) {
+                return redirect()->back()->with('error', 'No courses to delete.');
+            }
+
+            DB::beginTransaction();
+
+            // Delete all enrollments first (foreign key constraint)
+            $enrollmentsDeleted = Enrollment::count();
+            Enrollment::query()->delete();
+
+            // Delete all courses
+            Course::query()->delete();
+
+            DB::commit();
+
+            // Log the deletion
+            ActivityLogger::logSystem('delete_all_courses',
+                "All courses deleted from system",
+                [
+                    'total_courses_deleted' => $totalCourses,
+                    'total_enrollments_deleted' => $enrollmentsDeleted,
+                    'performed_by' => auth()->user()->email
+                ],
+                'success',
+                'warning'
+            );
+
+            Log::warning('All courses deleted', [
+                'total_courses' => $totalCourses,
+                'total_enrollments' => $enrollmentsDeleted,
+                'deleted_by' => auth()->user()->email,
+                'ip' => $request->ip()
+            ]);
+
+            return redirect()->back()->with('success', "Successfully deleted all {$totalCourses} courses and {$enrollmentsDeleted} enrollments.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Delete all courses failed', [
+                'error' => $e->getMessage(),
+                'attempted_by' => auth()->user()->email
+            ]);
+
+            ActivityLogger::logSystem('delete_all_courses_error',
+                "Failed to delete all courses",
+                [
+                    'error' => $e->getMessage(),
+                    'attempted_by' => auth()->user()->email
+                ],
+                'failed',
+                'error'
+            );
+
+            return redirect()->back()->with('error', 'Failed to delete all courses: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Toggle course status (active/inactive)
      */
     public function toggleStatus(Request $request, Course $course)

@@ -242,6 +242,7 @@ Route::middleware('auth')->group(function () {
             Route::prefix('courses')->name('courses.')->controller(CourseController::class)->group(function () {
                 Route::get('/', 'adminIndex')->name('index');
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
+                Route::delete('/delete-all', 'deleteAll')->name('deleteAll');
                 Route::post('/bulk-sync', 'bulkSync')->name('bulkSync');
                 Route::post('/bulk-status', 'bulkUpdateStatus')->name('bulkStatus');
                 Route::post('/{course}/toggle-status', 'toggleStatus')->name('toggleStatus');
@@ -394,6 +395,7 @@ Route::middleware('auth')->group(function () {
                             Route::get('/import', 'index')->name('import');
                             Route::post('/import/file', 'importFromFile')->name('import.file');
                             Route::post('/sync', 'syncFromMoodle')->name('sync');
+                            Route::post('/sync/single', 'importSingleCourse')->name('sync.single');
                             Route::get('/export', 'exportFromMoodle')->name('export');
                         });
                     }
