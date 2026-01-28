@@ -18,7 +18,13 @@ use App\Http\Controllers\Auth\{
 use App\Http\Controllers\Admin\{
     RoleManagementController,
     MoodleCourseImportController,
-    MoodleTestController
+    MoodleTestController,
+    UserApprovalController,
+    EnrollmentRequestController as AdminEnrollmentRequestController
+};
+use App\Http\Controllers\{
+    ExternalRegistrationController,
+    CourseCatalogController
 };
 
 /*
@@ -78,6 +84,12 @@ Route::middleware('guest')->group(function () {
     Route::controller(RegisterController::class)->group(function () {
         Route::get('/register', 'showRegistrationForm')->name('register');
         Route::post('/register', 'register')->name('register.submit');
+    });
+
+    // External User Registration Routes
+    Route::controller(ExternalRegistrationController::class)->group(function () {
+        Route::get('/register/external', 'create')->name('register.external');
+        Route::post('/register/external', 'store')->name('register.external.store');
     });
 
     // Google OAuth Routes
@@ -186,6 +198,16 @@ Route::middleware('auth')->group(function () {
         
         // My Courses
         Route::get('/mycourses', [EnrollmentController::class, 'myCourses'])->name('mycourses');
+
+        // Course Catalog Routes (user-facing catalog)
+        Route::prefix('catalog')->name('catalog.')->group(function () {
+            Route::get('/', [CourseCatalogController::class, 'index'])->name('index');
+            Route::get('/{course}', [CourseCatalogController::class, 'show'])->name('show');
+        });
+
+        // Enrollment Request Routes (for users to request course access)
+        Route::post('/courses/{course}/request-access', [AdminEnrollmentRequestController::class, 'store'])
+            ->name('courses.request-access');
         
         // Profile Management
         Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
@@ -249,6 +271,22 @@ Route::middleware('auth')->group(function () {
                 Route::delete('/{user}', 'destroy')->name('destroy');
                 Route::patch('/{user}/suspend', 'suspend')->name('suspend');
                 Route::patch('/{user}/reactivate', 'reactivate')->name('reactivate');
+            });
+
+            // External User Approval Management
+            Route::prefix('users')->name('users.')->controller(UserApprovalController::class)->group(function () {
+                Route::get('/pending', 'index')->name('pending');
+                Route::post('/{user}/approve', 'approve')->name('approve');
+                Route::post('/{user}/deny', 'deny')->name('deny');
+                Route::post('/{user}/deactivate', 'deactivate')->name('deactivate');
+                // Note: reactivate is already in UserManagementController above
+            });
+
+            // Enrollment Request Management (for admin to review enrollment requests)
+            Route::prefix('enrollment-requests')->name('enrollment-requests.')->controller(AdminEnrollmentRequestController::class)->group(function () {
+                Route::get('/', 'adminIndex')->name('index');
+                Route::post('/{enrollmentRequest}/approve', 'approve')->name('approve');
+                Route::post('/{enrollmentRequest}/deny', 'deny')->name('deny');
             });
             
             // Role Management

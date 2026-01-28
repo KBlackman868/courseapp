@@ -10,10 +10,18 @@ class Course extends Model
 {
     use HasFactory;
 
+    // Audience type constants
+    public const AUDIENCE_MOH = 'moh';
+    public const AUDIENCE_EXTERNAL = 'external';
+    public const AUDIENCE_ALL = 'all';
+
     protected $fillable = [
         'title',
         'description',
         'status',
+        'audience_type',
+        'is_free',
+        'is_active',
         'image',
         'moodle_course_id',
         'moodle_course_shortname',
@@ -23,6 +31,8 @@ class Course extends Model
 
     protected $casts = [
         'moodle_course_id' => 'integer',
+        'is_free' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     /**
@@ -31,6 +41,14 @@ class Course extends Model
     public function enrollments(): HasMany
     {
         return $this->hasMany(Enrollment::class);
+    }
+
+    /**
+     * Get the enrollment requests for the course
+     */
+    public function enrollmentRequests(): HasMany
+    {
+        return $this->hasMany(EnrollmentRequest::class);
     }
 
     /**
@@ -107,5 +125,113 @@ class Course extends Model
     public function scopeNotMoodleSynced($query)
     {
         return $query->whereNull('moodle_course_id');
+    }
+
+    /**
+     * Scope to get only active courses
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Scope to get courses visible to MOH staff
+     */
+    public function scopeForMohStaff($query)
+    {
+        return $query->whereIn('audience_type', [self::AUDIENCE_MOH, self::AUDIENCE_ALL]);
+    }
+
+    /**
+     * Scope to get courses visible to external users
+     */
+    public function scopeForExternalUsers($query)
+    {
+        return $query->whereIn('audience_type', [self::AUDIENCE_EXTERNAL, self::AUDIENCE_ALL]);
+    }
+
+    /**
+     * Scope to get courses for a specific user based on their type
+     */
+    public function scopeForUser($query, User $user)
+    {
+        if ($user->isInternal()) {
+            return $query->forMohStaff();
+        }
+        return $query->forExternalUsers();
+    }
+
+    /**
+     * Scope to get free (open enrollment) courses
+     */
+    public function scopeFree($query)
+    {
+        return $query->where('is_free', true);
+    }
+
+    /**
+     * Scope to get courses requiring approval
+     */
+    public function scopeRequiresApproval($query)
+    {
+        return $query->where('is_free', false);
+    }
+
+    /**
+     * Check if the course is open for direct enrollment
+     */
+    public function isOpenEnrollment(): bool
+    {
+        return $this->is_free;
+    }
+
+    /**
+     * Check if the course requires approval
+     */
+    public function requiresApproval(): bool
+    {
+        return !$this->is_free;
+    }
+
+    /**
+     * Check if a user can view this course based on audience type
+     */
+    public function isVisibleTo(User $user): bool
+    {
+        if ($this->audience_type === self::AUDIENCE_ALL) {
+            return true;
+        }
+
+        if ($this->audience_type === self::AUDIENCE_MOH && $user->isInternal()) {
+            return true;
+        }
+
+        if ($this->audience_type === self::AUDIENCE_EXTERNAL && $user->isExternal()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get audience type display label
+     */
+    public function getAudienceLabelAttribute(): string
+    {
+        return match($this->audience_type) {
+            self::AUDIENCE_MOH => 'MOH Staff Only',
+            self::AUDIENCE_EXTERNAL => 'External Users Only',
+            self::AUDIENCE_ALL => 'All Users',
+            default => 'Unknown',
+        };
+    }
+
+    /**
+     * Get enrollment type display label
+     */
+    public function getEnrollmentTypeLabelAttribute(): string
+    {
+        return $this->is_free ? 'Open Enrollment' : 'Requires Approval';
     }
 }

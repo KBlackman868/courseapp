@@ -15,7 +15,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     public function register(): void
     {
         // Telescope::night();
-        
 
         $this->hideSensitiveRequestDetails();
 
@@ -30,7 +29,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                    $entry->isScheduledTask() ||
                    $entry->hasMonitoredTag();
         });
-        Telescope::routes();
     }
 
     /**
@@ -59,11 +57,22 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewTelescope', function ($user) {
-            return in_array($user->email, [
+            // Allow access for specific emails
+            $authorizedEmails = [
                 'kyle.blackman@health.gov.tt',
-                'superadmin@example.com',
-                // Add other authorized emails here
-            ]) || $user->hasRole('superadmin');
+                'admin@health.gov.tt',
+            ];
+
+            if (in_array($user->email, $authorizedEmails)) {
+                return true;
+            }
+
+            // Allow access for superadmin and admin roles
+            if (method_exists($user, 'hasRole')) {
+                return $user->hasRole(['superadmin', 'admin']);
+            }
+
+            return false;
         });
     }
 }
