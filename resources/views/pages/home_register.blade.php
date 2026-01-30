@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -8,6 +8,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /*
+     * FIX FOR SCROLL ISSUE:
+     * - Removed h-full from html to allow natural scrolling
+     * - Changed body to use min-h-screen instead of fixed height
+     * - Removed any focus-trap or overflow-hidden that could block scrolling
+     * - Added proper padding for mobile and desktop
+     */
+    html, body {
+      min-height: 100%;
+      height: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
     /* Animated gradient background */
     @keyframes gradient {
       0% { background-position: 0% 50%; }
@@ -110,7 +124,14 @@
     }
   </style>
 </head>
-<body class="animated-gradient min-h-screen flex items-center justify-center relative overflow-y-auto py-12">
+<body class="animated-gradient min-h-screen relative py-8 sm:py-12">
+  <!--
+    SCROLL FIX EXPLANATION:
+    - Removed 'flex items-center justify-center' from body as it can cause scroll issues
+    - Using min-h-screen instead of fixed height
+    - Added padding for proper spacing
+    - Container below handles centering
+  -->
   
   <!-- Animated background elements -->
   <div class="absolute inset-0 overflow-hidden">
@@ -148,8 +169,8 @@
     </div>
   @endif
 
-  <!-- Main Container -->
-  <div class="flex flex-col justify-center px-6 py-12 lg:px-8 z-10 w-full max-w-lg">
+  <!-- Main Container - Centered with proper scroll support -->
+  <div class="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full mx-auto max-w-lg min-h-screen">
     <!-- Registration Form Card -->
     <div class="glass rounded-3xl shadow-2xl p-8 pulse-glow">
       <!-- Logo and Header -->

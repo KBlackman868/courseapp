@@ -329,11 +329,19 @@ class LoginController extends Controller
 
     /**
      * Logout the user
+     *
+     * IMPORTANT: This method handles the logout flow properly to avoid
+     * "Page Expired" (419) errors. The key is to:
+     * 1. Log the action BEFORE invalidating the session
+     * 2. Invalidate the session
+     * 3. Regenerate the CSRF token
+     * 4. Return a redirect (not an Inertia response)
      */
     public function logout(Request $request)
     {
         $user = Auth::user();
 
+        // Log the action BEFORE invalidating the session
         if ($user && class_exists(ActivityLogger::class)) {
             ActivityLogger::logAuth('logout', 'User logged out', [
                 'user_id' => $user->id,
@@ -342,10 +350,20 @@ class LoginController extends Controller
             ]);
         }
 
+        // Clear any OTP-related session data
+        $request->session()->forget('otp_user_id');
+        $request->session()->forget('registration_pending');
+
+        // Logout the user
         Auth::logout();
+
+        // Invalidate the session and regenerate the CSRF token
+        // This is critical to prevent "Page Expired" errors
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/')->with('success', 'You have been logged out.');
+        // Use a standard redirect (not Inertia) to avoid CSRF issues
+        // The redirect will load a fresh page with a new CSRF token
+        return redirect()->route('home')->with('success', 'You have been logged out successfully.');
     }
 }
