@@ -176,11 +176,25 @@ class CourseController extends Controller
             ]
         );
 
-        // Build Moodle URL and redirect
-        $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
-        $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+        // Try to generate auto-login URL using SSO (tied to user email)
+        try {
+            $moodleService = app(\App\Services\MoodleService::class);
+            $moodleUrl = $moodleService->generateCourseLoginUrl($user->email, $course->moodle_course_id);
 
-        return redirect()->away($moodleUrl);
+            return redirect()->away($moodleUrl);
+        } catch (\Exception $e) {
+            // Fallback to direct URL if SSO fails
+            \Illuminate\Support\Facades\Log::warning('Moodle SSO failed, using direct URL', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id,
+                'course_id' => $course->id
+            ]);
+
+            $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
+            $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+
+            return redirect()->away($moodleUrl);
+        }
     }
 
     // Display the registration page for a specific course (GET)

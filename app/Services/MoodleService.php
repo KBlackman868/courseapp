@@ -305,4 +305,127 @@ class MoodleService
             return false;
         }
     }
+
+    /**
+     * Generate an auto-login URL for a user using auth_userkey plugin
+     * This allows users to be automatically logged into Moodle
+     *
+     * @param string $email User's email address (must match Moodle account)
+     * @param string|null $redirectUrl Optional URL to redirect after login (e.g., course page)
+     * @return string|null The auto-login URL or null on failure
+     */
+    public function generateLoginUrl(string $email, ?string $redirectUrl = null): ?string
+    {
+        try {
+            // Call Moodle's auth_userkey_request_login_url function
+            // This requires the auth_userkey plugin to be installed and configured
+            $params = ['user' => ['email' => $email]];
+
+            $response = $this->call('auth_userkey_request_login_url', $params);
+
+            if (isset($response['loginurl'])) {
+                $loginUrl = $response['loginurl'];
+
+                // Append redirect URL if provided
+                if ($redirectUrl) {
+                    $loginUrl .= '&wantsurl=' . urlencode($redirectUrl);
+                }
+
+                Log::info('Generated Moodle auto-login URL', [
+                    'email' => $email,
+                    'has_redirect' => !empty($redirectUrl)
+                ]);
+
+                return $loginUrl;
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            // If auth_userkey is not installed, try fallback method
+            Log::warning('auth_userkey not available, falling back to direct URL', [
+                'error' => $e->getMessage(),
+                'email' => $email
+            ]);
+
+            return $this->generateFallbackLoginUrl($email, $redirectUrl);
+        }
+    }
+
+    /**
+     * Fallback method to generate a Moodle URL without SSO
+     * This simply constructs the course URL - user will need to login manually
+     *
+     * @param string $email User's email
+     * @param string|null $redirectUrl The target URL in Moodle
+     * @return string|null The Moodle URL
+     */
+    protected function generateFallbackLoginUrl(string $email, ?string $redirectUrl = null): ?string
+    {
+        // If no redirect URL, just return the Moodle base URL
+        if (!$redirectUrl) {
+            return $this->baseUrl;
+        }
+
+        // Return the redirect URL directly - user will need to login
+        return $redirectUrl;
+    }
+
+    /**
+     * Get Moodle user by email
+     *
+     * @param string $email
+     * @return array|null User data or null if not found
+     */
+    public function getUserByEmail(string $email): ?array
+    {
+        try {
+            $response = $this->call('core_user_get_users', [
+                'criteria' => [
+                    [
+                        'key' => 'email',
+                        'value' => $email
+                    ]
+                ]
+            ]);
+
+            if (isset($response['users']) && count($response['users']) > 0) {
+                return $response['users'][0];
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Failed to get Moodle user by email', [
+                'error' => $e->getMessage(),
+                'email' => $email
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Build a direct Moodle course URL
+     *
+     * @param int $moodleCourseId The Moodle course ID
+     * @return string The course URL
+     */
+    public function getCourseUrl(int $moodleCourseId): string
+    {
+        return $this->baseUrl . '/course/view.php?id=' . $moodleCourseId;
+    }
+
+    /**
+     * Generate auto-login URL for a course
+     *
+     * @param string $email User's email
+     * @param int $moodleCourseId Moodle course ID
+     * @return string The auto-login URL to the course
+     */
+    public function generateCourseLoginUrl(string $email, int $moodleCourseId): string
+    {
+        $courseUrl = $this->getCourseUrl($moodleCourseId);
+        $loginUrl = $this->generateLoginUrl($email, $courseUrl);
+
+        // If SSO failed, return the direct course URL
+        return $loginUrl ?? $courseUrl;
+    }
 }
