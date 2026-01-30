@@ -7,7 +7,8 @@ use App\Http\Controllers\{
     ProfileController,
     UserManagementController,
     AdminController,
-    NotificationController
+    NotificationController,
+    DashboardController
 };
 use App\Http\Controllers\Auth\{
     LoginController,
@@ -105,6 +106,16 @@ Route::middleware('guest')->group(function () {
     // All users now authenticate via username/password only
     // MOH Staff are identified by @health.gov.tt email domain
 
+    // MOH Staff Account Request Routes
+    // MOH staff submit request with password, but cannot login until approved
+    Route::controller(RegisterController::class)->group(function () {
+        Route::get('/moh/request-account', 'showMohRequestForm')->name('moh.request-account');
+        Route::post('/moh/request-account', 'submitMohRequest')
+            ->middleware('throttle:5,1')
+            ->name('moh.request-account.submit');
+        Route::get('/moh/request-submitted', 'mohRequestSubmitted')->name('moh.request-submitted');
+    });
+
     // Password Reset Routes
     Route::prefix('password')->name('password.')->group(function () {
         Route::controller(ForgotPasswordController::class)->group(function () {
@@ -173,9 +184,27 @@ Route::middleware('auth')->group(function () {
     |----------------------------------------------------------------------
     */
     Route::middleware('verified')->group(function () {
-        
-        // Dashboard
-        Route::get('/dashboard', fn() => view('pages.dashboard'))->name('dashboard');
+
+        // =========================================================================
+        // DASHBOARD ROUTES (Role-aware redirects)
+        // =========================================================================
+        // Main dashboard entry - redirects based on role
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Admin Dashboard (SuperAdmin/Admin/Course Admin)
+        Route::get('/dashboard/admin', [DashboardController::class, 'admin'])
+            ->middleware('role:admin|superadmin')
+            ->name('dashboard.admin');
+
+        // Learner Dashboard (MOH Staff / External User)
+        Route::get('/dashboard/learner', [DashboardController::class, 'learner'])->name('dashboard.learner');
+
+        // Complete onboarding (dismiss welcome banner)
+        Route::post('/dashboard/complete-onboarding', [DashboardController::class, 'completeOnboarding'])
+            ->name('dashboard.complete-onboarding');
+
+        // Account pending status page (for MOH Staff awaiting approval)
+        Route::get('/account/pending', [DashboardController::class, 'accountPending'])->name('account.pending');
         
         // Course Routes - PROPERLY ORDERED (Static routes before dynamic)
         Route::prefix('courses')->name('courses.')->group(function () {
@@ -203,8 +232,14 @@ Route::middleware('auth')->group(function () {
             });
         });
         
-        // My Courses
+        // My Courses (Legacy)
         Route::get('/mycourses', [EnrollmentController::class, 'myCourses'])->name('mycourses');
+
+        // My Learning (Enrolled courses with progress)
+        Route::get('/my-learning', [EnrollmentController::class, 'myLearning'])->name('my-learning.index');
+
+        // My Requests (Course access requests history)
+        Route::get('/my-requests', [CourseAccessRequestController::class, 'userRequests'])->name('my-requests.index');
 
         // Course Catalog Routes (user-facing catalog)
         Route::prefix('catalog')->name('catalog.')->group(function () {

@@ -206,4 +206,94 @@ class RegisterController extends Controller
         return redirect()->route('auth.otp.verify')
             ->with('success', 'Registration successful! Please enter the verification code sent to your email.');
     }
+
+    /**
+     * Show the MOH Staff account request form
+     *
+     * This is a dedicated form for MOH Staff to request an account.
+     * Uses the same UI as external registration but with MOH-specific messaging.
+     */
+    public function showMohRequestForm()
+    {
+        return view('auth.moh-request-account');
+    }
+
+    /**
+     * Handle MOH Staff account request submission
+     *
+     * Same logic as the main register method but dedicated to MOH Staff flow.
+     * Creates an AccountRequest that needs Course Admin approval.
+     */
+    public function submitMohRequest(Request $request)
+    {
+        $validatedData = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name'  => 'required|string|max:255',
+            'email'      => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                'unique:users',
+                'unique:account_requests,email',
+                // Ensure it's an MOH email
+                function ($attribute, $value, $fail) {
+                    if (!User::isMohEmail($value)) {
+                        $fail('Only @' . User::MOH_EMAIL_DOMAIN . ' email addresses can request MOH Staff accounts.');
+                    }
+                },
+            ],
+            'password'   => 'required|string|min:8|confirmed',
+            'department' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:50',
+        ]);
+
+        // Create account request
+        $accountRequest = AccountRequest::create([
+            'first_name' => $validatedData['first_name'],
+            'last_name' => $validatedData['last_name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
+            'department' => $validatedData['department'],
+            'organization' => 'Ministry of Health Trinidad and Tobago',
+            'phone' => $validatedData['phone'] ?? null,
+            'status' => AccountRequest::STATUS_PENDING,
+            'request_type' => AccountRequest::TYPE_MOH_STAFF,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        Log::info('MOH Staff account request submitted via dedicated form', [
+            'request_id' => $accountRequest->id,
+            'email' => $accountRequest->email,
+            'department' => $accountRequest->department,
+        ]);
+
+        // Log the action
+        ActivityLogger::log(
+            'account_request_submitted',
+            "MOH Staff account request submitted for {$accountRequest->email}",
+            $accountRequest,
+            [
+                'email' => $accountRequest->email,
+                'department' => $accountRequest->department,
+            ],
+            'success',
+            'info'
+        );
+
+        // Notify Course Admins about new request
+        SystemNotification::notifyNewAccountRequest($accountRequest);
+
+        // Redirect to confirmation page
+        return redirect()->route('moh.request-submitted');
+    }
+
+    /**
+     * Show MOH request submitted confirmation page
+     */
+    public function mohRequestSubmitted()
+    {
+        return view('auth.moh-request-submitted');
+    }
 }

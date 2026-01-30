@@ -98,6 +98,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'initial_otp_completed',
         'initial_otp_completed_at',
         'auth_method',
+        'onboarding_completed_at',
+        'status',
     ];
 
     /**
@@ -130,6 +132,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'otp_verified' => 'boolean',
             'initial_otp_completed' => 'boolean',
             'is_suspended' => 'boolean',
+            'onboarding_completed_at' => 'datetime',
         ];
     }
 

@@ -609,6 +609,57 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Display the user's enrolled courses (My Learning page)
+     */
+    public function myLearning(Request $request)
+    {
+        $user = Auth::user();
+
+        // Get filter parameters
+        $status = $request->input('status', 'all');
+        $search = $request->input('search');
+
+        // Build query for enrollments
+        $query = Enrollment::where('user_id', $user->id)
+            ->with(['course'])
+            ->orderBy('created_at', 'desc');
+
+        // Filter by status
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        // Search by course title
+        if ($search) {
+            $query->whereHas('course', function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%");
+            });
+        }
+
+        $enrollments = $query->paginate(12);
+
+        // Get counts for tabs
+        $counts = [
+            'all' => Enrollment::where('user_id', $user->id)->count(),
+            'approved' => Enrollment::where('user_id', $user->id)->where('status', 'approved')->count(),
+            'pending' => Enrollment::where('user_id', $user->id)->where('status', 'pending')->count(),
+            'completed' => Enrollment::where('user_id', $user->id)->where('status', 'completed')->count(),
+        ];
+
+        // Log viewing my learning
+        ActivityLogger::logSystem('my_learning_viewed',
+            "User viewed their learning dashboard",
+            [
+                'user_id' => $user->id,
+                'filter_status' => $status,
+                'total_enrollments' => $enrollments->total()
+            ]
+        );
+
+        return view('my-learning.index', compact('enrollments', 'counts', 'status', 'search'));
+    }
+
+    /**
      * Bulk sync all approved enrollments for a course to Moodle
      */
     public function bulkSyncCourseEnrollments(Request $request, Course $course)

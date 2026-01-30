@@ -363,6 +363,37 @@ class CourseAccessRequestController extends Controller
     }
 
     /**
+     * Display the user's own course access requests (My Requests page)
+     */
+    public function userRequests(Request $request)
+    {
+        $user = auth()->user();
+
+        // Get user's requests with filtering
+        $status = $request->input('status', 'all');
+
+        $query = CourseAccessRequest::where('user_id', $user->id)
+            ->with(['course', 'approver'])
+            ->orderBy('requested_at', 'desc');
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $requests = $query->paginate(10);
+
+        // Get counts for tabs
+        $counts = [
+            'all' => CourseAccessRequest::where('user_id', $user->id)->count(),
+            'pending' => CourseAccessRequest::where('user_id', $user->id)->pending()->count(),
+            'approved' => CourseAccessRequest::where('user_id', $user->id)->where('status', 'approved')->count(),
+            'rejected' => CourseAccessRequest::where('user_id', $user->id)->where('status', 'rejected')->count(),
+        ];
+
+        return view('my-requests.index', compact('requests', 'counts', 'status'));
+    }
+
+    /**
      * User endpoint: Create a course access request
      */
     public function store(Request $request, Course $course)
