@@ -50,6 +50,10 @@ class NavConfig
         if ($user->isAdmin()) {
             return 'admin';
         }
+        // Check for course_admin role
+        if ($user->hasRole('course_admin')) {
+            return 'course_admin';
+        }
         if ($user->isMohStaff()) {
             return 'moh_staff';
         }
@@ -86,10 +90,10 @@ class NavConfig
                 return array_merge($nav, self::getSuperAdminNav());
 
             case 'admin':
-                if ($isCourseAdmin) {
-                    return array_merge($nav, self::getCourseAdminNav());
-                }
                 return array_merge($nav, self::getAdminNav());
+
+            case 'course_admin':
+                return array_merge($nav, self::getCourseAdminNav());
 
             case 'moh_staff':
             case 'external_user':
@@ -100,66 +104,80 @@ class NavConfig
 
     /**
      * SuperAdmin navigation items
+     * SuperAdmins have access to ALL system functions including role management
      */
     private static function getSuperAdminNav(): array
     {
         return [
-            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users'],
-            ['label' => 'Course Management', 'route' => 'courses.index', 'icon' => 'book-open'],
+            // SuperAdmin-only dashboard
+            ['label' => 'SuperAdmin', 'route' => 'dashboard.superadmin', 'icon' => 'shield-check', 'superadmin_only' => true],
+            // Role management - ONLY visible to SuperAdmins
+            ['label' => 'Roles', 'route' => 'admin.roles.index', 'icon' => 'key', 'superadmin_only' => true, 'permission' => 'roles.manage'],
+            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'permission' => 'users.view'],
+            ['label' => 'Course Management', 'route' => 'courses.index', 'icon' => 'book-open', 'permission' => 'courses.manage'],
             [
                 'label' => 'Pending',
                 'icon' => 'clock',
                 'badge' => 'pending_count',
+                'permission' => 'users.approve',
                 'children' => [
                     ['label' => 'Account Requests', 'route' => 'admin.account-requests.index', 'badge' => 'account_pending'],
                     ['label' => 'Course Access', 'route' => 'admin.course-access-requests.index', 'badge' => 'course_pending'],
                     ['label' => 'Legacy Enrollments', 'route' => 'admin.enrollments.index'],
                 ],
             ],
-            ['label' => 'Moodle', 'route' => 'admin.moodle.status', 'icon' => 'server'],
-            ['label' => 'Audit Log', 'route' => 'admin.activity-logs.index', 'icon' => 'clipboard-list'],
+            ['label' => 'Moodle', 'route' => 'admin.moodle.status', 'icon' => 'server', 'permission' => 'system.moodle'],
+            ['label' => 'Audit Log', 'route' => 'admin.activity-logs.index', 'icon' => 'clipboard-list', 'permission' => 'system.logs'],
             ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'bell', 'badge' => 'unread_notifications'],
         ];
     }
 
     /**
      * Admin navigation items
+     * Admins can manage users and enrollments but NOT roles
      */
     private static function getAdminNav(): array
     {
         return [
-            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users'],
+            // Note: NO Roles link for Admins - they cannot manage roles
+            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'permission' => 'users.view'],
+            ['label' => 'Course Management', 'route' => 'courses.index', 'icon' => 'book-open', 'permission' => 'courses.view'],
             [
                 'label' => 'Pending',
                 'icon' => 'clock',
                 'badge' => 'pending_count',
-                'children' => [
-                    ['label' => 'Legacy Enrollments', 'route' => 'admin.enrollments.index'],
-                ],
-            ],
-            ['label' => 'Moodle Logs', 'route' => 'admin.moodle.status', 'icon' => 'server'],
-            ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'bell', 'badge' => 'unread_notifications'],
-        ];
-    }
-
-    /**
-     * Course Admin navigation items (Admin + is_course_admin)
-     */
-    private static function getCourseAdminNav(): array
-    {
-        return [
-            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users'],
-            [
-                'label' => 'Pending',
-                'icon' => 'clock',
-                'badge' => 'pending_count',
+                'permission' => 'enrollments.view',
                 'children' => [
                     ['label' => 'Account Requests', 'route' => 'admin.account-requests.index', 'badge' => 'account_pending'],
                     ['label' => 'Course Access', 'route' => 'admin.course-access-requests.index', 'badge' => 'course_pending'],
                     ['label' => 'Legacy Enrollments', 'route' => 'admin.enrollments.index'],
                 ],
             ],
-            ['label' => 'Moodle Logs', 'route' => 'admin.moodle.status', 'icon' => 'server'],
+            ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'bell', 'badge' => 'unread_notifications'],
+        ];
+    }
+
+    /**
+     * Course Admin navigation items
+     * Course Admins can manage courses and approve users but NOT roles
+     */
+    private static function getCourseAdminNav(): array
+    {
+        return [
+            // Note: NO Roles link for Course Admins - they cannot manage roles
+            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'permission' => 'users.view'],
+            ['label' => 'Course Management', 'route' => 'courses.index', 'icon' => 'book-open', 'permission' => 'courses.manage'],
+            [
+                'label' => 'Pending',
+                'icon' => 'clock',
+                'badge' => 'pending_count',
+                'permission' => 'users.approve',
+                'children' => [
+                    ['label' => 'Account Requests', 'route' => 'admin.account-requests.index', 'badge' => 'account_pending'],
+                    ['label' => 'Course Access', 'route' => 'admin.course-access-requests.index', 'badge' => 'course_pending'],
+                    ['label' => 'Legacy Enrollments', 'route' => 'admin.enrollments.index'],
+                ],
+            ],
             ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'bell', 'badge' => 'unread_notifications'],
         ];
     }
@@ -246,12 +264,50 @@ class NavConfig
             return route('login');
         }
 
-        // SuperAdmin, Admin, Course Admin → Admin Dashboard
-        if ($user->isSuperAdmin() || $user->isAdmin()) {
+        // SuperAdmin → SuperAdmin Dashboard
+        if ($user->isSuperAdmin()) {
+            return route('dashboard.superadmin');
+        }
+
+        // Admin, Course Admin → Admin Dashboard
+        if ($user->isAdmin() || $user->hasRole('course_admin')) {
             return route('dashboard.admin');
         }
 
         // MOH Staff, External User → Learner Dashboard
         return route('dashboard.learner');
+    }
+
+    /**
+     * Check if user has permission (with SuperAdmin override)
+     * SuperAdmins automatically have all permissions.
+     */
+    public static function hasPermission(User $user, string $permission): bool
+    {
+        // SuperAdmins have all permissions
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->can($permission);
+    }
+
+    /**
+     * Check if a nav item should be visible to user
+     */
+    public static function canAccessNavItem(User $user, array $navItem): bool
+    {
+        // SuperAdmin-only items
+        if (isset($navItem['superadmin_only']) && $navItem['superadmin_only']) {
+            return $user->isSuperAdmin();
+        }
+
+        // Permission-based check
+        if (isset($navItem['permission'])) {
+            return self::hasPermission($user, $navItem['permission']);
+        }
+
+        // Default: allow
+        return true;
     }
 }

@@ -193,8 +193,13 @@ Route::middleware('auth')->group(function () {
 
         // Admin Dashboard (SuperAdmin/Admin/Course Admin)
         Route::get('/dashboard/admin', [DashboardController::class, 'admin'])
-            ->middleware('role:admin|superadmin')
+            ->middleware('role:admin|superadmin|course_admin')
             ->name('dashboard.admin');
+
+        // SuperAdmin Dashboard (SuperAdmin ONLY)
+        Route::get('/dashboard/superadmin', [DashboardController::class, 'superadmin'])
+            ->middleware('role:superadmin')
+            ->name('dashboard.superadmin');
 
         // Learner Dashboard (MOH Staff / External User)
         Route::get('/dashboard/learner', [DashboardController::class, 'learner'])->name('dashboard.learner');
@@ -326,7 +331,8 @@ Route::middleware('auth')->group(function () {
                 // IMPORTANT: Static routes MUST come before dynamic {user} routes
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
                 // Dynamic routes with {user} parameter
-                Route::post('/{user}/role', 'updateRole')->name('updateRole');
+                // SECURITY: Role update is SuperAdmin-only to prevent privilege escalation
+                Route::post('/{user}/role', 'updateRole')->middleware('role:superadmin')->name('updateRole');
                 Route::delete('/{user}', 'destroy')->name('destroy');
                 Route::patch('/{user}/suspend', 'suspend')->name('suspend');
                 Route::patch('/{user}/reactivate', 'reactivate')->name('reactivate');
@@ -375,8 +381,8 @@ Route::middleware('auth')->group(function () {
                 Route::post('/bulk-approve', 'bulkApprove')->name('bulkApprove');
             });
             
-            // Role Management
-            Route::prefix('roles')->name('roles.')->controller(RoleManagementController::class)->group(function () {
+            // Role Management - SUPERADMIN ONLY (SECURITY: Prevents privilege escalation)
+            Route::middleware('role:superadmin')->prefix('roles')->name('roles.')->controller(RoleManagementController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/assign/{user}', 'assignRole')->name('assign');
                 Route::post('/bulk-assign', 'bulkAssignRoles')->name('bulkAssign');
