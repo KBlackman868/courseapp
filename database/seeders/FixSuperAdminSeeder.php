@@ -59,7 +59,7 @@ class FixSuperAdminSeeder extends Seeder
                 'first_name' => 'Kyle',
                 'last_name' => 'Blackman',
                 'email' => 'kyle.blackman@health.gov.tt',
-                'password' => Hash::make($password),
+                'password' => Hash::make('H3@lth100%'),
                 'user_type' => 'internal',
                 'account_status' => 'active',
                 'auth_method' => 'local',

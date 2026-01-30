@@ -104,6 +104,12 @@ class Course extends Model
     }
 
     /**
+     * Get administrators who should receive enrollment notifications for this course
+     * Priority: Course creator > Course admins > General admins > Superadmins
+     */
+
+
+    /**
      * Check if course is synced with Moodle
      */
     public function hasMoodleIntegration(): bool
