@@ -42,10 +42,11 @@ return new class extends Migration
 
         // Migrate existing data: is_free = true → OPEN_ENROLLMENT, is_free = false → APPROVAL_REQUIRED
         // This preserves existing course settings
+        // Note: SQL Server uses 1/0 for boolean, not true/false
         \DB::statement("
             UPDATE courses
             SET enrollment_type = CASE
-                WHEN is_free = 1 OR is_free = true THEN 'OPEN_ENROLLMENT'
+                WHEN is_free = 1 THEN 'OPEN_ENROLLMENT'
                 ELSE 'APPROVAL_REQUIRED'
             END
             WHERE enrollment_type IS NULL OR enrollment_type = ''
