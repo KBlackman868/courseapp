@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\NavConfig;
 use App\Models\AccountRequest;
+use App\Models\ActivityLog;
 use App\Models\Course;
 use App\Models\CourseAccessRequest;
 use App\Models\Enrollment;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 /**
  * DashboardController
@@ -61,8 +63,8 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Ensure user has admin access
-        if (!$user->isSuperAdmin() && !$user->isAdmin()) {
+        // Ensure user has admin access (SuperAdmin, Admin, or Course Admin)
+        if (!$user->isSuperAdmin() && !$user->isAdmin() && !$user->hasRole('course_admin')) {
             return redirect()->route('dashboard.learner');
         }
 
@@ -350,5 +352,95 @@ class DashboardController extends Controller
         $requestedAt = $accountRequest ? $accountRequest->created_at : $user->created_at;
 
         return view('dashboard.account-pending', compact('user', 'status', 'requestedAt'));
+    }
+
+    /**
+     * SuperAdmin Dashboard
+     *
+     * SECURITY: Only SuperAdmins can access this dashboard.
+     *
+     * Shows:
+     * - System-wide statistics
+     * - Role management overview
+     * - User management
+     * - Moodle integration status
+     * - System health
+     * - Audit logs
+     */
+    public function superadmin(Request $request)
+    {
+        $user = auth()->user();
+
+        // SECURITY: Only SuperAdmins can access
+        if (!$user->isSuperAdmin()) {
+            ActivityLogger::logSystem('superadmin_access_blocked',
+                'Unauthorized SuperAdmin dashboard access attempt',
+                ['attempted_by' => $user->email],
+                'failed',
+                'warning'
+            );
+            abort(403, 'Only SuperAdmins can access this dashboard.');
+        }
+
+        // System-wide statistics
+        $stats = [
+            'total_users' => User::count(),
+            'superadmins' => User::whereHas('roles', fn($q) => $q->where('name', 'superadmin'))->count(),
+            'admins' => User::whereHas('roles', fn($q) => $q->where('name', 'admin'))->count(),
+            'course_admins' => User::whereHas('roles', fn($q) => $q->where('name', 'course_admin'))->count(),
+            'moh_staff' => User::whereHas('roles', fn($q) => $q->where('name', User::ROLE_MOH_STAFF))->count(),
+            'external_users' => User::whereHas('roles', fn($q) => $q->where('name', User::ROLE_EXTERNAL_USER))->count(),
+            'total_courses' => Course::count(),
+            'active_courses' => Course::active()->count(),
+            'moodle_synced' => Course::whereNotNull('moodle_course_id')->count(),
+        ];
+
+        // Pending workloads
+        $pendingAccountRequests = AccountRequest::pending()->count();
+        $pendingCourseRequests = CourseAccessRequest::pending()->count();
+        $failedSyncs = CourseAccessRequest::syncFailed()->count();
+
+        // Role distribution
+        $roleDistribution = \Spatie\Permission\Models\Role::withCount('users')
+            ->orderBy('users_count', 'desc')
+            ->get();
+
+        // Recent system activity (audit logs)
+        $recentActivity = \App\Models\ActivityLog::with('user')
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+
+        // Moodle health check
+        $moodleHealth = [
+            'courses_synced' => Course::whereNotNull('moodle_course_id')->count(),
+            'courses_pending' => Course::whereNull('moodle_course_id')->where('status', 'active')->count(),
+            'failed_syncs' => $failedSyncs,
+            'users_with_moodle' => User::whereNotNull('moodle_user_id')->count(),
+        ];
+
+        // Recent users
+        $recentUsers = User::with('roles')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Navigation config
+        $navConfig = NavConfig::get($user);
+        $badgeCounts = NavConfig::getBadgeCounts($user);
+
+        return view('dashboard.superadmin', compact(
+            'user',
+            'stats',
+            'pendingAccountRequests',
+            'pendingCourseRequests',
+            'failedSyncs',
+            'roleDistribution',
+            'recentActivity',
+            'moodleHealth',
+            'recentUsers',
+            'navConfig',
+            'badgeCounts'
+        ));
     }
 }

@@ -20,19 +20,50 @@ class UserManagementController extends Controller
         return view('admin.users_lists', compact('users'));
     }
 
-    // Update a user's role
+    /**
+     * Update a user's role
+     *
+     * SECURITY: Only SuperAdmins can change user roles.
+     * This prevents privilege escalation attacks.
+     */
     public function updateRole(Request $request, User $user)
     {
-        if ($user->hasRole('superadmin')) {
-            return back()->with('error', 'You cannot change the superadmin role.');
+        // CRITICAL SECURITY CHECK: Only SuperAdmins can assign roles
+        if (!auth()->user()->hasRole('superadmin')) {
+            // Log the attempted privilege escalation
+            Log::warning('Role escalation attempt blocked', [
+                'attempted_by' => auth()->user()->email,
+                'attempted_by_id' => auth()->id(),
+                'target_user' => $user->email,
+                'target_user_id' => $user->id,
+                'requested_role' => $request->role,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            return back()->with('error', 'Only SuperAdmins can change user roles.');
         }
-        
+
+        // Prevent self-demotion from superadmin
+        if ($user->id === auth()->id() && $user->hasRole('superadmin') && $request->role !== 'superadmin') {
+            return back()->with('error', 'You cannot remove your own superadmin role.');
+        }
+
         $request->validate([
-            'role' => 'required|in:superadmin,admin,user',
+            'role' => 'required|exists:roles,name',
         ]);
+
+        $oldRoles = $user->getRoleNames()->toArray();
 
         // Update the user roles (removing existing ones first)
         $user->syncRoles([$request->role]);
+
+        Log::info('User role updated', [
+            'updated_by' => auth()->user()->email,
+            'target_user' => $user->email,
+            'old_roles' => $oldRoles,
+            'new_role' => $request->role
+        ]);
 
         return redirect()->back()->with('success', 'User role updated successfully.');
     }
