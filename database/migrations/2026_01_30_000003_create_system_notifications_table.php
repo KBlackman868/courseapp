@@ -70,11 +70,11 @@ return new class extends Migration
             $table->index('type');
             $table->index('priority');
 
-            // Foreign key
+            // Foreign key - Using NO ACTION for SQL Server compatibility
             $table->foreign('user_id')
                   ->references('id')
                   ->on('users')
-                  ->onDelete('cascade');
+                  ->onDelete('no action');
         });
     }
 

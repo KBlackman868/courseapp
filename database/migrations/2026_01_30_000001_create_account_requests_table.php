@@ -68,16 +68,17 @@ return new class extends Migration
             $table->index('reviewed_at');
             $table->index('department'); // For bulk approval by department
 
-            // Foreign keys
+            // Foreign keys - Using NO ACTION for SQL Server compatibility
+            // SQL Server doesn't allow multiple cascade paths to the same table
             $table->foreign('reviewed_by')
                   ->references('id')
                   ->on('users')
-                  ->onDelete('set null');
+                  ->onDelete('no action');
 
             $table->foreign('user_id')
                   ->references('id')
                   ->on('users')
-                  ->onDelete('set null');
+                  ->onDelete('no action');
         });
     }
 

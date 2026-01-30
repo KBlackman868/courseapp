@@ -77,21 +77,22 @@ return new class extends Migration
             // Each user can only have one request per course
             $table->unique(['user_id', 'course_id']);
 
-            // Foreign keys
+            // Foreign keys - Using NO ACTION for SQL Server compatibility
+            // SQL Server doesn't allow multiple cascade paths to the same table
             $table->foreign('user_id')
                   ->references('id')
                   ->on('users')
-                  ->onDelete('cascade');
+                  ->onDelete('no action');
 
             $table->foreign('course_id')
                   ->references('id')
                   ->on('courses')
-                  ->onDelete('cascade');
+                  ->onDelete('no action');
 
             $table->foreign('approved_by')
                   ->references('id')
                   ->on('users')
-                  ->onDelete('set null');
+                  ->onDelete('no action');
         });
     }
 

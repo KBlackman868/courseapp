@@ -48,11 +48,14 @@ return new class extends Migration
         });
 
         // Add indexes for better query performance
-        Schema::table('activity_logs', function (Blueprint $table) {
-            if (!Schema::hasIndex('activity_logs', 'activity_logs_category_index')) {
-                $table->index('category');
-            }
-        });
+        // Note: Index creation wrapped in try-catch for SQL Server compatibility
+        try {
+            Schema::table('activity_logs', function (Blueprint $table) {
+                $table->index('category', 'activity_logs_category_index');
+            });
+        } catch (\Exception $e) {
+            // Index may already exist, ignore
+        }
     }
 
     public function down(): void
