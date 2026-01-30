@@ -11,12 +11,10 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * This middleware checks if the user has Course Admin permission.
  *
- * Course Admin permission is granted to Admin users by SuperAdmin.
- * It's stored as the `is_course_admin` flag on the User model.
- *
  * WHO CAN PASS THIS MIDDLEWARE:
  * - SuperAdmin (always has Course Admin capabilities)
- * - Admin users with is_course_admin = true
+ * - Users with course_admin role
+ * - Admin users with is_course_admin flag = true
  *
  * USAGE IN ROUTES:
  * Route::middleware('course.admin')->group(function () { ... });

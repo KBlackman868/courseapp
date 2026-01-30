@@ -34,10 +34,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     // =========================================================================
     // ROLE CONSTANTS
-    // These are the ONLY roles allowed in the system
+    // These are the roles allowed in the system
     // =========================================================================
     public const ROLE_SUPERADMIN = 'superadmin';
     public const ROLE_ADMIN = 'admin';
+    public const ROLE_COURSE_ADMIN = 'course_admin';
     public const ROLE_MOH_STAFF = 'moh_staff';
     public const ROLE_EXTERNAL_USER = 'external_user';
 
@@ -184,8 +185,9 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Check if user has Course Admin permission
-     * This is the is_course_admin flag, not a role
-     * Only applies to Admin users
+     * Can be either:
+     * - A user with the course_admin role
+     * - An Admin user with the is_course_admin flag
      *
      * @return bool
      */
@@ -196,7 +198,12 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        // Admin users need the is_course_admin flag
+        // Check for the course_admin role
+        if ($this->hasRole(self::ROLE_COURSE_ADMIN)) {
+            return true;
+        }
+
+        // Admin users can also have the is_course_admin flag
         if ($this->isAdmin()) {
             return $this->is_course_admin ?? false;
         }
@@ -419,8 +426,11 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->isSuperAdmin()) {
             return 'Super Administrator';
         }
+        if ($this->hasRole(self::ROLE_COURSE_ADMIN)) {
+            return 'Course Administrator';
+        }
         if ($this->isAdmin()) {
-            return $this->isCourseAdmin() ? 'Course Administrator' : 'Administrator';
+            return $this->is_course_admin ? 'Course Administrator' : 'Administrator';
         }
         if ($this->isMohStaff()) {
             return 'MOH Staff';
@@ -518,7 +528,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         public function canCreateCourses(): bool
         {
-            return $this->is_course_creator || $this->hasRole('superadmin');
+            return $this->is_course_creator || $this->isSuperAdmin() || $this->isCourseAdmin();
         }
 
         public function hasCompletedOtp(): bool
