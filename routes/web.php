@@ -217,7 +217,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [CourseController::class, 'index'])->name('index');
             
             // CREATE route (static) - MUST come before {course} routes
-            Route::middleware('role:admin|superadmin')->group(function () {
+            Route::middleware('role:admin|superadmin|course_admin')->group(function () {
                 Route::get('/create', [CourseController::class, 'create'])->name('create');
                 Route::post('/store', [CourseController::class, 'store'])->name('store');
             });
@@ -229,7 +229,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle');
             
             // Admin dynamic routes
-            Route::middleware('role:admin|superadmin')->group(function () {
+            Route::middleware('role:admin|superadmin|course_admin')->group(function () {
                 Route::get('/{course}/edit', [CourseController::class, 'edit'])->name('edit');
                 Route::put('/{course}', [CourseController::class, 'update'])->name('update');
                 Route::delete('/{course}', [CourseController::class, 'destroy'])->name('destroy');
@@ -283,10 +283,10 @@ Route::middleware('auth')->group(function () {
         
         /*
         |----------------------------------------------------------------------
-        | ADMIN & SUPERADMIN ROUTES
+        | ADMIN, SUPERADMIN & COURSE ADMIN ROUTES
         |----------------------------------------------------------------------
         */
-        Route::middleware('role:admin|superadmin')->prefix('admin')->name('admin.')->group(function () {
+        Route::middleware('role:admin|superadmin|course_admin')->prefix('admin')->name('admin.')->group(function () {
             
             // Admin Dashboard
             Route::get('/dashboard', function() {

@@ -159,13 +159,12 @@ class NavConfig
 
     /**
      * Course Admin navigation items
-     * Course Admins can manage courses and approve users but NOT roles
+     * Course Admins can manage courses and approve requests but NOT roles or user management
      */
     private static function getCourseAdminNav(): array
     {
         return [
-            // Note: NO Roles link for Course Admins - they cannot manage roles
-            ['label' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'permission' => 'users.view'],
+            // Note: NO Roles link and NO Users link for Course Admins
             ['label' => 'Course Management', 'route' => 'courses.index', 'icon' => 'book-open', 'permission' => 'courses.manage'],
             [
                 'label' => 'Pending',
