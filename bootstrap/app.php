@@ -29,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'verified' => \App\Http\Middleware\EnsureEmailVerified::class,
             'email.verified' => \App\Http\Middleware\EnsureEmailVerified::class,
+            // Course Admin middleware - checks if user has Course Admin permission
+            // Used for routes that require Course Admin access (approvals, course management)
+            'course.admin' => \App\Http\Middleware\CheckCourseAdmin::class,
         ]);
 
         // Add any global middleware here if needed

@@ -125,6 +125,30 @@
                                         </a>
                                         @break
 
+                                    @case('syncing')
+                                        <button disabled
+                                                class="block w-full text-center px-4 py-2.5 bg-blue-300 dark:bg-blue-600 text-blue-800 dark:text-blue-200 rounded-xl font-semibold cursor-not-allowed">
+                                            <span class="flex items-center justify-center">
+                                                <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                </svg>
+                                                Setting up access...
+                                            </span>
+                                        </button>
+                                        @break
+
+                                    @case('sync_failed')
+                                        <button disabled
+                                                class="block w-full text-center px-4 py-2.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl font-semibold cursor-not-allowed">
+                                            <span class="flex items-center justify-center">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                                </svg>
+                                                Setup failed - Admin notified
+                                            </span>
+                                        </button>
+                                        @break
+
                                     @case('pending')
                                         <button disabled
                                                 class="block w-full text-center px-4 py-2.5 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-xl font-semibold cursor-not-allowed">
@@ -154,18 +178,30 @@
 
                                     @case('can_request')
                                     @default
-                                        <form action="{{ route('courses.request-access', $course) }}" method="POST">
-                                            @csrf
-                                            <button type="submit"
-                                                    class="block w-full text-center px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                                        @if($course->isOpenEnrollment())
+                                            <a href="{{ route('courses.access-moodle', $course) }}"
+                                               class="block w-full text-center px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg">
                                                 <span class="flex items-center justify-center">
                                                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                                                     </svg>
-                                                    Request Access
+                                                    Enroll Now
                                                 </span>
-                                            </button>
-                                        </form>
+                                            </a>
+                                        @else
+                                            <form action="{{ route('courses.request-access', $course) }}" method="POST">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="block w-full text-center px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                                                    <span class="flex items-center justify-center">
+                                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                                        </svg>
+                                                        Request Access
+                                                    </span>
+                                                </button>
+                                            </form>
+                                        @endif
                                         @break
                                 @endswitch
                             </div>

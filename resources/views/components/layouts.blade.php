@@ -413,13 +413,62 @@
                     Course Management
                   </a>
                   
-                  <a href="{{ route('admin.enrollments.index') }}" 
-                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
-                    Pending
-                    @if(isset($pendingCount) && $pendingCount > 0)
-                      <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
-                    @endif
-                  </a>
+                  @if(auth()->user()->isCourseAdmin() || auth()->user()->isSuperAdmin())
+                    <!-- Course Admin Pending Dropdown -->
+                    <div class="relative" x-data="{ pendingOpen: false }">
+                      <button @click="pendingOpen = !pendingOpen"
+                              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 flex items-center {{ request()->routeIs('admin.account-requests.*') || request()->routeIs('admin.course-access-requests.*') || request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                        Pending
+                        @php
+                          $totalPending = \App\Models\AccountRequest::pending()->count() + \App\Models\CourseAccessRequest::pending()->count();
+                        @endphp
+                        @if($totalPending > 0)
+                          <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $totalPending }}</span>
+                        @endif
+                        <svg class="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                      </button>
+                      <div x-show="pendingOpen"
+                           @click.away="pendingOpen = false"
+                           x-transition:enter="transition ease-out duration-200"
+                           x-transition:enter-start="opacity-0 scale-95"
+                           x-transition:enter-end="opacity-100 scale-100"
+                           x-transition:leave="transition ease-in duration-100"
+                           x-transition:leave-start="opacity-100 scale-100"
+                           x-transition:leave-end="opacity-0 scale-95"
+                           class="absolute left-0 mt-2 w-56 rounded-lg glass dark:glass-dark shadow-lg overflow-hidden z-50">
+                        <a href="{{ route('admin.account-requests.index') }}"
+                           class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors flex items-center justify-between">
+                          <span>Account Requests</span>
+                          @php $accountPending = \App\Models\AccountRequest::pending()->count(); @endphp
+                          @if($accountPending > 0)
+                            <span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">{{ $accountPending }}</span>
+                          @endif
+                        </a>
+                        <a href="{{ route('admin.course-access-requests.index') }}"
+                           class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors flex items-center justify-between">
+                          <span>Course Access</span>
+                          @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+                          @if($coursePending > 0)
+                            <span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">{{ $coursePending }}</span>
+                          @endif
+                        </a>
+                        <a href="{{ route('admin.enrollments.index') }}"
+                           class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                          Legacy Enrollments
+                        </a>
+                      </div>
+                    </div>
+                  @else
+                    <a href="{{ route('admin.enrollments.index') }}"
+                      class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('admin.enrollments.*') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
+                      Pending
+                      @if(isset($pendingCount) && $pendingCount > 0)
+                        <span class="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ $pendingCount }}</span>
+                      @endif
+                    </a>
+                  @endif
                   
                   <a href="{{ route('courses.create') }}" 
                     class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-white dark:hover:bg-gray-800 {{ request()->routeIs('courses.create') ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow' : 'text-gray-700 dark:text-gray-300' }}">
@@ -485,14 +534,15 @@
             
             @auth
               <!-- Notifications -->
-              <button class="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
+              <a href="{{ route('notifications.index') }}" class="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 group">
                 <svg class="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                 </svg>
-                @if(isset($unreadNotifications) && $unreadNotifications > 0)
-                  <span class="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
+                @php $unreadCount = auth()->user()->systemNotifications()->unread()->count(); @endphp
+                @if($unreadCount > 0)
+                  <span class="absolute top-0.5 right-0.5 h-4 w-4 flex items-center justify-center text-xs text-white bg-red-500 rounded-full">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
                 @endif
-              </button>
+              </a>
               
               <!-- Dark Mode Toggle -->
               <button @click="toggleDarkMode()" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">

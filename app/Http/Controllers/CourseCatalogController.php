@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\EnrollmentRequest;
+use App\Models\CourseAccessRequest;
 use App\Models\Enrollment;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
@@ -14,6 +14,10 @@ class CourseCatalogController extends Controller
     /**
      * Display the course catalog
      * Shows courses based on user type (internal/external)
+     *
+     * Uses the new CourseAccessRequest system:
+     * - OPEN_ENROLLMENT: Direct access
+     * - APPROVAL_REQUIRED: Submit CourseAccessRequest for approval
      */
     public function index(Request $request)
     {
@@ -25,18 +29,19 @@ class CourseCatalogController extends Controller
             ->with(['category', 'creator'])
             ->orderBy('title');
 
-        // Get user's enrollment requests and enrollments
-        $enrollmentRequests = EnrollmentRequest::forUser($user->id)
+        // Get user's course access requests (new system)
+        $accessRequests = CourseAccessRequest::where('user_id', $user->id)
             ->get()
             ->keyBy('course_id');
 
+        // Get user's enrollments (for legacy and direct enrollment tracking)
         $enrollments = Enrollment::where('user_id', $user->id)
             ->whereIn('status', ['approved', 'pending'])
             ->get()
             ->keyBy('course_id');
 
-        $courses = $coursesQuery->get()->map(function ($course) use ($user, $enrollmentRequests, $enrollments) {
-            $course->user_enrollment_status = $this->getEnrollmentStatus($course, $user, $enrollmentRequests, $enrollments);
+        $courses = $coursesQuery->get()->map(function ($course) use ($user, $accessRequests, $enrollments) {
+            $course->user_enrollment_status = $this->getEnrollmentStatus($course, $user, $accessRequests, $enrollments);
             return $course;
         });
 
@@ -56,16 +61,19 @@ class CourseCatalogController extends Controller
     /**
      * Determine the enrollment status for a course and user
      *
+     * Uses the new CourseAccessRequest system alongside legacy Enrollment model.
+     *
      * Returns:
-     * - 'open': Course is free, user can enter directly
+     * - 'open': Course is open enrollment, user can enter directly
      * - 'enrolled': User has approved enrollment
-     * - 'pending': User has pending enrollment request
-     * - 'denied': User's enrollment request was denied
+     * - 'pending': User has pending access request
+     * - 'denied': User's access request was denied
+     * - 'syncing': Access approved, Moodle sync in progress
      * - 'can_request': User can request access
      */
-    private function getEnrollmentStatus($course, $user, $enrollmentRequests, $enrollments): string
+    private function getEnrollmentStatus($course, $user, $accessRequests, $enrollments): string
     {
-        // Check existing enrollment first
+        // Check existing enrollment (legacy support)
         if ($enrollments->has($course->id)) {
             $enrollment = $enrollments->get($course->id);
             if ($enrollment->status === 'approved') {
@@ -76,14 +84,35 @@ class CourseCatalogController extends Controller
             }
         }
 
-        // Check enrollment requests
-        if ($enrollmentRequests->has($course->id)) {
-            $request = $enrollmentRequests->get($course->id);
-            return $request->status; // 'pending', 'approved', 'denied'
+        // Check course access requests (new system)
+        if ($accessRequests->has($course->id)) {
+            $request = $accessRequests->get($course->id);
+
+            if ($request->isApproved()) {
+                // Check Moodle sync status
+                if ($request->moodle_sync_status === CourseAccessRequest::SYNC_SYNCED) {
+                    return 'enrolled';
+                }
+                if ($request->moodle_sync_status === CourseAccessRequest::SYNC_SYNCING) {
+                    return 'syncing';
+                }
+                if ($request->hasSyncFailed()) {
+                    return 'sync_failed';
+                }
+                return 'approved';
+            }
+
+            if ($request->isPending()) {
+                return 'pending';
+            }
+
+            if ($request->isRejected()) {
+                return 'denied';
+            }
         }
 
-        // If course is free, user can access directly
-        if ($course->is_free) {
+        // If course is open enrollment, user can access directly
+        if ($course->isOpenEnrollment()) {
             return 'open';
         }
 

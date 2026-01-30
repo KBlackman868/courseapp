@@ -6,10 +6,10 @@ use App\Http\Controllers\{
     EnrollmentController,
     ProfileController,
     UserManagementController,
-    AdminController
+    AdminController,
+    NotificationController
 };
 use App\Http\Controllers\Auth\{
-    GoogleAuthController, 
     LoginController,
     RegisterController,
     ForgotPasswordController,
@@ -20,7 +20,9 @@ use App\Http\Controllers\Admin\{
     MoodleCourseImportController,
     MoodleTestController,
     UserApprovalController,
-    EnrollmentRequestController as AdminEnrollmentRequestController
+    EnrollmentRequestController as AdminEnrollmentRequestController,
+    AccountRequestController,
+    CourseAccessRequestController
 };
 use App\Http\Controllers\{
     ExternalRegistrationController,
@@ -74,29 +76,34 @@ Route::controller(LoginController::class)->prefix('auth/otp')->name('auth.otp.')
 });
 
 Route::middleware('guest')->group(function () {
-    // Authentication Routes
+    // Authentication Routes (Rate limited to prevent brute force)
     Route::controller(LoginController::class)->group(function () {
         Route::get('/login', 'showLoginForm')->name('login');
-        Route::post('/login', 'login')->name('login.submit');
+        Route::post('/login', 'login')
+            ->middleware('throttle:5,1') // 5 login attempts per minute
+            ->name('login.submit');
     });
 
-    // Registration Routes
+    // Registration Routes (Rate limited to prevent abuse)
     Route::controller(RegisterController::class)->group(function () {
         Route::get('/register', 'showRegistrationForm')->name('register');
-        Route::post('/register', 'register')->name('register.submit');
+        Route::post('/register', 'register')
+            ->middleware('throttle:5,1') // 5 registration attempts per minute
+            ->name('register.submit');
     });
 
-    // External User Registration Routes
+    // External User Registration Routes (Rate limited)
+    // External users register via this page and can see courses and request access
     Route::controller(ExternalRegistrationController::class)->group(function () {
         Route::get('/register/external', 'create')->name('register.external');
-        Route::post('/register/external', 'store')->name('register.external.store');
+        Route::post('/register/external', 'store')
+            ->middleware('throttle:5,1') // 5 registration attempts per minute
+            ->name('register.external.store');
     });
 
-    // Google OAuth Routes
-    Route::get('/auth/google', [GoogleAuthController::class, 'redirectToGoogle'])
-        ->name('auth.google');
-    Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])
-        ->name('auth.google.callback');
+    // NOTE: Google OAuth has been REMOVED per requirements
+    // All users now authenticate via username/password only
+    // MOH Staff are identified by @health.gov.tt email domain
 
     // Password Reset Routes
     Route::prefix('password')->name('password.')->group(function () {
@@ -205,8 +212,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/{course}', [CourseCatalogController::class, 'show'])->name('show');
         });
 
-        // Enrollment Request Routes (for users to request course access)
-        Route::post('/courses/{course}/request-access', [AdminEnrollmentRequestController::class, 'store'])
+        // =========================================================================
+        // COURSE ACCESS REQUEST ROUTES (For users to request course access)
+        // Users can request access to courses with APPROVAL_REQUIRED enrollment
+        // =========================================================================
+        Route::post('/courses/{course}/request-access', [CourseAccessRequestController::class, 'store'])
+            ->middleware('throttle:10,1') // Rate limit: 10 requests per minute
             ->name('courses.request-access');
         
         // Profile Management
@@ -215,6 +226,19 @@ Route::middleware('auth')->group(function () {
             Route::get('/settings', 'settings')->name('settings');
             Route::post('/photo', 'updatePhoto')->name('photo');
             Route::post('/password', 'updatePassword')->name('password');
+        });
+
+        // =========================================================================
+        // NOTIFICATION ROUTES
+        // In-app notifications for users
+        // =========================================================================
+        Route::prefix('notifications')->name('notifications.')->controller(NotificationController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/recent', 'recent')->name('recent');
+            Route::post('/{notification}/read', 'markAsRead')->name('read');
+            Route::post('/mark-all-read', 'markAllAsRead')->name('markAllRead');
+            Route::delete('/{notification}', 'destroy')->name('destroy');
+            Route::post('/clear-read', 'clearRead')->name('clearRead');
         });
         
         /*
@@ -287,6 +311,33 @@ Route::middleware('auth')->group(function () {
                 Route::get('/', 'adminIndex')->name('index');
                 Route::post('/{enrollmentRequest}/approve', 'approve')->name('approve');
                 Route::post('/{enrollmentRequest}/deny', 'deny')->name('deny');
+            });
+
+            // =========================================================================
+            // ACCOUNT REQUEST MANAGEMENT (Course Admin)
+            // MOH Staff registration requests that need approval
+            // =========================================================================
+            Route::prefix('account-requests')->name('account-requests.')->middleware('course.admin')->controller(AccountRequestController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{accountRequest}', 'show')->name('show');
+                Route::post('/{accountRequest}/approve', 'approve')->name('approve');
+                Route::post('/{accountRequest}/reject', 'reject')->name('reject');
+                Route::post('/bulk-approve', 'bulkApprove')->name('bulkApprove');
+                Route::post('/bulk-approve-moh', 'bulkApproveAllMoh')->name('bulkApproveMoh');
+            });
+
+            // =========================================================================
+            // COURSE ACCESS REQUEST MANAGEMENT (Course Admin)
+            // Course enrollment requests that need approval
+            // =========================================================================
+            Route::prefix('course-access-requests')->name('course-access-requests.')->middleware('course.admin')->controller(CourseAccessRequestController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/{courseAccessRequest}', 'show')->name('show');
+                Route::post('/{courseAccessRequest}/approve', 'approve')->name('approve');
+                Route::post('/{courseAccessRequest}/reject', 'reject')->name('reject');
+                Route::post('/{courseAccessRequest}/revoke', 'revoke')->name('revoke');
+                Route::post('/{courseAccessRequest}/retry-sync', 'retrySync')->name('retrySync');
+                Route::post('/bulk-approve', 'bulkApprove')->name('bulkApprove');
             });
             
             // Role Management
