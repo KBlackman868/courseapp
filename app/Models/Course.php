@@ -107,26 +107,7 @@ class Course extends Model
      * Get administrators who should receive enrollment notifications for this course
      * Priority: Course creator > Course admins > General admins > Superadmins
      */
-    public function getEnrollmentAdmins()
-    {
-        $admins = collect();
 
-        // 1. Course creator (if exists and has appropriate permissions)
-        if ($this->creator_id && $this->creator) {
-            $admins->push($this->creator);
-        }
-
-        // 2. Users with course_admin or admin role
-        $courseAdmins = User::role(['course_admin', 'admin'])->get();
-        $admins = $admins->merge($courseAdmins);
-
-        // 3. If no specific admins found, fall back to superadmins
-        if ($admins->isEmpty()) {
-            $admins = User::role('superadmin')->get();
-        }
-
-        return $admins->unique('id');
-    }
 
     /**
      * Check if course is synced with Moodle
