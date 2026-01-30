@@ -992,7 +992,12 @@
         </div>
         
         <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400 text-sm">
-          <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved. | Developed with ❤️ by Kyle Blackman</p>
+          <p>
+            &copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.
+            <span class="tooltip tooltip-top" data-tip="Kyle Blackman">
+              <span class="inline-block w-1 h-1 rounded-full bg-gray-500 ml-2 cursor-default hover:bg-indigo-400 transition-colors"></span>
+            </span>
+          </p>
         </div>
       </div>
     </footer>
