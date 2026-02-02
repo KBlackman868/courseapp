@@ -69,7 +69,7 @@ Route::get('/test-sso', function () {
     $functionname = 'auth_userkey_request_login_url';
 
     // Get test user - use current logged in user or specify email
-    $useremail = auth()->check() ? auth()->user()->email : 'test@example.com';
+    $useremail = auth()->check() ? auth()->user()->email : 'kyle.blackman@health.gov.tt';
     $courseid = 2; // Change to a real course ID
 
     $param = [
