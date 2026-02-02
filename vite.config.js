@@ -13,8 +13,6 @@ export default defineConfig({
     build: {
         // Enable CSS code splitting
         cssCodeSplit: true,
-        // Use modern minification
-        cssMinify: 'lightningcss',
         // Optimize chunk splitting
         rollupOptions: {
             output: {
