@@ -6,9 +6,32 @@
   <title>{{ config('app.name', 'Ministry of Health') }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  @vite(['resources/css/app.css', 'resources/js/app.js'])
-  <script src="//unpkg.com/alpinejs" defer></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+  @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Inline toast styles (lighter than toastr CDN) -->
+  <style>
+    .toast-notification {
+      position: fixed;
+      top: 5rem;
+      right: 1rem;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      color: white;
+      font-weight: 500;
+      z-index: 9999;
+      animation: slideIn 0.3s ease-out;
+      max-width: 400px;
+    }
+    .toast-success { background: linear-gradient(135deg, #10b981, #059669); }
+    .toast-error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .toast-info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
 
   <style>
     /* Modern animations and effects */
@@ -174,7 +197,8 @@
             <div class="relative">
               <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full blur-md opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
               <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH Logo"
-                   class="relative h-10 w-10 md:h-12 md:w-12 rounded-full ring-2 ring-white/50 shadow-lg transition-transform duration-300 group-hover:scale-110" />
+                   class="relative h-10 w-10 md:h-12 md:w-12 rounded-full ring-2 ring-white/50 shadow-lg transition-transform duration-300 group-hover:scale-110"
+                   loading="lazy" />
             </div>
             <div class="hidden md:block">
               <span class="text-xl font-bold gradient-text">MOH Learning</span>
@@ -380,7 +404,7 @@
                         class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
                   @php $photo = auth()->user()->profile_photo; @endphp
                   <img src="{{ $photo ? Storage::url($photo) : asset('images/default-avatar.png') }}"
-                       class="h-8 w-8 rounded-full ring-2 ring-indigo-500/30 hover:ring-indigo-500/50 transition-all duration-300" alt="Avatar">
+                       class="h-8 w-8 rounded-full ring-2 ring-indigo-500/30 hover:ring-indigo-500/50 transition-all duration-300" alt="Avatar" loading="lazy">
                   <svg class="h-4 w-4 text-gray-600 dark:text-gray-400 transition-transform duration-300"
                        :class="{ 'rotate-180': profileOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -723,7 +747,7 @@
           <!-- Brand Section -->
           <div class="col-span-1 md:col-span-2">
             <div class="flex items-center space-x-3 mb-4">
-              <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH Logo" class="h-10 w-10 rounded-full">
+              <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH Logo" class="h-10 w-10 rounded-full" loading="lazy">
               <span class="text-xl font-bold">Ministry of Health Learning</span>
             </div>
             <p class="text-gray-400 text-sm max-w-md">
@@ -789,9 +813,19 @@
   <!-- Toast Notifications Container -->
   <div id="toast-container" class="fixed top-20 right-4 z-50 space-y-4"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
+    // Lightweight toast function (no jQuery needed)
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast-notification toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
     function layoutData() {
       return {
         darkMode: false,
@@ -818,36 +852,23 @@
           // Track scroll position
           window.addEventListener('scroll', () => {
             this.scrolled = window.pageYOffset > 20;
-          });
+          }, { passive: true });
 
-          // Initialize toastr
-          toastr.options = {
-            "closeButton": true,
-            "progressBar": true,
-            "positionClass": "toast-top-right",
-            "timeOut": "3000",
-            "extendedTimeOut": "1000",
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-          };
-
-          // Display session messages
+          // Display session messages (using native toast)
           @if(session('success'))
-            toastr.success("{{ session('success') }}");
+            showToast("{{ session('success') }}", 'success');
           @endif
 
           @if(session('error'))
-            toastr.error("{{ session('error') }}");
+            showToast("{{ session('error') }}", 'error');
           @endif
 
           @if(session('warning'))
-            toastr.warning("{{ session('warning') }}");
+            showToast("{{ session('warning') }}", 'warning');
           @endif
 
           @if(session('info'))
-            toastr.info("{{ session('info') }}");
+            showToast("{{ session('info') }}", 'info');
           @endif
         },
 
