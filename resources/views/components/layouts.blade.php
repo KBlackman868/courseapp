@@ -6,9 +6,10 @@
   <title>{{ config('app.name', 'Ministry of Health') }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  @vite('resources/js/app.jsx')
-  <script src="//unpkg.com/alpinejs" defer></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+  @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+
+  <!-- Inline toast styles (lighter than toastr CDN) -->
   <style>
     /* Prevent horizontal scroll */
     html, body { overflow-x: hidden; max-width: 100vw; }
@@ -342,7 +343,10 @@
   <script>
     function layoutData() {
       return {
-        darkMode: localStorage.getItem('darkMode') === 'true',
+        darkMode: false,
+        scrolled: false,
+        mobileMenuOpen: false,
+
         init() {
           if (this.darkMode) {
             document.documentElement.classList.add('dark');
