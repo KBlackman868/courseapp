@@ -68,20 +68,20 @@ Route::get('/test-sso', function () {
     $domainname = config('moodle.base_url');
     $functionname = 'auth_userkey_request_login_url';
 
-    // Get test user - use current logged in user or specify email
-    $useremail = auth()->check() ? auth()->user()->email : 'test@example.com';
+    // Get test user
+    $username = 'kyle.blackman';  // Moodle username
     $courseid = 2; // Change to a real course ID
 
     $param = [
         'user' => [
-            'email' => $useremail,
+            'username' => $username,  // Using username instead of email
         ]
     ];
 
     $serverurl = $domainname . '/webservice/rest/server.php?wstoken=' . $token . '&wsfunction=' . $functionname . '&moodlewsrestformat=json';
 
     $output = "<h2>Moodle SSO Test</h2>";
-    $output .= "<p><strong>Email:</strong> " . htmlspecialchars($useremail) . "</p>";
+    $output .= "<p><strong>Username:</strong> " . htmlspecialchars($username) . "</p>";
     $output .= "<p><strong>Moodle URL:</strong> " . htmlspecialchars($domainname) . "</p>";
     $output .= "<p><strong>Function:</strong> " . htmlspecialchars($functionname) . "</p>";
 
