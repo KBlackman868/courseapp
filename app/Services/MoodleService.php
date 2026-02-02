@@ -12,10 +12,10 @@ class MoodleService
 
     public function __construct()
     {
-        // Check for both possible variable names
-        $this->baseUrl = config('services.moodle.url', env('MOODLE_URL', env('MOODLE_BASE_URL')));
-        $this->token = config('services.moodle.token', env('MOODLE_TOKEN'));
-        
+        // Read from config/moodle.php
+        $this->baseUrl = config('moodle.base_url');
+        $this->token = config('moodle.token');
+
         // Remove trailing slash from base URL if present
         $this->baseUrl = rtrim($this->baseUrl, '/');
     }
