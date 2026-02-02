@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   @vite(['resources/css/app.css', 'resources/js/app.jsx'])
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
   <!-- Inline toast styles (lighter than toastr CDN) -->
   <style>
@@ -831,6 +831,8 @@
         darkMode: false,
         scrolled: false,
         mobileMenuOpen: false,
+        profileOpen: false,
+        pendingOpen: false,
 
         init() {
           // Check localStorage for dark mode preference
