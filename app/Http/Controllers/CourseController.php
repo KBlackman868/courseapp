@@ -176,11 +176,70 @@ class CourseController extends Controller
             ]
         );
 
-        // Build Moodle URL and redirect
+        // Build Moodle URL with SSO
         $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
-        $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+
+        // Check if SSO is enabled
+        if (config('moodle.sso_enabled') && config('moodle.sso_secret')) {
+            // Use auth_userkey plugin for SSO
+            $moodleUrl = $this->buildMoodleSSOUrl($user, $course, $moodleBaseUrl);
+        } else {
+            // Fallback to direct URL (will require Moodle login)
+            $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+            Log::warning('Moodle SSO not configured, user will need to login manually', [
+                'user_id' => $user->id,
+                'course_id' => $course->id
+            ]);
+        }
 
         return redirect()->away($moodleUrl);
+    }
+
+    /**
+     * Build Moodle SSO URL using auth_userkey plugin
+     * Calls Moodle's auth_userkey_request_login_url web service
+     */
+    private function buildMoodleSSOUrl($user, Course $course, string $moodleBaseUrl): string
+    {
+        try {
+            // Call Moodle API to generate login URL
+            // The auth_userkey plugin provides this web service function
+            $result = $this->moodleClient->call('auth_userkey_request_login_url', [
+                'user' => [
+                    'email' => $user->email,
+                ],
+            ]);
+
+            if (isset($result['loginurl'])) {
+                // Append the course redirect URL
+                $loginUrl = $result['loginurl'];
+                $wantsUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+
+                // Add wantsurl parameter for redirect after login
+                $separator = (strpos($loginUrl, '?') !== false) ? '&' : '?';
+                $finalUrl = $loginUrl . $separator . 'wantsurl=' . urlencode($wantsUrl);
+
+                Log::info('Generated Moodle SSO URL via API', [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'course_id' => $course->id,
+                    'moodle_course_id' => $course->moodle_course_id,
+                ]);
+
+                return $finalUrl;
+            }
+
+            throw new \Exception('Invalid response from Moodle auth_userkey API');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to generate Moodle SSO URL', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Fallback to direct URL (user will need to login manually)
+            return $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+        }
     }
 
     // Display the registration page for a specific course (GET)
