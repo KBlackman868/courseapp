@@ -6,9 +6,33 @@
   <title>{{ config('app.name', 'Ministry of Health') }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  @vite('resources/js/app.jsx')
-  <script src="//unpkg.com/alpinejs" defer></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+  @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Inline toast styles (lighter than toastr CDN) -->
+  <style>
+    .toast-notification {
+      position: fixed;
+      top: 5rem;
+      right: 1rem;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      color: white;
+      font-weight: 500;
+      z-index: 9999;
+      animation: slideIn 0.3s ease-out;
+      max-width: 400px;
+    }
+    .toast-success { background: linear-gradient(135deg, #10b981, #059669); }
+    .toast-error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .toast-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .toast-info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+
   <style>
     /* Prevent horizontal scroll */
     html, body { overflow-x: hidden; max-width: 100vw; }
@@ -42,7 +66,8 @@
           <a href="{{ route('home') }}" class="btn btn-ghost normal-case text-xl gap-2">
             <div class="avatar">
               <div class="w-8 rounded-full ring ring-primary ring-offset-base-100 ring-offset-1">
-                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
+                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'"
+                   loading="lazy" />
               </div>
             </div>
             <span class="hidden sm:inline gradient-text font-bold">MOH Learning</span>
@@ -166,47 +191,115 @@
             </svg>
           </button>
 
-          <!-- Profile Dropdown -->
-          <div class="dropdown dropdown-end">
-            <label tabindex="0" class="btn btn-ghost btn-circle avatar">
-              <div class="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                @php $photo = auth()->user()->profile_photo; @endphp
-                <img src="{{ $photo ? Storage::url($photo) : 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->first_name . '+' . auth()->user()->last_name) . '&background=6366f1&color=fff' }}"
-                     alt="Avatar"
-                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->first_name) }}&background=6366f1&color=fff'" />
-              </div>
-            </label>
-            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-64 shadow-xl z-50">
-              <!-- User Info -->
-              <li class="menu-title bg-primary text-primary-content rounded-t-box px-4 py-3">
-                <div>
-                  <p class="font-semibold">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
-                  <p class="text-xs opacity-80">{{ auth()->user()->email }}</p>
-                  @if(auth()->user()->getRoleNames()->isNotEmpty())
-                    @php $role = auth()->user()->getRoleNames()->first(); @endphp
-                    <span class="badge badge-sm mt-1 bg-white/20 border-0">{{ ucwords(str_replace('_', ' ', $role)) }}</span>
-                  @endif
+              <!-- Profile Dropdown -->
+              <div class="relative" x-data="{ profileOpen: false }">
+                <button @click="profileOpen = !profileOpen"
+                        class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+                  @php $photo = auth()->user()->profile_photo; @endphp
+                  <img src="{{ $photo ? Storage::url($photo) : asset('images/default-avatar.png') }}"
+                       class="h-8 w-8 rounded-full ring-2 ring-indigo-500/30 hover:ring-indigo-500/50 transition-all duration-300" alt="Avatar" loading="lazy">
+                  <svg class="h-4 w-4 text-gray-600 dark:text-gray-400 transition-transform duration-300"
+                       :class="{ 'rotate-180': profileOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+
+                <!-- Profile Dropdown Menu -->
+                <div x-show="profileOpen"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                     @click.away="profileOpen = false"
+                     class="absolute right-0 mt-2 w-64 rounded-2xl glass dark:glass-dark shadow-xl overflow-hidden">
+
+                  <!-- User Info Header -->
+                  <div class="px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500">
+                    <p class="text-sm font-semibold text-white">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
+                    <p class="text-xs text-indigo-100">{{ auth()->user()->email }}</p>
+                    @if(auth()->user()->getRoleNames()->isNotEmpty())
+                      <div class="mt-1">
+                        @php
+                          $primaryRole = auth()->user()->getRoleNames()->first();
+                          $roleColors = [
+                            'superadmin' => 'bg-purple-200 text-purple-800',
+                            'admin' => 'bg-indigo-200 text-indigo-800',
+                            'course_admin' => 'bg-blue-200 text-blue-800',
+                            'moh_staff' => 'bg-green-200 text-green-800',
+                            'external_user' => 'bg-gray-200 text-gray-800'
+                          ];
+                          $roleDisplay = [
+                            'superadmin' => 'Super Admin',
+                            'admin' => 'Admin',
+                            'course_admin' => 'Course Admin',
+                            'moh_staff' => 'MOH Staff',
+                            'external_user' => 'External User'
+                          ];
+                        @endphp
+                        <span class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full {{ $roleColors[$primaryRole] ?? 'bg-gray-200 text-gray-800' }}">
+                          {{ $roleDisplay[$primaryRole] ?? ucfirst(str_replace('_', ' ', $primaryRole)) }}
+                        </span>
+                      </div>
+                    @endif
+                  </div>
+
+                  <!-- Menu Items -->
+                  <div class="py-2">
+                    <a href="{{ route('profile.show') }}"
+                       class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                      <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                      Your Profile
+                    </a>
+
+                    @if(!auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
+                      <a href="{{ route('mycourses') }}"
+                         class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                        <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        My Courses
+                      </a>
+                    @endif
+
+                    <a href="{{ route('profile.settings') }}"
+                       class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                      <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                      Settings
+                    </a>
+
+                    <hr class="my-2 border-gray-200 dark:border-gray-700">
+
+                    <form method="POST" action="{{ route('logout') }}">
+                      @csrf
+                      <button type="submit"
+                              class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                        <svg class="mr-3 h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Sign Out
+                      </button>
+                    </form>
+                  </div>
                 </div>
-              </li>
-              <li><a href="{{ route('profile.show') }}">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                Profile
-              </a></li>
-              <li><a href="{{ route('profile.settings') }}">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Settings
-              </a></li>
-              <div class="divider my-0"></div>
-              <li>
-                <form method="POST" action="{{ route('logout') }}" class="p-0">
-                  @csrf
-                  <button type="submit" class="text-error w-full text-left">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    Sign Out
-                  </button>
-                </form>
-              </li>
-            </ul>
+              </div>
+            @endauth
+
+            <!-- Mobile Menu Toggle -->
+            <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+              <svg x-show="!mobileMenuOpen" class="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+              <svg x-show="mobileMenuOpen" class="h-6 w-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
         </div>
         @endauth
@@ -246,25 +339,30 @@
         </div>
       </main>
 
-      <!-- Footer -->
-      <footer class="footer footer-center p-6 bg-base-300 text-base-content">
-        <div>
-          <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
-
-    <!-- Mobile Drawer Sidebar -->
-    <div class="drawer-side z-50">
-      <label for="main-drawer" class="drawer-overlay"></label>
-      <ul class="menu p-4 w-80 min-h-full bg-base-100">
-        <!-- Logo in sidebar -->
-        <li class="menu-title">
-          <div class="flex items-center gap-2">
-            <div class="avatar">
-              <div class="w-8 rounded-full">
-                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
-              </div>
+    <!-- Footer -->
+    <footer class="bg-gradient-to-r from-gray-900 to-gray-800 text-white mt-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <!-- Brand Section -->
+          <div class="col-span-1 md:col-span-2">
+            <div class="flex items-center space-x-3 mb-4">
+              <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH Logo" class="h-10 w-10 rounded-full" loading="lazy">
+              <span class="text-xl font-bold">Ministry of Health Learning</span>
+            </div>
+            <p class="text-gray-400 text-sm max-w-md">
+              Empowering healthcare professionals through continuous education and training excellence.
+            </p>
+            <div class="flex space-x-4 mt-4">
+              <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"></path>
+                </svg>
+              </a>
+              <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"></path>
+                </svg>
+              </a>
             </div>
             <span class="font-bold">MOH Learning</span>
           </div>
@@ -337,24 +435,63 @@
     </div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
+    // Lightweight toast function (no jQuery needed)
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast-notification toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
     function layoutData() {
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
         init() {
           if (this.darkMode) {
             document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
           }
+
+          // Track scroll position
+          window.addEventListener('scroll', () => {
+            this.scrolled = window.pageYOffset > 20;
+          });
+
+          // Initialize toastr
           toastr.options = {
-            closeButton: true, progressBar: true,
-            positionClass: "toast-top-right", timeOut: "3000"
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut"
           };
-          @if(session('success')) toastr.success("{{ session('success') }}"); @endif
-          @if(session('error')) toastr.error("{{ session('error') }}"); @endif
-          @if(session('warning')) toastr.warning("{{ session('warning') }}"); @endif
-          @if(session('info')) toastr.info("{{ session('info') }}"); @endif
+
+          // Display session messages
+          @if(session('success'))
+            toastr.success("{{ session('success') }}");
+          @endif
+
+          @if(session('error'))
+            toastr.error("{{ session('error') }}");
+          @endif
+
+          @if(session('warning'))
+            toastr.warning("{{ session('warning') }}");
+          @endif
+
+          @if(session('info'))
+            toastr.info("{{ session('info') }}");
+          @endif
         },
         toggleDarkMode() {
           this.darkMode = !this.darkMode;
