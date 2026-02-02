@@ -157,7 +157,7 @@
                                         @if($course->image)
                                             <div class="avatar">
                                                 <div class="mask mask-squircle w-12 h-12">
-                                                    <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}">
+                                                    <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" loading="lazy">
                                                 </div>
                                             </div>
                                         @else

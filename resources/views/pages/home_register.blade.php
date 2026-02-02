@@ -6,7 +6,7 @@
   <title>Ministry of Health - Register</title>
   <meta name="description" content="Register for the Ministry of Health Learning Management System" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  @vite(['resources/css/app.css'])
   <style>
     /*
      * FIX FOR SCROLL ISSUE:

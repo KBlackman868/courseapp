@@ -46,7 +46,7 @@
                         <!-- Course Image -->
                         <figure class="relative h-48 bg-gradient-to-br from-primary to-secondary">
                             @if($course->image)
-                                <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" class="w-full h-full object-cover">
+                                <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" class="w-full h-full object-cover" loading="lazy">
                             @else
                                 <div class="flex items-center justify-center w-full h-full">
                                     <svg class="w-20 h-20 text-primary-content/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">

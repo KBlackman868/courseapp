@@ -184,7 +184,8 @@
                                 @if($course->image)
                                     <img src="{{ Storage::url($course->image) }}"
                                          alt="{{ $course->title }}"
-                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                         loading="lazy">
                                 @else
                                     <div class="w-full h-full bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 flex items-center justify-center">
                                         <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +263,8 @@
                                 @if($course->image)
                                     <img src="{{ Storage::url($course->image) }}"
                                          alt="{{ $course->title }}"
-                                         class="w-full h-full object-cover grayscale">
+                                         class="w-full h-full object-cover grayscale"
+                                         loading="lazy">
                                 @else
                                     <div class="w-full h-full bg-gradient-to-br from-yellow-400 via-orange-500 to-amber-600 flex items-center justify-center">
                                         <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +325,8 @@
                                 @if($course->image)
                                     <img src="{{ Storage::url($course->image) }}"
                                          alt="{{ $course->title }}"
-                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 {{ $isPending ? 'grayscale' : '' }}">
+                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 {{ $isPending ? 'grayscale' : '' }}"
+                                         loading="lazy">
                                 @else
                                     <div class="w-full h-full bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 flex items-center justify-center">
                                         <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
