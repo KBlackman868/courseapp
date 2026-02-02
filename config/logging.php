@@ -54,7 +54,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single','bugsnag')),
+            'channels' => ['single'],
             'ignore_exceptions' => false,
         ],
 
@@ -127,10 +127,6 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
-    ],
-    'bugsnag' => [
-        'driver' => 'bugsnag',
-        'level' => env('LOG_LEVEL', 'debug'),
     ],
 
 ];
