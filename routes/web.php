@@ -68,15 +68,20 @@ Route::get('/test-sso', function () {
     $domainname = config('moodle.base_url');
     $functionname = 'auth_userkey_request_login_url';
 
-    // Get test user - use current logged in user or specify email
-    $useremail = auth()->check() ? auth()->user()->email : 'kyle.blackman@health.gov.tt';
-    // Get test user
-    $username = 'kyle.blackman';  // Moodle username
-    $courseid = 2; // Change to a real course ID
+    // Get test user - include all fields
+    $username = 'kyle.blackman';
+    $email = 'kyle.blackman@health.gov.tt';
+    $firstname = 'Kyle';
+    $lastname = 'Blackman';
+    $courseid = 2;
 
+    // Try with all user fields
     $param = [
         'user' => [
-            'username' => $username,  // Using username instead of email
+            'username' => $username,
+            'email' => $email,
+            'firstname' => $firstname,
+            'lastname' => $lastname,
         ]
     ];
 
@@ -84,18 +89,25 @@ Route::get('/test-sso', function () {
 
     $output = "<h2>Moodle SSO Test</h2>";
     $output .= "<p><strong>Username:</strong> " . htmlspecialchars($username) . "</p>";
+    $output .= "<p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>";
     $output .= "<p><strong>Moodle URL:</strong> " . htmlspecialchars($domainname) . "</p>";
     $output .= "<p><strong>Function:</strong> " . htmlspecialchars($functionname) . "</p>";
+    $output .= "<p><strong>Params sent:</strong></p>";
+    $output .= "<pre>" . htmlspecialchars(json_encode($param, JSON_PRETTY_PRINT)) . "</pre>";
 
     try {
         $response = \Illuminate\Support\Facades\Http::asForm()
             ->withoutVerifying()
+            ->timeout(30)
             ->post($serverurl, $param);
 
+        $rawBody = $response->body();
         $resp = $response->json();
 
         $output .= "<p><strong>HTTP Status:</strong> " . $response->status() . "</p>";
-        $output .= "<p><strong>Raw Response:</strong></p>";
+        $output .= "<p><strong>Raw Body:</strong></p>";
+        $output .= "<pre>" . htmlspecialchars($rawBody) . "</pre>";
+        $output .= "<p><strong>Parsed JSON:</strong></p>";
         $output .= "<pre>" . htmlspecialchars(json_encode($resp, JSON_PRETTY_PRINT)) . "</pre>";
 
         if (isset($resp['loginurl'])) {
