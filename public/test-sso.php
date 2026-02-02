@@ -6,15 +6,15 @@
  */
 
 // Your Moodle settings (copy from .env)
-$token = 'YOUR_MOODLE_TOKEN_HERE';  // Replace with your actual token
+$token = "60fc1ff9827ab85fc1d0dee9709acf9d";  // Replace with your actual token
 $domainname = 'http://learnabouthealth.hin.gov.tt';  // Your Moodle URL
 $functionname = 'auth_userkey_request_login_url';
 
 // Test user (use a real user that exists in Moodle)
-$useremail = 'test@example.com';  // Replace with actual email
-$firstname = 'Test';
-$lastname = 'User';
-$username = 'testuser';
+$useremail = 'kyle.blackman@health.gov.tt';  // Replace with actual email
+$firstname = 'Kyle';
+$lastname = 'Blackman';
+$username = 'Kyle.Blackman';
 $courseid = 2;  // Replace with actual Moodle course ID
 
 // Build the parameters
