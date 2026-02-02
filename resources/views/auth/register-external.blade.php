@@ -6,7 +6,7 @@
   <title>Ministry of Health - External Registration</title>
   <meta name="description" content="Register as an external user for the Ministry of Health Learning Management System" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  @vite(['resources/css/app.css'])
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @keyframes gradient {
       0% { background-position: 0% 50%; }
