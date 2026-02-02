@@ -317,22 +317,47 @@ class MoodleService
     public function generateLoginUrl(string $email, ?string $redirectUrl = null): ?string
     {
         try {
-            // Call Moodle's auth_userkey_request_login_url function
-            // This requires the auth_userkey plugin to be installed and configured
+            // Try different function names based on auth_userkey plugin version
+            // Newer versions use: auth_userkey_request_login_url
+            // Some versions use: auth_userkey_generatekey
             $params = ['user' => ['email' => $email]];
+            $response = null;
+            $functionName = null;
 
-            $response = $this->call('auth_userkey_request_login_url', $params);
+            // Try the newer function first
+            try {
+                $response = $this->call('auth_userkey_request_login_url', $params);
+                $functionName = 'auth_userkey_request_login_url';
+            } catch (\Exception $e) {
+                Log::info('auth_userkey_request_login_url not available, trying generatekey', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            // If that fails, try the older function name
+            if (!$response || !isset($response['loginurl'])) {
+                try {
+                    $response = $this->call('auth_userkey_generatekey', $params);
+                    $functionName = 'auth_userkey_generatekey';
+                } catch (\Exception $e) {
+                    Log::warning('auth_userkey_generatekey also failed', [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
 
             if (isset($response['loginurl'])) {
                 $loginUrl = $response['loginurl'];
 
                 // Append redirect URL if provided
                 if ($redirectUrl) {
-                    $loginUrl .= '&wantsurl=' . urlencode($redirectUrl);
+                    $separator = (strpos($loginUrl, '?') !== false) ? '&' : '?';
+                    $loginUrl .= $separator . 'wantsurl=' . urlencode($redirectUrl);
                 }
 
                 Log::info('Generated Moodle auto-login URL', [
                     'email' => $email,
+                    'function' => $functionName,
                     'has_redirect' => !empty($redirectUrl)
                 ]);
 
