@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Reset Your Password - Ministry of Health</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  @vite(['resources/css/app.css'])
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
       background: linear-gradient(135deg, #667eea, #764ba2);
