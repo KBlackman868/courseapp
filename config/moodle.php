@@ -13,6 +13,18 @@ return [
     'retry_times' => env('MOODLE_RETRY_TIMES', 2),
     'retry_sleep' => env('MOODLE_RETRY_SLEEP', 200),
     'verify_ssl' => env('MOODLE_VERIFY_SSL', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | SSO Configuration (auth_userkey plugin)
+    |--------------------------------------------------------------------------
+    | Moodle must have auth_userkey plugin installed and configured
+    | Generate a shared secret in Moodle: Site admin > Plugins > Authentication > User key
+    */
+    'sso_enabled' => env('MOODLE_SSO_ENABLED', true),
+    'sso_secret' => env('MOODLE_SSO_SECRET', ''),
+    'sso_logout_redirect' => env('MOODLE_SSO_LOGOUT_REDIRECT', ''),
+
     'auto_approve_enrollments' => env('MOODLE_AUTO_APPROVE_ENROLLMENTS', false),
     'auto_create_users' => env('MOODLE_AUTO_CREATE_USERS', true),
     
