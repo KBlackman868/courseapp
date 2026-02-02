@@ -60,6 +60,66 @@ Route::get('/home', fn() => redirect('/'));
 
 /*
 |==========================================================================
+| SSO TEST ROUTE (DELETE AFTER TESTING!)
+|==========================================================================
+*/
+Route::get('/test-sso', function () {
+    $token = config('moodle.token');
+    $domainname = config('moodle.base_url');
+    $functionname = 'auth_userkey_request_login_url';
+
+    // Get test user - use current logged in user or specify email
+    $useremail = auth()->check() ? auth()->user()->email : 'test@example.com';
+    $courseid = 2; // Change to a real course ID
+
+    $param = [
+        'user' => [
+            'email' => $useremail,
+        ]
+    ];
+
+    $serverurl = $domainname . '/webservice/rest/server.php?wstoken=' . $token . '&wsfunction=' . $functionname . '&moodlewsrestformat=json';
+
+    $output = "<h2>Moodle SSO Test</h2>";
+    $output .= "<p><strong>Email:</strong> " . htmlspecialchars($useremail) . "</p>";
+    $output .= "<p><strong>Moodle URL:</strong> " . htmlspecialchars($domainname) . "</p>";
+    $output .= "<p><strong>Function:</strong> " . htmlspecialchars($functionname) . "</p>";
+
+    try {
+        $response = \Illuminate\Support\Facades\Http::asForm()
+            ->withoutVerifying()
+            ->post($serverurl, $param);
+
+        $resp = $response->json();
+
+        $output .= "<p><strong>HTTP Status:</strong> " . $response->status() . "</p>";
+        $output .= "<p><strong>Raw Response:</strong></p>";
+        $output .= "<pre>" . htmlspecialchars(json_encode($resp, JSON_PRETTY_PRINT)) . "</pre>";
+
+        if (isset($resp['loginurl'])) {
+            $loginurl = $resp['loginurl'];
+            $finalUrl = $loginurl . '&wantsurl=' . urlencode("$domainname/course/view.php?id=$courseid");
+
+            $output .= "<h3 style='color:green'>SUCCESS!</h3>";
+            $output .= "<p><a href='" . htmlspecialchars($finalUrl) . "' style='padding:10px 20px; background:green; color:white; text-decoration:none; border-radius:5px;'>Click to Test SSO Login</a></p>";
+        } else {
+            $output .= "<h3 style='color:red'>FAILED - No loginurl in response</h3>";
+            if (isset($resp['exception'])) {
+                $output .= "<p><strong>Error:</strong> " . htmlspecialchars($resp['message'] ?? $resp['exception']) . "</p>";
+            }
+        }
+    } catch (\Exception $e) {
+        $output .= "<h3 style='color:red'>ERROR</h3>";
+        $output .= "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    }
+
+    $output .= "<hr><p style='color:red'><strong>⚠️ DELETE THIS ROUTE AFTER TESTING!</strong></p>";
+
+    return $output;
+})->name('test.sso');
+
+/*
+|==========================================================================
 | GUEST ONLY ROUTES
 |==========================================================================
 */
