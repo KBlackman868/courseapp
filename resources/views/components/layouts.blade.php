@@ -854,22 +854,19 @@
             this.scrolled = window.pageYOffset > 20;
           }, { passive: true });
 
-          // Display session messages (using native toast)
-          @if(session('success'))
-            showToast("{{ session('success') }}", 'success');
-          @endif
+          // Display session messages
+          this.showSessionToasts();
+        },
 
-          @if(session('error'))
-            showToast("{{ session('error') }}", 'error');
-          @endif
-
-          @if(session('warning'))
-            showToast("{{ session('warning') }}", 'warning');
-          @endif
-
-          @if(session('info'))
-            showToast("{{ session('info') }}", 'info');
-          @endif
+        showSessionToasts() {
+          const toastData = document.getElementById('session-toast-data');
+          if (toastData) {
+            const data = JSON.parse(toastData.textContent || '{}');
+            if (data.success) showToast(data.success, 'success');
+            if (data.error) showToast(data.error, 'error');
+            if (data.warning) showToast(data.warning, 'warning');
+            if (data.info) showToast(data.info, 'info');
+          }
         },
 
         toggleDarkMode() {
@@ -883,6 +880,16 @@
         }
       }
     }
+  </script>
+
+  {{-- Session data for toasts (avoids Blade inside JS issues) --}}
+  <script type="application/json" id="session-toast-data">
+    {!! json_encode([
+      'success' => session('success'),
+      'error' => session('error'),
+      'warning' => session('warning'),
+      'info' => session('info')
+    ]) !!}
   </script>
 
   <!-- Additional Page Scripts -->
