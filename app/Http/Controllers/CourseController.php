@@ -176,23 +176,25 @@ class CourseController extends Controller
             ]
         );
 
-        // Build Moodle URL with SSO
-        $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
+        // Try to generate auto-login URL using SSO (tied to user email)
+        try {
+            $moodleService = app(\App\Services\MoodleService::class);
+            $moodleUrl = $moodleService->generateCourseLoginUrl($user->email, $course->moodle_course_id);
 
-        // Check if SSO is enabled
-        if (config('moodle.sso_enabled') && config('moodle.sso_secret')) {
-            // Use auth_userkey plugin for SSO
-            $moodleUrl = $this->buildMoodleSSOUrl($user, $course, $moodleBaseUrl);
-        } else {
-            // Fallback to direct URL (will require Moodle login)
-            $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
-            Log::warning('Moodle SSO not configured, user will need to login manually', [
+            return redirect()->away($moodleUrl);
+        } catch (\Exception $e) {
+            // Fallback to direct URL if SSO fails
+            \Illuminate\Support\Facades\Log::warning('Moodle SSO failed, using direct URL', [
+                'error' => $e->getMessage(),
                 'user_id' => $user->id,
                 'course_id' => $course->id
             ]);
-        }
 
-        return redirect()->away($moodleUrl);
+            $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
+            $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+
+            return redirect()->away($moodleUrl);
+        }
     }
 
     /**
