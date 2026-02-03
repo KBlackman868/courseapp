@@ -11,21 +11,22 @@
 
   <!-- Inline toast styles (lighter than toastr CDN) -->
   <style>
-    /* DO NOT use overflow-x: hidden on html/body - it clips dropdowns */
-    .gradient-text {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    /* Navbar height: p-4 (16px) * 2 + content (~40px) = ~72px, use pt-[72px] or pt-20 (80px) for safety */
+    /* Z-Index Strategy - Using high values to ensure menu stays on top of DaisyUI components */
+    .z-content { z-index: 1; }
+    .z-sticky { z-index: 100; }
+    .z-dropdown { z-index: 200; }
+    .z-overlay { z-index: 9999; }
+    .z-modal { z-index: 10000; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
 
-  <!-- Navbar - Fixed at top with explicit height -->
-  <nav class="bg-white dark:bg-gray-800 fixed w-full z-[100] top-0 start-0 border-b border-gray-200 dark:border-gray-700 shadow-sm h-[72px]">
-    <div class="max-w-screen-xl h-full flex items-center justify-between mx-auto px-4">
+  {{-- ============================================================
+       MINIMAL TOP BAR - Slim header with menu trigger
+       ============================================================ --}}
+  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-sticky shadow-sm">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+      <div class="flex items-center justify-between h-14">
 
       <!-- Logo - shrink-0 prevents compression -->
       <a href="{{ route('home') }}" class="flex items-center gap-3 shrink-0">
@@ -119,17 +120,14 @@
                           <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">{{ $accountPending }}</span>
                         @endif
                       </a>
-                    </li>
-                    <li>
-                      <a href="{{ route('admin.course-access-requests.index') }}" class="flex items-center justify-between w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
+
+                      @php $enrollmentPending = \App\Models\Enrollment::where('status', 'pending')->count(); @endphp
+                      <a href="{{ route('admin.enrollment-requests.index') }}" @click="menuOpen = false" class="flex items-center justify-between px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <span class="flex items-center gap-2">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                          Course Access
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                          Enrollment Requests
                         </span>
-                        @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
-                        @if($coursePending > 0)
-                          <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">{{ $coursePending }}</span>
-                        @endif
+                        @if($enrollmentPending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $enrollmentPending }}</span>@endif
                       </a>
                     </li>
 
@@ -313,64 +311,13 @@
         </button>
       </div>
     </div>
+  </header>
 
-    <!-- Mobile Navigation Menu -->
-    <div x-data="{ mobileOpen: false }" @toggle-mobile-menu.window="mobileOpen = !mobileOpen"
-         x-show="mobileOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
-         class="lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[calc(100vh-72px)] overflow-y-auto">
-      <ul class="p-4 space-y-1">
-        <li>
-          <a href="{{ route('home') }}" class="block py-2 px-3 rounded-lg {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-            Home
-          </a>
-        </li>
-
-        @auth
-          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-            <li class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-              <span class="block px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Admin</span>
-            </li>
-            @if(auth()->user()->hasRole('superadmin'))
-              <li><a href="{{ route('dashboard.superadmin') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a></li>
-            @endif
-            @if(auth()->user()->hasRole(['superadmin', 'admin']))
-              <li><a href="{{ route('admin.users.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Users</a></li>
-              @if(auth()->user()->hasRole('superadmin'))
-                <li><a href="{{ route('admin.roles.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Roles</a></li>
-              @endif
-            @endif
-            <li><a href="{{ route('courses.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Courses</a></li>
-            <li><a href="{{ route('courses.create') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Create Course</a></li>
-            <li>
-              <a href="{{ route('admin.account-requests.index') }}" class="flex items-center justify-between py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                Account Requests
-                @if($accountPending > 0)<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded">{{ $accountPending }}</span>@endif
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('admin.course-access-requests.index') }}" class="flex items-center justify-between py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                Course Access
-                @if($coursePending > 0)<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded">{{ $coursePending }}</span>@endif
-              </a>
-            </li>
-            @if(auth()->user()->hasRole('superadmin'))
-              <li><a href="{{ route('admin.moodle.status') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Moodle Status</a></li>
-              <li><a href="{{ route('admin.activity-logs.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Activity Logs</a></li>
-            @endif
-          @else
-            <li><a href="{{ route('dashboard') }}" class="block py-2 px-3 rounded-lg {{ request()->routeIs('dashboard*') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">Dashboard</a></li>
-            <li><a href="{{ route('mycourses') }}" class="block py-2 px-3 rounded-lg {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">My Courses</a></li>
-          @endif
-        @else
-          <li><a href="{{ route('login') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Login</a></li>
-          <li><a href="{{ route('register') }}" class="block py-2 px-3 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 text-center">Register</a></li>
-        @endauth
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Main Content - Proper spacing for fixed navbar -->
-  <main class="flex-1 pt-[72px]">
+  {{-- ============================================================
+       MAIN CONTENT AREA - z-content ensures it stays below header/menu
+       ============================================================ --}}
+  <main class="flex-1 relative z-content isolate">
+    {{-- Page Header (for non-landing pages) --}}
     @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
       <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
