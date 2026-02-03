@@ -109,6 +109,11 @@
                         @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
                         @if($coursePending > 0)<span class="badge badge-warning badge-sm">{{ $coursePending }}</span>@endif
                       </a></li>
+                      <li><a href="{{ route('admin.enrollment-requests.index') }}">
+                        Enrollment Requests
+                        @php $enrollmentPending = \App\Models\EnrollmentRequest::pending()->count(); @endphp
+                        @if($enrollmentPending > 0)<span class="badge badge-warning badge-sm">{{ $enrollmentPending }}</span>@endif
+                      </a></li>
                       @if(auth()->user()->hasRole('superadmin'))
                         <div class="divider my-0"></div>
                         <li><a href="{{ route('admin.moodle.status') }}" class="{{ request()->routeIs('admin.moodle.*') ? 'active' : '' }}">
@@ -143,7 +148,7 @@
 
         <!-- Right side - Notifications, Theme, Profile -->
         @auth
-        <div class="flex-none gap-2">
+        <div class="flex-none flex items-center gap-2">
           <!-- Notifications -->
           <a href="{{ route('notifications.index') }}" class="btn btn-ghost btn-circle">
             <div class="indicator">
@@ -315,6 +320,11 @@
               Course Access
               @php $cp = \App\Models\CourseAccessRequest::pending()->count(); @endphp
               @if($cp > 0)<span class="badge badge-warning badge-sm">{{ $cp }}</span>@endif
+            </a></li>
+            <li><a href="{{ route('admin.enrollment-requests.index') }}">
+              Enrollment Requests
+              @php $ep = \App\Models\EnrollmentRequest::pending()->count(); @endphp
+              @if($ep > 0)<span class="badge badge-warning badge-sm">{{ $ep }}</span>@endif
             </a></li>
 
             @if(auth()->user()->hasRole('superadmin'))
