@@ -23,7 +23,7 @@
   {{-- ============================================================
        MINIMAL TOP BAR - Slim header with menu trigger
        ============================================================ --}}
-  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-sticky">
+  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-sticky shadow-sm">
     <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
       <div class="flex items-center justify-between h-14">
 
@@ -187,13 +187,13 @@
                         @if($accountPending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $accountPending }}</span>@endif
                       </a>
 
-                      @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
-                      <a href="{{ route('admin.course-access-requests.index') }}" @click="menuOpen = false" class="flex items-center justify-between px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      @php $enrollmentPending = \App\Models\Enrollment::where('status', 'pending')->count(); @endphp
+                      <a href="{{ route('admin.enrollment-requests.index') }}" @click="menuOpen = false" class="flex items-center justify-between px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <span class="flex items-center gap-2">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                          Course Access
+                          Enrollment Requests
                         </span>
-                        @if($coursePending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $coursePending }}</span>@endif
+                        @if($enrollmentPending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $enrollmentPending }}</span>@endif
                       </a>
 
                       @if(auth()->user()->hasRole('superadmin'))
