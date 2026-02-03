@@ -155,10 +155,12 @@ class EnhancedAuthController extends Controller
             ]);
         }
 
-        // Ensure user is marked as external
-        if ($user->user_type !== 'external') {
+        // Set user_type if not already set (preserve existing user_type for MOH staff)
+        if (!$user->user_type) {
+            // Determine user_type based on email domain
+            $userType = User::isMohEmail($user->email) ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL;
             $user->update([
-                'user_type' => 'external',
+                'user_type' => $userType,
                 'auth_method' => 'local',
             ]);
         }
@@ -245,8 +247,8 @@ class EnhancedAuthController extends Controller
             'ldap_synced_at' => now(),
         ]);
 
-        // Assign default role
-        $user->assignRole('user');
+        // Assign MOH staff role for internal LDAP users
+        $user->assignRole(User::ROLE_MOH_STAFF);
 
         // Check if user should be a course creator
         if (isset($ldapUser['dn'])) {
