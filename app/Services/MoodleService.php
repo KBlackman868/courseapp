@@ -310,17 +310,15 @@ class MoodleService
      * Generate an auto-login URL for a user using auth_userkey plugin
      * This allows users to be automatically logged into Moodle
      *
-     * @param string $email User's email address (must match Moodle account)
+     * @param array $userData User data with username, email, firstname, lastname
      * @param string|null $redirectUrl Optional URL to redirect after login (e.g., course page)
      * @return string|null The auto-login URL or null on failure
      */
-    public function generateLoginUrl(string $email, ?string $redirectUrl = null): ?string
+    public function generateLoginUrl(array $userData, ?string $redirectUrl = null): ?string
     {
         try {
-            // Try different function names based on auth_userkey plugin version
-            // Newer versions use: auth_userkey_request_login_url
-            // Some versions use: auth_userkey_generatekey
-            $params = ['user' => ['email' => $email]];
+            // Send all user fields - auth_userkey may match on any of these
+            $params = ['user' => $userData];
             $response = null;
             $functionName = null;
 
@@ -356,7 +354,8 @@ class MoodleService
                 }
 
                 Log::info('Generated Moodle auto-login URL', [
-                    'email' => $email,
+                    'username' => $userData['username'] ?? 'N/A',
+                    'email' => $userData['email'] ?? 'N/A',
                     'function' => $functionName,
                     'has_redirect' => !empty($redirectUrl)
                 ]);
@@ -369,10 +368,10 @@ class MoodleService
             // If auth_userkey is not installed, try fallback method
             Log::warning('auth_userkey not available, falling back to direct URL', [
                 'error' => $e->getMessage(),
-                'email' => $email
+                'email' => $userData['email'] ?? 'N/A'
             ]);
 
-            return $this->generateFallbackLoginUrl($email, $redirectUrl);
+            return $this->generateFallbackLoginUrl($userData['email'] ?? '', $redirectUrl);
         }
     }
 
@@ -441,14 +440,26 @@ class MoodleService
     /**
      * Generate auto-login URL for a course
      *
-     * @param string $email User's email
+     * @param \App\Models\User $user The user object
      * @param int $moodleCourseId Moodle course ID
      * @return string The auto-login URL to the course
      */
-    public function generateCourseLoginUrl(string $email, int $moodleCourseId): string
+    public function generateCourseLoginUrl($user, int $moodleCourseId): string
     {
         $courseUrl = $this->getCourseUrl($moodleCourseId);
-        $loginUrl = $this->generateLoginUrl($email, $courseUrl);
+
+        // Build user data array with all fields needed for auth_userkey
+        // Username is typically the part before @ in email for MOH users
+        $username = $user->username ?? explode('@', $user->email)[0];
+
+        $userData = [
+            'username' => $username,
+            'email' => $user->email,
+            'firstname' => $user->first_name ?? $user->firstname ?? explode('.', $username)[0] ?? 'User',
+            'lastname' => $user->last_name ?? $user->lastname ?? explode('.', $username)[1] ?? 'User',
+        ];
+
+        $loginUrl = $this->generateLoginUrl($userData, $courseUrl);
 
         // If SSO failed, return the direct course URL
         return $loginUrl ?? $courseUrl;

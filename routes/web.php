@@ -90,9 +90,15 @@ Route::get('/debug-sso/{courseId}', function ($courseId) {
     try {
         $moodleService = app(\App\Services\MoodleService::class);
 
+        // Show user data being sent
+        $username = $user->username ?? explode('@', $user->email)[0];
+        $output .= "<p><strong>Username (derived):</strong> {$username}</p>";
+        $output .= "<p><strong>First Name:</strong> " . ($user->first_name ?? $user->firstname ?? 'N/A') . "</p>";
+        $output .= "<p><strong>Last Name:</strong> " . ($user->last_name ?? $user->lastname ?? 'N/A') . "</p>";
+
         $output .= "<hr><h3>Testing SSO...</h3>";
 
-        $ssoUrl = $moodleService->generateCourseLoginUrl($user->email, $course->moodle_course_id);
+        $ssoUrl = $moodleService->generateCourseLoginUrl($user, $course->moodle_course_id);
 
         $output .= "<p><strong>Generated URL:</strong></p>";
         $output .= "<pre>" . htmlspecialchars($ssoUrl) . "</pre>";

@@ -176,10 +176,10 @@ class CourseController extends Controller
             ]
         );
 
-        // Try to generate auto-login URL using SSO (tied to user email)
+        // Try to generate auto-login URL using SSO (pass full user object)
         try {
             $moodleService = app(\App\Services\MoodleService::class);
-            $moodleUrl = $moodleService->generateCourseLoginUrl($user->email, $course->moodle_course_id);
+            $moodleUrl = $moodleService->generateCourseLoginUrl($user, $course->moodle_course_id);
 
             return redirect()->away($moodleUrl);
         } catch (\Exception $e) {
