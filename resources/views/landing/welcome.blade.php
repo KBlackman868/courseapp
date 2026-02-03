@@ -3,8 +3,8 @@
         Welcome to MOH Learning Portal
     </x-slot:heading>
 
-    <!-- Hero Section -->
-    <div class="-mx-6 -mt-8 md:-mx-8 isolate relative overflow-hidden">
+    <!-- Hero Section - z-0 ensures it stays below navbar (z-50) -->
+    <div class="-mx-6 -mt-8 md:-mx-8 isolate relative overflow-hidden z-0">
         <section class="relative min-h-[600px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-t-2xl">
             <!-- Animated Background - z-0 to stay behind content -->
             <div class="absolute inset-0 z-0 overflow-hidden">
