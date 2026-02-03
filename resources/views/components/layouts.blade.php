@@ -115,7 +115,7 @@
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                           Moodle Status
                         </a></li>
-                        <li><a href="{{ config('moodle.base_url') }}" target="_blank" class="text-secondary">
+                        <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                           Open Moodle
                         </a></li>
@@ -320,7 +320,7 @@
             @if(auth()->user()->hasRole('superadmin'))
               <div class="divider">Moodle</div>
               <li><a href="{{ route('admin.moodle.status') }}">Moodle Status</a></li>
-              <li><a href="{{ config('moodle.base_url') }}" target="_blank" class="text-secondary">Open Moodle</a></li>
+              <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">Open Moodle</a></li>
               <li><a href="{{ route('admin.activity-logs.index') }}">Activity Logs</a></li>
             @endif
           @else
