@@ -11,12 +11,17 @@
 
   <!-- Inline toast styles (lighter than toastr CDN) -->
   <style>
-    /* Z-Index Strategy - Using high values to ensure menu stays on top of DaisyUI components */
-    .z-content { z-index: 1; }
-    .z-sticky { z-index: 100; }
-    .z-dropdown { z-index: 200; }
-    .z-overlay { z-index: 9999; }
-    .z-modal { z-index: 10000; }
+    /* Prevent horizontal scroll */
+    html, body { overflow-x: hidden; max-width: 100vw; }
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    /* Ensure drawer-side is hidden by default */
+    .drawer-side { visibility: hidden; }
+    .drawer-toggle:checked ~ .drawer-side { visibility: visible; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -184,57 +189,22 @@
       <div class="flex items-center gap-1 shrink-0">
         @auth
         <div class="flex-none flex items-center gap-2">
-          <!-- Notifications Dropdown (hover) -->
-          <div class="dropdown dropdown-end dropdown-hover">
-            <label tabindex="0" class="btn btn-ghost btn-circle">
-              <div class="indicator">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                @php
-                  $unreadCount = auth()->user()->systemNotifications()->unread()->count();
-                  $recentNotifications = auth()->user()->systemNotifications()->latest()->take(5)->get();
-                @endphp
-                @if($unreadCount > 0)
-                  <span class="badge badge-xs badge-error indicator-item">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
-                @endif
-              </div>
-            </label>
-            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-80 shadow-xl z-50 p-2">
-              <li class="menu-title">
-                <span class="flex justify-between items-center">
-                  Notifications
-                  @if($unreadCount > 0)
-                    <span class="badge badge-error badge-sm">{{ $unreadCount }} new</span>
-                  @endif
-                </span>
-              </li>
-              @forelse($recentNotifications as $notification)
-                <li>
-                  <div class="flex flex-col items-start gap-1 py-2 {{ $notification->read_at ? 'opacity-60' : '' }}">
-                    <span class="font-medium text-sm truncate w-full">{{ Str::limit($notification->title, 40) }}</span>
-                    <span class="text-xs text-gray-500">{{ $notification->created_at->diffForHumans() }}</span>
-                  </div>
-                </li>
-              @empty
-                <li class="text-center py-4 text-gray-500 text-sm">
-                  <span>No notifications</span>
-                </li>
-              @endforelse
-              @if($recentNotifications->count() > 0)
-                <div class="divider my-1"></div>
+          <!-- Notifications Icon -->
+          <a href="{{ route('notifications.index') }}" class="btn btn-ghost btn-circle">
+            <div class="indicator">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              @php $unreadCount = auth()->user()->systemNotifications()->unread()->count(); @endphp
+              @if($unreadCount > 0)
+                <span class="badge badge-xs badge-error indicator-item">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
               @endif
-              <li>
-                <a href="{{ route('notifications.index') }}" class="justify-center text-primary font-medium">
-                  View All
-                </a>
-              </li>
-            </ul>
-          </div>
+            </div>
+          </a>
 
-          <!-- Dark Mode Toggle -->
-          <button @click="toggleDarkMode()" type="button" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-            <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- Theme Toggle -->
+          <button @click="toggleDarkMode()" class="btn btn-ghost btn-circle">
+            <svg x-show="!darkMode" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
             </svg>
             <svg x-show="darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
