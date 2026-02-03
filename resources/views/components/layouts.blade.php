@@ -376,20 +376,20 @@
       </div>
     </nav>
 
-    <!-- Page Content -->
-    <main class="flex-1">
-      @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
-        <!-- Page Header -->
-        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-800 dark:to-gray-800 py-6 border-b border-gray-200 dark:border-gray-700">
-          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            @if(isset($heading))
-              <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ $heading }}</h1>
-            @elseif(View::hasSection('title'))
-              <h1 class="text-3xl font-bold text-gray-900 dark:text-white">@yield('title')</h1>
-            @endif
+      <!-- Page Content - z-0 ensures it stays below navbar (z-50) -->
+      <main class="flex-1 relative z-0">
+        @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
+          <!-- Page Header -->
+          <div class="bg-gradient-to-r from-primary/10 to-secondary/10 py-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              @if(isset($heading))
+                <h1 class="text-3xl font-bold text-base-content">{{ $heading }}</h1>
+              @elseif(View::hasSection('title'))
+                <h1 class="text-3xl font-bold text-base-content">@yield('title')</h1>
+              @endif
+            </div>
           </div>
-        </div>
-      @endif
+        @endif
 
       <!-- Main Content -->
       <div class="{{ request()->routeIs('home') || request()->routeIs('welcome') ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6' }}">
