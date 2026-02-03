@@ -19,9 +19,6 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    /* Ensure drawer-side is hidden by default */
-    .drawer-side { visibility: hidden; }
-    .drawer-toggle:checked ~ .drawer-side { visibility: visible; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -189,18 +186,46 @@
       <div class="flex items-center gap-1 shrink-0">
         @auth
         <div class="flex-none flex items-center gap-2">
-          <!-- Notifications Icon -->
-          <a href="{{ route('notifications.index') }}" class="btn btn-ghost btn-circle">
-            <div class="indicator">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              @php $unreadCount = auth()->user()->systemNotifications()->unread()->count(); @endphp
-              @if($unreadCount > 0)
-                <span class="badge badge-xs badge-error indicator-item">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
-              @endif
+          <!-- Notifications Dropdown -->
+          @php
+            $unreadCount = auth()->user()->systemNotifications()->unread()->count();
+            $recentNotifications = auth()->user()->systemNotifications()->latest()->take(5)->get();
+          @endphp
+          <div class="dropdown dropdown-end dropdown-hover">
+            <label tabindex="0" class="btn btn-ghost btn-circle">
+              <div class="indicator">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                @if($unreadCount > 0)
+                  <span class="badge badge-xs badge-error indicator-item">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
+                @endif
+              </div>
+            </label>
+            <div tabindex="0" class="dropdown-content bg-base-100 rounded-box w-72 shadow-xl z-[100] mt-1">
+              <div class="p-3 border-b border-base-200">
+                <span class="font-semibold">Notifications</span>
+                @if($unreadCount > 0)
+                  <span class="badge badge-error badge-sm ml-2">{{ $unreadCount }}</span>
+                @endif
+              </div>
+              <ul class="menu menu-sm p-2 max-h-64 overflow-y-auto">
+                @forelse($recentNotifications as $notification)
+                  <li>
+                    <div class="flex flex-col items-start {{ $notification->read_at ? 'opacity-60' : '' }}">
+                      <span class="text-sm font-medium">{{ Str::limit($notification->title, 35) }}</span>
+                      <span class="text-xs text-gray-500">{{ $notification->created_at->diffForHumans() }}</span>
+                    </div>
+                  </li>
+                @empty
+                  <li class="text-center py-3 text-gray-500 text-sm">No notifications</li>
+                @endforelse
+              </ul>
+              <div class="p-2 border-t border-base-200">
+                <a href="{{ route('notifications.index') }}" class="btn btn-ghost btn-sm btn-block">View All</a>
+              </div>
             </div>
-          </a>
+          </div>
 
           <!-- Theme Toggle -->
           <button @click="toggleDarkMode()" class="btn btn-ghost btn-circle">
@@ -323,12 +348,10 @@
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0">
-    <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-      <p class="text-center text-gray-500 dark:text-gray-400 text-sm">
-        &copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.
-      </p>
+      <!-- Footer -->
+      <footer class="footer footer-center p-4 bg-base-300 text-base-content">
+        <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.</p>
+      </footer>
     </div>
 
     <!-- Mobile Drawer Sidebar -->
