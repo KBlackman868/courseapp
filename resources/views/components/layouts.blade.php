@@ -10,12 +10,12 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
   <style>
-    /* Z-Index Strategy: 10=content, 20=sticky, 30=dropdown, 40=overlay, 50=modal */
-    .z-content { z-index: 10; }
-    .z-sticky { z-index: 20; }
-    .z-dropdown { z-index: 30; }
-    .z-overlay { z-index: 40; }
-    .z-modal { z-index: 50; }
+    /* Z-Index Strategy - Using high values to ensure menu stays on top of DaisyUI components */
+    .z-content { z-index: 1; }
+    .z-sticky { z-index: 100; }
+    .z-dropdown { z-index: 200; }
+    .z-overlay { z-index: 9999; }
+    .z-modal { z-index: 10000; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -222,9 +222,9 @@
   </header>
 
   {{-- ============================================================
-       MAIN CONTENT AREA
+       MAIN CONTENT AREA - z-content ensures it stays below header/menu
        ============================================================ --}}
-  <main class="flex-1">
+  <main class="flex-1 relative z-content isolate">
     {{-- Page Header (for non-landing pages) --}}
     @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
       <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
