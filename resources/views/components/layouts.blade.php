@@ -213,8 +213,8 @@
         @endauth
       </div>
 
-      <!-- Page Content -->
-      <main class="flex-1">
+      <!-- Page Content - z-0 ensures it stays below navbar (z-50) -->
+      <main class="flex-1 relative z-0">
         @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
           <!-- Page Header -->
           <div class="bg-gradient-to-r from-primary/10 to-secondary/10 py-6">
