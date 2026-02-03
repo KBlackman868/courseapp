@@ -119,6 +119,9 @@ class CreateOrLinkMoodleUser implements ShouldQueue
             $passwordSource = 'generated';
         }
         
+        // Use 'userkey' auth for SSO if enabled, otherwise 'manual'
+        $authMethod = config('moodle.sso_enabled', true) ? 'userkey' : 'manual';
+
         $userData = [
             'users' => [
                 [
@@ -127,7 +130,7 @@ class CreateOrLinkMoodleUser implements ShouldQueue
                     'firstname' => $this->firstName ?? $this->user->first_name ?? 'User',
                     'lastname' => $this->lastName ?? $this->user->last_name ?? 'User',
                     'email' => $this->email ?? $this->user->email,
-                    'auth' => 'manual',
+                    'auth' => $authMethod,
                     'lang' => 'en',
                     // Don't include 'confirmed' as it caused issues
                     'createpassword' => 0,

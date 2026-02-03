@@ -60,69 +60,6 @@ Route::get('/home', fn() => redirect('/'));
 
 /*
 |==========================================================================
-| DEBUG SSO ROUTE (DELETE AFTER TESTING)
-|==========================================================================
-*/
-Route::get('/debug-sso/{courseId}', function ($courseId) {
-    $user = auth()->user();
-    if (!$user) {
-        return 'Not logged in';
-    }
-
-    $course = \App\Models\Course::find($courseId);
-    if (!$course) {
-        return "Course ID {$courseId} not found in database";
-    }
-
-    $output = "<h2>SSO Debug for Course: {$course->title}</h2>";
-    $output .= "<p><strong>Course ID (local):</strong> {$course->id}</p>";
-    $output .= "<p><strong>Moodle Course ID:</strong> " . ($course->moodle_course_id ?? 'NULL - NOT SET!') . "</p>";
-    $output .= "<p><strong>User Email:</strong> {$user->email}</p>";
-    $output .= "<p><strong>Config moodle.base_url:</strong> " . config('moodle.base_url') . "</p>";
-    $output .= "<p><strong>Config moodle.token:</strong> " . (config('moodle.token') ? 'SET (' . strlen(config('moodle.token')) . ' chars)' : 'NOT SET!') . "</p>";
-
-    if (!$course->moodle_course_id) {
-        $output .= "<h3 style='color:red'>PROBLEM: Course has no moodle_course_id!</h3>";
-        $output .= "<p>You need to sync this course to Moodle first, or manually set the moodle_course_id in the database.</p>";
-        return $output;
-    }
-
-    try {
-        $moodleService = app(\App\Services\MoodleService::class);
-
-        // Show user data being sent
-        $username = $user->username ?? explode('@', $user->email)[0];
-        $output .= "<p><strong>Username (derived):</strong> {$username}</p>";
-        $output .= "<p><strong>First Name:</strong> " . ($user->first_name ?? $user->firstname ?? 'N/A') . "</p>";
-        $output .= "<p><strong>Last Name:</strong> " . ($user->last_name ?? $user->lastname ?? 'N/A') . "</p>";
-
-        $output .= "<hr><h3>Testing SSO...</h3>";
-
-        $ssoUrl = $moodleService->generateCourseLoginUrl($user, $course->moodle_course_id);
-
-        $output .= "<p><strong>Generated URL:</strong></p>";
-        $output .= "<pre>" . htmlspecialchars($ssoUrl) . "</pre>";
-
-        if (strpos($ssoUrl, 'login.php?key=') !== false) {
-            $output .= "<h3 style='color:green'>SUCCESS - SSO URL generated!</h3>";
-            $output .= "<p><a href='" . htmlspecialchars($ssoUrl) . "' style='padding:10px 20px; background:green; color:white; text-decoration:none;'>Test SSO Login</a></p>";
-        } else {
-            $output .= "<h3 style='color:orange'>WARNING - Fallback URL (no SSO token)</h3>";
-            $output .= "<p>The SSO call may have failed. Check Laravel logs.</p>";
-        }
-
-    } catch (\Exception $e) {
-        $output .= "<h3 style='color:red'>ERROR</h3>";
-        $output .= "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
-        $output .= "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
-    }
-
-    $output .= "<hr><p style='color:red'><strong>DELETE THIS ROUTE AFTER TESTING!</strong></p>";
-    return $output;
-})->middleware('auth')->name('debug.sso');
-
-/*
-|==========================================================================
 | GUEST ONLY ROUTES
 |==========================================================================
 */
