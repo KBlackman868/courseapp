@@ -24,6 +24,7 @@ const navigation = [
     { name: 'Roles & Permissions', href: '/admin/roles', icon: ShieldCheckIcon, routeName: 'admin.roles.*' },
     { name: 'Courses', href: '/courses', icon: AcademicCapIcon, routeName: 'courses.*' },
     { name: 'Access Requests', href: '/admin/course-access-requests', icon: ClipboardDocumentListIcon, routeName: 'admin.course-access-requests.*', badge: true },
+    { name: 'Enrollment Requests', href: '/admin/enrollment-requests', icon: FolderIcon, routeName: 'admin.enrollment-requests.*', badge: true },
     { name: 'Account Requests', href: '/admin/account-requests', icon: DocumentTextIcon, routeName: 'admin.account-requests.*', badge: true },
     { name: 'Activity Logs', href: '/admin/activity-logs', icon: ChartBarIcon, routeName: 'admin.activity-logs.*' },
 ];

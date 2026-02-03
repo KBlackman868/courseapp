@@ -116,26 +116,22 @@
                           Account Requests
                         </span>
                         @php $accountPending = \App\Models\AccountRequest::pending()->count(); @endphp
-                        @if($accountPending > 0)
-                          <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">{{ $accountPending }}</span>
-                        @endif
-                      </a>
-
-                      @php $enrollmentPending = \App\Models\Enrollment::where('status', 'pending')->count(); @endphp
-                      <a href="{{ route('admin.enrollment-requests.index') }}" @click="menuOpen = false" class="flex items-center justify-between px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <span class="flex items-center gap-2">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                          Enrollment Requests
-                        </span>
-                        @if($enrollmentPending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $enrollmentPending }}</span>@endif
-                      </a>
-                    </li>
-
-                    @if(auth()->user()->hasRole('superadmin'))
-                      <li class="border-t border-gray-200 dark:border-gray-700 my-1"></li>
-                      <li>
-                        <a href="{{ route('admin.moodle.status') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        @if($accountPending > 0)<span class="badge badge-warning badge-sm">{{ $accountPending }}</span>@endif
+                      </a></li>
+                      <li><a href="{{ route('admin.course-access-requests.index') }}">
+                        Course Access
+                        @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+                        @if($coursePending > 0)<span class="badge badge-warning badge-sm">{{ $coursePending }}</span>@endif
+                      </a></li>
+                      <li><a href="{{ route('admin.enrollment-requests.index') }}">
+                        Enrollment Requests
+                        @php $enrollmentPending = \App\Models\EnrollmentRequest::pending()->count(); @endphp
+                        @if($enrollmentPending > 0)<span class="badge badge-warning badge-sm">{{ $enrollmentPending }}</span>@endif
+                      </a></li>
+                      @if(auth()->user()->hasRole('superadmin'))
+                        <div class="divider my-0"></div>
+                        <li><a href="{{ route('admin.moodle.status') }}" class="{{ request()->routeIs('admin.moodle.*') ? 'active' : '' }}">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                           Moodle Status
                         </a>
                       </li>
@@ -187,12 +183,12 @@
       <!-- Right Side Items -->
       <div class="flex items-center gap-1 shrink-0">
         @auth
-          <!-- Notification Bell -->
-          <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" type="button" class="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <span class="sr-only">View notifications</span>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5.365V3m0 2.365a5.338 5.338 0 0 1 5.133 5.368v1.8c0 2.386 1.867 2.982 1.867 4.175 0 .593 0 1.292-.538 1.292H5.538C5 18 5 17.301 5 16.708c0-1.193 1.867-1.789 1.867-4.175v-1.8A5.338 5.338 0 0 1 12 5.365ZM8.733 18c.094.852.306 1.54.944 2.112a3.48 3.48 0 0 0 4.646 0c.638-.572 1.236-1.26 1.33-2.112h-6.92Z"/>
+        <div class="flex-none flex items-center gap-2">
+          <!-- Notifications -->
+          <a href="{{ route('notifications.index') }}" class="btn btn-ghost btn-circle">
+            <div class="indicator">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               @php $unreadCount = auth()->user()->systemNotifications()->unread()->count(); @endphp
               @if($unreadCount > 0)
@@ -356,9 +352,103 @@
         &copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.
       </p>
     </div>
-  </footer>
 
-  {{-- Scripts --}}
+    <!-- Mobile Drawer Sidebar -->
+    <div class="drawer-side z-50">
+      <label for="main-drawer" class="drawer-overlay" aria-label="close sidebar"></label>
+      <ul class="menu p-4 w-80 min-h-full bg-base-100" onclick="document.getElementById('main-drawer').checked = false;">
+        <!-- Close button -->
+        <li class="flex justify-end mb-2">
+          <label for="main-drawer" class="btn btn-sm btn-circle btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </label>
+        </li>
+        <!-- Logo in sidebar -->
+        <li class="menu-title">
+          <div class="flex items-center gap-2">
+            <div class="avatar">
+              <div class="w-8 rounded-full">
+                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
+              </div>
+            </div>
+            <span class="font-bold">MOH Learning</span>
+          </div>
+        </li>
+
+        @auth
+          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
+            <!-- Admin Role Badge -->
+            <li class="my-2">
+              <div class="badge badge-primary">
+                @if(auth()->user()->hasRole('superadmin'))
+                  Super Admin
+                @elseif(auth()->user()->hasRole('course_admin'))
+                  Course Admin
+                @else
+                  Admin
+                @endif
+              </div>
+            </li>
+
+            @if(auth()->user()->hasRole('superadmin'))
+              <li><a href="{{ route('dashboard.superadmin') }}">Dashboard</a></li>
+              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+              <li><a href="{{ route('admin.roles.index') }}">Roles</a></li>
+            @elseif(auth()->user()->hasRole('admin'))
+              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+            @endif
+
+            <li><a href="{{ route('courses.index') }}">Courses</a></li>
+            <li><a href="{{ route('courses.create') }}">Create Course</a></li>
+
+            <div class="divider">Pending</div>
+            <li><a href="{{ route('admin.account-requests.index') }}">
+              Account Requests
+              @php $ap = \App\Models\AccountRequest::pending()->count(); @endphp
+              @if($ap > 0)<span class="badge badge-warning badge-sm">{{ $ap }}</span>@endif
+            </a></li>
+            <li><a href="{{ route('admin.course-access-requests.index') }}">
+              Course Access
+              @php $cp = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+              @if($cp > 0)<span class="badge badge-warning badge-sm">{{ $cp }}</span>@endif
+            </a></li>
+            <li><a href="{{ route('admin.enrollment-requests.index') }}">
+              Enrollment Requests
+              @php $ep = \App\Models\EnrollmentRequest::pending()->count(); @endphp
+              @if($ep > 0)<span class="badge badge-warning badge-sm">{{ $ep }}</span>@endif
+            </a></li>
+
+            @if(auth()->user()->hasRole('superadmin'))
+              <div class="divider">Moodle</div>
+              <li><a href="{{ route('admin.moodle.status') }}">Moodle Status</a></li>
+              <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">Open Moodle</a></li>
+              <li><a href="{{ route('admin.activity-logs.index') }}">Activity Logs</a></li>
+            @endif
+          @else
+            <li><a href="{{ route('home') }}">Home</a></li>
+            <li><a href="{{ route('mycourses') }}">My Courses</a></li>
+          @endif
+
+          <div class="divider">Account</div>
+          <li><a href="{{ route('profile.show') }}">Profile</a></li>
+          <li><a href="{{ route('profile.settings') }}">Settings</a></li>
+          <li>
+            <form method="POST" action="{{ route('logout') }}">
+              @csrf
+              <button type="submit" class="text-error">Sign Out</button>
+            </form>
+          </li>
+        @else
+          <li><a href="{{ route('home') }}">Home</a></li>
+          <li><a href="{{ route('login') }}">Login</a></li>
+          <li><a href="{{ route('register') }}">Register</a></li>
+        @endauth
+      </ul>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
