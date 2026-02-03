@@ -29,21 +29,20 @@
 </head>
 <body class="min-h-screen bg-gray-50 dark:bg-gray-900">
 
-  <!-- Toast Container -->
-  <div id="toast-container" class="toast-container"></div>
+  <div class="drawer">
+    <input id="main-drawer" type="checkbox" class="drawer-toggle" />
 
-  <!-- Mobile Menu Overlay -->
-  <div x-show="mobileMenuOpen"
-       x-transition:enter="transition-opacity ease-linear duration-300"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition-opacity ease-linear duration-300"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"
-       @click="mobileMenuOpen = false"
-       class="fixed inset-0 bg-gray-900/80 z-40 lg:hidden"
-       style="display: none;">
-  </div>
+    <div class="drawer-content flex flex-col">
+      <!-- Navbar - z-[100] to ensure it's always above page content -->
+      <div class="navbar bg-base-100 shadow-lg sticky top-0 z-[100]">
+        <!-- Mobile menu button -->
+        <div class="flex-none lg:hidden">
+          <label for="main-drawer" class="btn btn-square btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </label>
+        </div>
 
   <!-- Mobile Sidebar -->
   <div x-show="mobileMenuOpen"
@@ -70,169 +69,27 @@
         </button>
       </div>
 
-      <!-- Sidebar Content -->
-      <nav class="flex-1 overflow-y-auto p-4">
-        @auth
-          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-            <!-- Admin Badge -->
-            <div class="mb-4">
-              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                @if(auth()->user()->hasRole('superadmin'))
-                  Super Admin
-                @elseif(auth()->user()->hasRole('course_admin'))
-                  Course Admin
-                @else
-                  Admin
-                @endif
-              </span>
-            </div>
-
-            <div class="space-y-1">
-              @if(auth()->user()->hasRole('superadmin'))
-                <a href="{{ route('dashboard.superadmin') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('dashboard.superadmin') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
-                  Dashboard
-                </a>
-                <a href="{{ route('admin.users.index') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                  Users
-                </a>
-                <a href="{{ route('admin.roles.index') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('admin.roles.*') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                  Roles
-                </a>
-              @elseif(auth()->user()->hasRole('admin'))
-                <a href="{{ route('admin.users.index') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('admin.users.*') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                  Users
-                </a>
-              @endif
-
-              <a href="{{ route('courses.index') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('courses.index') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                Courses
-              </a>
-              <a href="{{ route('courses.create') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('courses.create') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Create Course
-              </a>
-            </div>
-
-            <!-- Pending Section -->
-            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Pending</p>
-              <div class="space-y-1">
-                <a href="{{ route('admin.account-requests.index') }}" @click="mobileMenuOpen = false" class="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                  Account Requests
-                  @php $ap = \App\Models\AccountRequest::pending()->count(); @endphp
-                  @if($ap > 0)<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ $ap }}</span>@endif
-                </a>
-                <a href="{{ route('admin.course-access-requests.index') }}" @click="mobileMenuOpen = false" class="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                  Course Access
-                  @php $cp = \App\Models\CourseAccessRequest::pending()->count(); @endphp
-                  @if($cp > 0)<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ $cp }}</span>@endif
-                </a>
-              </div>
-            </div>
-
-            @if(auth()->user()->hasRole('superadmin'))
-              <!-- Moodle Section -->
-              <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Moodle</p>
-                <div class="space-y-1">
-                  <a href="{{ route('admin.moodle.status') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                    Moodle Status
-                  </a>
-                  <a href="{{ route('moodle.sso') }}" target="_blank" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-gray-700">
-                    Open Moodle
-                  </a>
-                  <a href="{{ route('admin.activity-logs.index') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                    Activity Logs
-                  </a>
-                </div>
-              </div>
-            @endif
-          @else
-            <!-- Regular User -->
-            <div class="space-y-1">
-              <a href="{{ route('home') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('home') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                Home
-              </a>
-              <a href="{{ route('mycourses') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('mycourses') ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                My Courses
-              </a>
-            </div>
-          @endif
-
-          <!-- Account Section -->
-          <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Account</p>
-            <div class="space-y-1">
-              <a href="{{ route('profile.show') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                Profile
-              </a>
-              <a href="{{ route('profile.settings') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Settings
-              </a>
-              <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                  Sign Out
-                </button>
-              </form>
-            </div>
-          </div>
-        @else
-          <!-- Guest -->
-          <div class="space-y-1">
-            <a href="{{ route('home') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">Home</a>
-            <a href="{{ route('login') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">Login</a>
-            <a href="{{ route('register') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">Register</a>
-          </div>
-        @endauth
-      </nav>
-    </div>
-  </div>
-
-  <!-- Main Content Wrapper -->
-  <div class="flex flex-col min-h-screen">
-    <!-- Top Navigation -->
-    <nav class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <!-- Left: Mobile Menu Button + Logo -->
-          <div class="flex items-center">
-            <!-- Mobile menu button -->
-            <button @click="mobileMenuOpen = true" class="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-            </button>
-
-            <!-- Logo -->
-            <a href="{{ route('home') }}" class="flex items-center gap-2 ml-2 lg:ml-0">
-              <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" class="w-8 h-8 rounded-full ring-2 ring-indigo-500 ring-offset-2" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
-              <span class="hidden sm:inline font-bold gradient-text">MOH Learning</span>
-            </a>
-
-            <!-- Desktop Navigation -->
-            <div class="hidden lg:flex lg:ml-8 lg:space-x-1">
-              @auth
-                @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-                  <!-- Admin Dropdown -->
-                  <div x-data="{ open: false }" class="relative">
-                    <button @click="open = !open" @click.away="open = false" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                        @if(auth()->user()->hasRole('superadmin'))Super Admin @elseif(auth()->user()->hasRole('course_admin'))Course Admin @else Admin @endif
-                      </span>
+        <!-- Desktop Navigation -->
+        <div class="flex-none hidden lg:flex">
+          <ul class="menu menu-horizontal px-1 gap-1">
+            @auth
+              @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
+                <!-- Admin Navigation with Dropdown -->
+                <li>
+                  <details>
+                    <summary class="font-medium">
+                      <div class="badge badge-primary badge-sm">
+                        @if(auth()->user()->hasRole('superadmin'))
+                          Super Admin
+                        @elseif(auth()->user()->hasRole('course_admin'))
+                          Course Admin
+                        @else
+                          Admin
+                        @endif
+                      </div>
                       Menu
-                      <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </button>
-
-                    <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute left-0 mt-2 w-56 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50" style="display: none;">
+                    </summary>
+                    <ul class="bg-base-100 rounded-box w-52 shadow-xl z-50">
                       @if(auth()->user()->hasRole('superadmin'))
                         <a href="{{ route('dashboard.superadmin') }}" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 {{ request()->routeIs('dashboard.superadmin') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
@@ -334,17 +191,14 @@
                      alt="Avatar"
                      class="w-8 h-8 rounded-full ring-2 ring-indigo-500 ring-offset-2 object-cover"
                      onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->first_name) }}&background=6366f1&color=fff'" />
-                <div class="hidden lg:block text-left">
-                  <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ auth()->user()->first_name }}</p>
-                </div>
-                <svg class="hidden lg:block w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-              </button>
-
-              <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute right-0 mt-2 w-64 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 z-50" style="display: none;">
-                <!-- User Info Header -->
-                <div class="px-4 py-3 bg-indigo-600 rounded-t-lg">
-                  <p class="text-sm font-semibold text-white">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
-                  <p class="text-xs text-indigo-200">{{ auth()->user()->email }}</p>
+              </div>
+            </label>
+            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-64 shadow-xl z-50">
+              <!-- User Info -->
+              <li class="menu-title bg-primary text-primary-content rounded-t-box px-4 py-3">
+                <div>
+                  <p class="font-semibold">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
+                  <p class="text-xs opacity-80">{{ auth()->user()->email }}</p>
                   @if(auth()->user()->getRoleNames()->isNotEmpty())
                     @php $role = auth()->user()->getRoleNames()->first(); @endphp
                     <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium bg-white/20 text-white">{{ ucwords(str_replace('_', ' ', $role)) }}</span>
@@ -418,6 +272,99 @@
     </footer>
   </div>
 
+    <!-- Mobile Drawer Sidebar -->
+    <div class="drawer-side z-50">
+      <label for="main-drawer" class="drawer-overlay" aria-label="close sidebar"></label>
+      <ul class="menu p-4 w-80 min-h-full bg-base-100" onclick="document.getElementById('main-drawer').checked = false;">
+        <!-- Close button -->
+        <li class="flex justify-end mb-2">
+          <label for="main-drawer" class="btn btn-sm btn-circle btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </label>
+        </li>
+        <!-- Logo in sidebar -->
+        <li class="menu-title">
+          <div class="flex items-center gap-2">
+            <div class="avatar">
+              <div class="w-8 rounded-full">
+                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
+              </div>
+            </div>
+            <span class="font-bold">MOH Learning</span>
+          </div>
+        </li>
+
+        @auth
+          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
+            <!-- Admin Role Badge -->
+            <li class="my-2">
+              <div class="badge badge-primary">
+                @if(auth()->user()->hasRole('superadmin'))
+                  Super Admin
+                @elseif(auth()->user()->hasRole('course_admin'))
+                  Course Admin
+                @else
+                  Admin
+                @endif
+              </div>
+            </li>
+
+            @if(auth()->user()->hasRole('superadmin'))
+              <li><a href="{{ route('dashboard.superadmin') }}">Dashboard</a></li>
+              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+              <li><a href="{{ route('admin.roles.index') }}">Roles</a></li>
+            @elseif(auth()->user()->hasRole('admin'))
+              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+            @endif
+
+            <li><a href="{{ route('courses.index') }}">Courses</a></li>
+            <li><a href="{{ route('courses.create') }}">Create Course</a></li>
+
+            <div class="divider">Pending</div>
+            <li><a href="{{ route('admin.account-requests.index') }}">
+              Account Requests
+              @php $ap = \App\Models\AccountRequest::pending()->count(); @endphp
+              @if($ap > 0)<span class="badge badge-warning badge-sm">{{ $ap }}</span>@endif
+            </a></li>
+            <li><a href="{{ route('admin.course-access-requests.index') }}">
+              Course Access
+              @php $cp = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+              @if($cp > 0)<span class="badge badge-warning badge-sm">{{ $cp }}</span>@endif
+            </a></li>
+
+            @if(auth()->user()->hasRole('superadmin'))
+              <div class="divider">Moodle</div>
+              <li><a href="{{ route('admin.moodle.status') }}">Moodle Status</a></li>
+              <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">Open Moodle</a></li>
+              <li><a href="{{ route('admin.activity-logs.index') }}">Activity Logs</a></li>
+            @endif
+          @else
+            <li><a href="{{ route('home') }}">Home</a></li>
+            <li><a href="{{ route('mycourses') }}">My Courses</a></li>
+          @endif
+
+          <div class="divider">Account</div>
+          <li><a href="{{ route('profile.show') }}">Profile</a></li>
+          <li><a href="{{ route('profile.settings') }}">Settings</a></li>
+          <li>
+            <form method="POST" action="{{ route('logout') }}">
+              @csrf
+              <button type="submit" class="text-error">Sign Out</button>
+            </form>
+          </li>
+        @else
+          <li><a href="{{ route('home') }}">Home</a></li>
+          <li><a href="{{ route('login') }}">Login</a></li>
+          <li><a href="{{ route('register') }}">Register</a></li>
+        @endauth
+      </ul>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
     function layoutData() {
       return {
