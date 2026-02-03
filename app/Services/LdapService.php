@@ -453,8 +453,9 @@ public function authenticate(string $username, string $password): ?array
                 'email_verified_at' => now(),
             ]);
 
+            // Assign MOH staff role for internal LDAP users
             if (method_exists($user, 'assignRole')) {
-                $user->assignRole('user');
+                $user->assignRole(User::ROLE_MOH_STAFF);
             }
 
             Log::info('Created new user from LDAP', ['user_id' => $user->id]);
