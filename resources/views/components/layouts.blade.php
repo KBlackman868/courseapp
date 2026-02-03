@@ -211,20 +211,22 @@
               </li>
               @forelse($recentNotifications as $notification)
                 <li>
-                  <a href="{{ route('notifications.show', $notification) }}" class="flex flex-col items-start gap-1 py-2 {{ $notification->read_at ? 'opacity-60' : '' }}">
+                  <div class="flex flex-col items-start gap-1 py-2 {{ $notification->read_at ? 'opacity-60' : '' }}">
                     <span class="font-medium text-sm truncate w-full">{{ Str::limit($notification->title, 40) }}</span>
                     <span class="text-xs text-gray-500">{{ $notification->created_at->diffForHumans() }}</span>
-                  </a>
+                  </div>
                 </li>
               @empty
                 <li class="text-center py-4 text-gray-500 text-sm">
                   <span>No notifications</span>
                 </li>
               @endforelse
-              <div class="divider my-1"></div>
+              @if($recentNotifications->count() > 0)
+                <div class="divider my-1"></div>
+              @endif
               <li>
                 <a href="{{ route('notifications.index') }}" class="justify-center text-primary font-medium">
-                  View All Notifications
+                  View All
                 </a>
               </li>
             </ul>
