@@ -4,10 +4,10 @@
     </x-slot:heading>
 
     <!-- Hero Section -->
-    <div class="-mx-6 -mt-8 md:-mx-8">
+    <div class="-mx-6 -mt-8 md:-mx-8 isolate relative overflow-hidden">
         <section class="relative min-h-[600px] flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-t-2xl">
-            <!-- Animated Background -->
-            <div class="absolute inset-0">
+            <!-- Animated Background - z-0 to stay behind content -->
+            <div class="absolute inset-0 z-0 overflow-hidden">
                 <div class="absolute top-20 left-10 w-72 h-72 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
                 <div class="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-br from-indigo-400 to-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style="animation-delay: 4s;"></div>
             </div>
