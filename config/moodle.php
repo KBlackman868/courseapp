@@ -20,10 +20,14 @@ return [
     |--------------------------------------------------------------------------
     | Moodle must have auth_userkey plugin installed and configured
     | Generate a shared secret in Moodle: Site admin > Plugins > Authentication > User key
+    |
+    | IMPORTANT: Configure logout redirect in Moodle admin panel:
+    | Site Administration → Plugins → Authentication → User key authentication
+    | Set "Logout redirect URL" to your Laravel app's logout URL
     */
     'sso_enabled' => env('MOODLE_SSO_ENABLED', true),
     'sso_secret' => env('MOODLE_SSO_SECRET', ''),
-    'sso_logout_redirect' => env('MOODLE_SSO_LOGOUT_REDIRECT', ''),
+    'sso_logout_redirect' => env('APP_URL', 'http://localhost') . '/logout',
 
     'auto_approve_enrollments' => env('MOODLE_AUTO_APPROVE_ENROLLMENTS', false),
     'auto_create_users' => env('MOODLE_AUTO_CREATE_USERS', true),
