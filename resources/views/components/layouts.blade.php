@@ -27,8 +27,8 @@
     <input id="main-drawer" type="checkbox" class="drawer-toggle" />
 
     <div class="drawer-content flex flex-col">
-      <!-- Navbar -->
-      <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+      <!-- Navbar - z-[100] to ensure it's always above page content -->
+      <div class="navbar bg-base-100 shadow-lg sticky top-0 z-[100]">
         <!-- Mobile menu button -->
         <div class="flex-none lg:hidden">
           <label for="main-drawer" class="btn btn-square btn-ghost">
@@ -70,7 +70,7 @@
                       </div>
                       Menu
                     </summary>
-                    <ul class="bg-base-100 rounded-box w-52 shadow-xl z-50">
+                    <ul class="bg-base-100 rounded-box w-52 shadow-xl z-[200]">
                       @if(auth()->user()->hasRole('superadmin'))
                         <li><a href="{{ route('dashboard.superadmin') }}" class="{{ request()->routeIs('dashboard.superadmin') ? 'active' : '' }}">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
@@ -177,7 +177,7 @@
                      onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->first_name) }}&background=6366f1&color=fff'" />
               </div>
             </label>
-            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-64 shadow-xl z-50">
+            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-64 shadow-xl z-[200]">
               <!-- User Info -->
               <li class="menu-title bg-primary text-primary-content rounded-t-box px-4 py-3">
                 <div>
@@ -256,7 +256,7 @@
     </div>
 
     <!-- Mobile Drawer Sidebar -->
-    <div class="drawer-side z-50">
+    <div class="drawer-side z-[150]">
       <label for="main-drawer" class="drawer-overlay" aria-label="close sidebar"></label>
       <ul class="menu p-4 w-80 min-h-full bg-base-100" onclick="document.getElementById('main-drawer').checked = false;">
         <!-- Close button -->
