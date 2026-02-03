@@ -56,7 +56,7 @@ Route::get('/', function () {
     return view('landing.welcome', ['isAuthenticated' => false]);
 })->name('home');
 
-Route::get('/home', fn() => redirect('/'));
+Route::get('/home', fn() => auth()->check() ? redirect('/dashboard') : redirect('/'));
 
 // SSO to Moodle Dashboard (for navigation link)
 Route::get('/moodle/sso', function () {
