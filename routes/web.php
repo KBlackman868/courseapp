@@ -58,6 +58,43 @@ Route::get('/', function () {
 
 Route::get('/home', fn() => redirect('/'));
 
+// Debug SSO - DELETE AFTER USE
+Route::get('/debug-sso/{courseId}', function ($courseId) {
+    if (!auth()->check()) return 'Not logged in';
+    $user = auth()->user();
+    $course = \App\Models\Course::find($courseId);
+    if (!$course) return "Course {$courseId} not found";
+
+    $moodleService = app(\App\Services\MoodleService::class);
+    $username = $user->username ?? explode('@', $user->email)[0];
+
+    $output = "<h2>SSO Debug</h2>";
+    $output .= "<p><strong>User:</strong> {$user->email}</p>";
+    $output .= "<p><strong>Username:</strong> {$username}</p>";
+    $output .= "<p><strong>Course:</strong> {$course->title}</p>";
+    $output .= "<p><strong>Moodle Course ID:</strong> " . ($course->moodle_course_id ?? 'NULL') . "</p>";
+    $output .= "<p><strong>Base URL:</strong> " . config('moodle.base_url') . "</p>";
+    $output .= "<p><strong>Token:</strong> " . (config('moodle.token') ? 'SET' : 'NOT SET') . "</p>";
+
+    try {
+        $url = $moodleService->generateCourseLoginUrl($user, $course->moodle_course_id);
+        $output .= "<p><strong>Generated URL:</strong></p><pre>{$url}</pre>";
+
+        if (strpos($url, 'login.php?key=') !== false) {
+            $output .= "<p style='color:green'><strong>SUCCESS - SSO URL generated</strong></p>";
+            $output .= "<p><a href='{$url}'>Test SSO Login</a></p>";
+        } else {
+            $output .= "<p style='color:orange'><strong>WARNING - Fallback URL (no SSO)</strong></p>";
+        }
+    } catch (\Exception $e) {
+        $output .= "<p style='color:red'><strong>ERROR:</strong> " . $e->getMessage() . "</p>";
+    }
+
+    // Show recent logs
+    $output .= "<h3>Check Laravel logs for errors</h3>";
+    return $output;
+})->middleware('auth');
+
 /*
 |==========================================================================
 | GUEST ONLY ROUTES
