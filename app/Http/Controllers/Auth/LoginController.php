@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 class LoginController extends Controller
 {
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/dashboard';
     
     private LdapService $ldapService;
     private OtpService $otpService;
