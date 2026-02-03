@@ -10,387 +10,242 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
   <style>
-    /* DO NOT use overflow-x: hidden on html/body - it clips dropdowns */
-    .gradient-text {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    /* Navbar height: p-4 (16px) * 2 + content (~40px) = ~72px, use pt-[72px] or pt-20 (80px) for safety */
+    /* Z-Index Strategy: 10=content, 20=sticky, 30=dropdown, 40=overlay, 50=modal */
+    .z-content { z-index: 10; }
+    .z-sticky { z-index: 20; }
+    .z-dropdown { z-index: 30; }
+    .z-overlay { z-index: 40; }
+    .z-modal { z-index: 50; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+<body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
 
-  <!-- Navbar - Fixed at top with explicit height -->
-  <nav class="bg-white dark:bg-gray-800 fixed w-full z-[100] top-0 start-0 border-b border-gray-200 dark:border-gray-700 shadow-sm h-[72px]">
-    <div class="max-w-screen-xl h-full flex items-center justify-between mx-auto px-4">
+  {{-- ============================================================
+       MINIMAL TOP BAR - Slim header with menu trigger
+       ============================================================ --}}
+  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-sticky">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+      <div class="flex items-center justify-between h-14">
 
-      <!-- Logo - shrink-0 prevents compression -->
-      <a href="{{ route('home') }}" class="flex items-center gap-3 shrink-0">
-        <img src="{{ asset('images/moh_logo.jpg') }}" class="h-8 w-8 rounded-full object-cover" alt="MOH Logo" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
-        <span class="text-xl font-semibold whitespace-nowrap text-gray-900 dark:text-white hidden sm:inline">MOH Learning</span>
-      </a>
+        {{-- Logo --}}
+        <a href="{{ route('home') }}" class="flex items-center gap-2 shrink-0">
+          <img src="{{ asset('images/moh_logo.jpg') }}" class="h-7 w-7 rounded-full object-cover" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff&size=32'" />
+          <span class="text-base font-semibold text-gray-900 dark:text-white hidden sm:block">MOH Learning</span>
+        </a>
 
-      <!-- Desktop Navigation - Center with overflow handling -->
-      <div class="hidden lg:flex items-center justify-center flex-1 min-w-0 mx-4">
-        <ul class="flex items-center gap-x-1 xl:gap-x-2">
-
-          <!-- Home Link -->
-          <li class="shrink-0">
-            <a href="{{ route('home') }}" class="block py-2 px-3 rounded-lg text-sm font-medium whitespace-nowrap {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' }}">
-              Home
-            </a>
-          </li>
-
+        {{-- Right Actions --}}
+        <div class="flex items-center gap-1">
           @auth
-            @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-              <!-- Admin Dropdown -->
-              <li class="relative shrink-0" x-data="{ open: false }">
-                <button @click="open = !open" class="flex items-center gap-1 py-2 px-3 rounded-lg text-sm font-medium whitespace-nowrap text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white">
-                  <span class="bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 text-xs font-medium px-1.5 py-0.5 rounded">
-                    @if(auth()->user()->hasRole('superadmin'))SA
-                    @elseif(auth()->user()->hasRole('course_admin'))CA
-                    @else A @endif
-                  </span>
-                  <span>Menu</span>
-                  <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/>
-                  </svg>
-                </button>
+            {{-- Notifications --}}
+            <div class="relative" x-data="{ open: false }">
+              <button @click="open = !open" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                @php $unreadCount = auth()->user()->systemNotifications()->unread()->count(); @endphp
+                @if($unreadCount > 0)
+                  <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                @endif
+              </button>
+              {{-- Notification dropdown --}}
+              <div x-show="open" @click.away="open = false" x-transition
+                   class="absolute right-0 mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-dropdown">
+                <div class="p-2 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Notifications @if($unreadCount > 0)<span class="ml-1 text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full">{{ $unreadCount }}</span>@endif
+                </div>
+                <div class="max-h-48 overflow-y-auto">
+                  @php $recentNotifications = auth()->user()->systemNotifications()->latest()->take(5)->get(); @endphp
+                  @forelse($recentNotifications as $notification)
+                    <a href="{{ route('notifications.index') }}" class="block px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 {{ $notification->read_at ? 'text-gray-500' : 'text-gray-900 dark:text-white font-medium' }}">
+                      {{ Str::limit($notification->message, 50) }}
+                    </a>
+                  @empty
+                    <p class="px-3 py-2 text-sm text-gray-500">No notifications</p>
+                  @endforelse
+                </div>
+                <a href="{{ route('notifications.index') }}" class="block p-2 text-center text-xs text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">View all</a>
+              </div>
+            </div>
 
-                <!-- Admin Dropdown Menu - positioned outside overflow context -->
-                <div x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
-                     class="absolute left-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[200] max-h-[calc(100vh-100px)] overflow-y-auto">
-                  <ul class="p-2 text-sm text-gray-700 dark:text-gray-300 font-medium">
+            {{-- Dark Mode --}}
+            <button @click="toggleDarkMode()" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
+              <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+              <svg x-show="darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
 
-                    @if(auth()->user()->hasRole('superadmin'))
-                      <li>
-                        <a href="{{ route('dashboard.superadmin') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded {{ request()->routeIs('dashboard.superadmin') ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : '' }}">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
-                          Dashboard
+            {{-- Profile --}}
+            <div class="relative" x-data="{ open: false }">
+              <button @click="open = !open" class="flex items-center gap-1.5 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                @php $photo = auth()->user()->profile_photo; @endphp
+                <img class="w-7 h-7 rounded-full object-cover" src="{{ $photo ? Storage::url($photo) : 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->first_name) . '&background=6366f1&color=fff&size=32' }}" alt="" onerror="this.src='https://ui-avatars.com/api/?name=U&background=6366f1&color=fff&size=32'" />
+                <svg class="w-4 h-4 text-gray-400 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
+              </button>
+              <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-dropdown py-1">
+                <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
+                  <p class="text-xs text-gray-500 truncate">{{ auth()->user()->email }}</p>
+                </div>
+                <a href="{{ route('profile.show') }}" class="block px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Profile</a>
+                <a href="{{ route('profile.settings') }}" class="block px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Settings</a>
+                <form method="POST" action="{{ route('logout') }}" class="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+                  @csrf
+                  <button type="submit" class="block w-full text-left px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-700">Sign out</button>
+                </form>
+              </div>
+            </div>
+          @else
+            <a href="{{ route('login') }}" class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Login</a>
+            <a href="{{ route('register') }}" class="px-3 py-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-md">Register</a>
+          @endauth
+
+          {{-- Menu Trigger (hover on desktop, click on mobile) --}}
+          <div class="relative ml-1"
+               x-data="{ menuOpen: false, isMobile: window.innerWidth < 768 }"
+               x-init="window.addEventListener('resize', () => { isMobile = window.innerWidth < 768 })"
+               @mouseenter="if(!isMobile) menuOpen = true"
+               @mouseleave="if(!isMobile) menuOpen = false"
+               @keydown.escape.window="menuOpen = false">
+            <button @click="if(isMobile) menuOpen = !menuOpen"
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                    :class="{ 'bg-gray-100 dark:bg-gray-700': menuOpen }">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <span class="hidden sm:inline">Menu</span>
+            </button>
+
+            {{-- Overlay Navigation Menu --}}
+            <div x-show="menuOpen"
+                 x-transition:enter="transition ease-out duration-150"
+                 x-transition:enter-start="opacity-0 translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-100"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-1"
+                 @click.away="menuOpen = false"
+                 class="absolute right-0 mt-1 w-64 sm:w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-overlay max-h-[calc(100vh-80px)] overflow-y-auto">
+
+              {{-- Quick Links --}}
+              <div class="p-2">
+                <a href="{{ route('home') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md {{ request()->routeIs('home') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                  Home
+                </a>
+
+                @auth
+                  <a href="{{ route('dashboard') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md {{ request()->routeIs('dashboard*') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                    Dashboard
+                  </a>
+                  <a href="{{ route('mycourses') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md {{ request()->routeIs('mycourses') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    My Courses
+                  </a>
+                  <a href="{{ route('courses.index') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Browse Courses
+                  </a>
+
+                  @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
+                    {{-- Admin Section --}}
+                    <div class="border-t border-gray-200 dark:border-gray-700 my-2 pt-2">
+                      <p class="px-2.5 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        @if(auth()->user()->hasRole('superadmin'))Super Admin
+                        @elseif(auth()->user()->hasRole('course_admin'))Course Admin
+                        @else Admin @endif
+                      </p>
+
+                      @if(auth()->user()->hasRole('superadmin'))
+                        <a href="{{ route('dashboard.superadmin') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                          Analytics
                         </a>
-                      </li>
-                    @endif
+                      @endif
 
-                    @if(auth()->user()->hasRole(['superadmin', 'admin']))
-                      <li>
-                        <a href="{{ route('admin.users.index') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                      @if(auth()->user()->hasRole(['superadmin', 'admin']))
+                        <a href="{{ route('admin.users.index') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                           Users
                         </a>
-                      </li>
-                      @if(auth()->user()->hasRole('superadmin'))
-                        <li>
-                          <a href="{{ route('admin.roles.index') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        @if(auth()->user()->hasRole('superadmin'))
+                          <a href="{{ route('admin.roles.index') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             Roles
                           </a>
-                        </li>
+                        @endif
                       @endif
-                    @endif
 
-                    <li class="border-t border-gray-200 dark:border-gray-700 my-1"></li>
-
-                    <li>
-                      <a href="{{ route('courses.index') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                        Courses
-                      </a>
-                    </li>
-                    <li>
-                      <a href="{{ route('courses.create') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                      <a href="{{ route('courses.create') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         Create Course
                       </a>
-                    </li>
 
-                    <li class="border-t border-gray-200 dark:border-gray-700 my-1"></li>
-
-                    <li>
-                      <a href="{{ route('admin.account-requests.index') }}" class="flex items-center justify-between w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
+                      @php $accountPending = \App\Models\AccountRequest::pending()->count(); @endphp
+                      <a href="{{ route('admin.account-requests.index') }}" @click="menuOpen = false" class="flex items-center justify-between px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <span class="flex items-center gap-2">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
                           Account Requests
                         </span>
-                        @php $accountPending = \App\Models\AccountRequest::pending()->count(); @endphp
-                        @if($accountPending > 0)
-                          <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">{{ $accountPending }}</span>
-                        @endif
+                        @if($accountPending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $accountPending }}</span>@endif
                       </a>
-                    </li>
-                    <li>
-                      <a href="{{ route('admin.course-access-requests.index') }}" class="flex items-center justify-between w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
+
+                      @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+                      <a href="{{ route('admin.course-access-requests.index') }}" @click="menuOpen = false" class="flex items-center justify-between px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <span class="flex items-center gap-2">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                           Course Access
                         </span>
-                        @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
-                        @if($coursePending > 0)
-                          <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">{{ $coursePending }}</span>
-                        @endif
+                        @if($coursePending > 0)<span class="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">{{ $coursePending }}</span>@endif
                       </a>
-                    </li>
 
-                    @if(auth()->user()->hasRole('superadmin'))
-                      <li class="border-t border-gray-200 dark:border-gray-700 my-1"></li>
-                      <li>
-                        <a href="{{ route('admin.moodle.status') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      @if(auth()->user()->hasRole('superadmin'))
+                        <a href="{{ route('admin.moodle.status') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                           Moodle Status
                         </a>
-                      </li>
-                      <li>
-                        <a href="{{ route('moodle.sso') }}" target="_blank" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-indigo-600 dark:text-indigo-400 rounded">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                          Open Moodle
-                        </a>
-                      </li>
-                      <li>
-                        <a href="{{ route('admin.activity-logs.index') }}" class="flex items-center gap-2 w-full p-2 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded">
-                          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        <a href="{{ route('admin.activity-logs.index') }}" @click="menuOpen = false" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
                           Activity Logs
                         </a>
-                      </li>
-                    @endif
-                  </ul>
-                </div>
-              </li>
-            @else
-              <!-- Regular User Links -->
-              <li class="shrink-0">
-                <a href="{{ route('dashboard') }}" class="block py-2 px-3 rounded-lg text-sm font-medium whitespace-nowrap {{ request()->routeIs('dashboard*') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' }}">
-                  Dashboard
-                </a>
-              </li>
-              <li class="shrink-0">
-                <a href="{{ route('mycourses') }}" class="block py-2 px-3 rounded-lg text-sm font-medium whitespace-nowrap {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' }}">
-                  My Courses
-                </a>
-              </li>
-            @endif
-          @else
-            <!-- Guest Links -->
-            <li class="shrink-0">
-              <a href="{{ route('login') }}" class="block py-2 px-3 rounded-lg text-sm font-medium whitespace-nowrap text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white">
-                Login
-              </a>
-            </li>
-            <li class="shrink-0">
-              <a href="{{ route('register') }}" class="block py-2 px-4 rounded-full text-sm font-medium whitespace-nowrap text-white bg-indigo-600 hover:bg-indigo-700">
-                Register
-              </a>
-            </li>
-          @endauth
-        </ul>
-      </div>
-
-      <!-- Right Side Items -->
-      <div class="flex items-center gap-1 shrink-0">
-        @auth
-          <!-- Notification Bell -->
-          <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" type="button" class="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <span class="sr-only">View notifications</span>
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5.365V3m0 2.365a5.338 5.338 0 0 1 5.133 5.368v1.8c0 2.386 1.867 2.982 1.867 4.175 0 .593 0 1.292-.538 1.292H5.538C5 18 5 17.301 5 16.708c0-1.193 1.867-1.789 1.867-4.175v-1.8A5.338 5.338 0 0 1 12 5.365ZM8.733 18c.094.852.306 1.54.944 2.112a3.48 3.48 0 0 0 4.646 0c.638-.572 1.236-1.26 1.33-2.112h-6.92Z"/>
-              </svg>
-              @php $unreadCount = auth()->user()->systemNotifications()->unread()->count(); @endphp
-              @if($unreadCount > 0)
-                <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              @endif
-            </button>
-
-            <!-- Notification Dropdown -->
-            <div x-show="open" @click.away="open = false" x-transition
-                 class="absolute right-0 top-full mt-1 w-80 bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow-lg z-[200] border border-gray-200 dark:border-gray-700">
-              <div class="px-4 py-2 font-medium text-center text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-t-lg">
-                Notifications
-                @if($unreadCount > 0)
-                  <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">{{ $unreadCount }}</span>
-                @endif
-              </div>
-              <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-64 overflow-y-auto">
-                @php $recentNotifications = auth()->user()->systemNotifications()->latest()->take(5)->get(); @endphp
-                @forelse($recentNotifications as $notification)
-                  <a href="{{ route('notifications.index') }}" class="block px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <div class="text-gray-600 dark:text-gray-300 text-sm mb-1 {{ $notification->read_at ? '' : 'font-semibold' }}">
-                      {{ Str::limit($notification->message, 60) }}
+                        <a href="{{ route('moodle.sso') }}" target="_blank" class="flex items-center gap-2 px-2.5 py-2 text-sm rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                          Open Moodle
+                        </a>
+                      @endif
                     </div>
-                    <div class="text-xs text-indigo-600 dark:text-indigo-400">{{ $notification->created_at->diffForHumans() }}</div>
-                  </a>
-                @empty
-                  <div class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">No notifications</div>
-                @endforelse
+                  @endif
+                @endauth
               </div>
-              <a href="{{ route('notifications.index') }}" class="block py-2 text-sm font-medium text-center text-gray-700 dark:text-gray-300 rounded-b-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
-                View all
-              </a>
             </div>
           </div>
-
-          <!-- Dark Mode Toggle -->
-          <button @click="toggleDarkMode()" type="button" class="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-            <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-            </svg>
-            <svg x-show="darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-          </button>
-
-          <!-- User Avatar Dropdown -->
-          <div class="relative" x-data="{ open: false }">
-            <button @click="open = !open" type="button" class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-              <span class="sr-only">Open user menu</span>
-              @php $photo = auth()->user()->profile_photo; @endphp
-              <img class="w-8 h-8 rounded-full object-cover"
-                   src="{{ $photo ? Storage::url($photo) : 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->first_name . '+' . auth()->user()->last_name) . '&background=6366f1&color=fff' }}"
-                   alt="{{ auth()->user()->first_name }}"
-                   onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->first_name) }}&background=6366f1&color=fff'" />
-              <span class="hidden md:block text-sm font-medium text-gray-900 dark:text-white">{{ auth()->user()->first_name }}</span>
-              <svg class="w-4 h-4 text-gray-500 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/>
-              </svg>
-            </button>
-
-            <!-- Avatar Dropdown Menu -->
-            <div x-show="open" @click.away="open = false" x-transition
-                 class="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[200]">
-              <div class="p-3 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center gap-3">
-                  <img class="w-10 h-10 rounded-full object-cover"
-                       src="{{ $photo ? Storage::url($photo) : 'https://ui-avatars.com/api/?name=' . urlencode(auth()->user()->first_name . '+' . auth()->user()->last_name) . '&background=6366f1&color=fff' }}"
-                       alt="{{ auth()->user()->first_name }}"
-                       onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->first_name) }}&background=6366f1&color=fff'" />
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium text-gray-900 dark:text-white truncate">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ auth()->user()->email }}</div>
-                  </div>
-                </div>
-              </div>
-              <ul class="p-2 text-sm text-gray-700 dark:text-gray-300">
-                <li>
-                  <a href="{{ route('profile.show') }}" class="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
-                    Profile
-                  </a>
-                </li>
-                <li>
-                  <a href="{{ route('profile.settings') }}" class="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    Settings
-                  </a>
-                </li>
-                <li class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-                  <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="flex items-center gap-2 w-full p-2 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                      </svg>
-                      Sign out
-                    </button>
-                  </form>
-                </li>
-              </ul>
-            </div>
-          </div>
-        @endauth
-
-        <!-- Mobile menu button -->
-        <button x-data @click="$dispatch('toggle-mobile-menu')" type="button" class="lg:hidden p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-          <span class="sr-only">Open main menu</span>
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </button>
+        </div>
       </div>
     </div>
+  </header>
 
-    <!-- Mobile Navigation Menu -->
-    <div x-data="{ mobileOpen: false }" @toggle-mobile-menu.window="mobileOpen = !mobileOpen"
-         x-show="mobileOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
-         class="lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[calc(100vh-72px)] overflow-y-auto">
-      <ul class="p-4 space-y-1">
-        <li>
-          <a href="{{ route('home') }}" class="block py-2 px-3 rounded-lg {{ request()->routeIs('home') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
-            Home
-          </a>
-        </li>
-
-        @auth
-          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-            <li class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
-              <span class="block px-3 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Admin</span>
-            </li>
-            @if(auth()->user()->hasRole('superadmin'))
-              <li><a href="{{ route('dashboard.superadmin') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a></li>
-            @endif
-            @if(auth()->user()->hasRole(['superadmin', 'admin']))
-              <li><a href="{{ route('admin.users.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Users</a></li>
-              @if(auth()->user()->hasRole('superadmin'))
-                <li><a href="{{ route('admin.roles.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Roles</a></li>
-              @endif
-            @endif
-            <li><a href="{{ route('courses.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Courses</a></li>
-            <li><a href="{{ route('courses.create') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Create Course</a></li>
-            <li>
-              <a href="{{ route('admin.account-requests.index') }}" class="flex items-center justify-between py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                Account Requests
-                @if($accountPending > 0)<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded">{{ $accountPending }}</span>@endif
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('admin.course-access-requests.index') }}" class="flex items-center justify-between py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                Course Access
-                @if($coursePending > 0)<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded">{{ $coursePending }}</span>@endif
-              </a>
-            </li>
-            @if(auth()->user()->hasRole('superadmin'))
-              <li><a href="{{ route('admin.moodle.status') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Moodle Status</a></li>
-              <li><a href="{{ route('admin.activity-logs.index') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Activity Logs</a></li>
-            @endif
-          @else
-            <li><a href="{{ route('dashboard') }}" class="block py-2 px-3 rounded-lg {{ request()->routeIs('dashboard*') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">Dashboard</a></li>
-            <li><a href="{{ route('mycourses') }}" class="block py-2 px-3 rounded-lg {{ request()->routeIs('mycourses') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">My Courses</a></li>
-          @endif
-        @else
-          <li><a href="{{ route('login') }}" class="block py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Login</a></li>
-          <li><a href="{{ route('register') }}" class="block py-2 px-3 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 text-center">Register</a></li>
-        @endauth
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Main Content - Proper spacing for fixed navbar -->
-  <main class="flex-1 pt-[72px]">
+  {{-- ============================================================
+       MAIN CONTENT AREA
+       ============================================================ --}}
+  <main class="flex-1">
+    {{-- Page Header (for non-landing pages) --}}
     @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
-      <!-- Page Header -->
-      <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 py-6 border-b border-gray-200 dark:border-gray-700">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
           @if(isset($heading))
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ $heading }}</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{{ $heading }}</h1>
           @elseif(View::hasSection('title'))
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">@yield('title')</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">@yield('title')</h1>
           @endif
         </div>
       </div>
     @endif
 
-    <!-- Main Content Area -->
-    <div class="{{ request()->routeIs('home') || request()->routeIs('welcome') ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6' }}">
+    {{-- Content Area --}}
+    <div class="{{ request()->routeIs('home') || request()->routeIs('welcome') ? '' : 'max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6' }}">
       @if(request()->routeIs('home') || request()->routeIs('welcome'))
         {{ $slot ?? '' }}
         @yield('content')
       @else
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
-          <div class="p-4 sm:p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div class="p-3 sm:p-4 lg:p-6">
             @if(isset($slot))
               {{ $slot }}
             @else
@@ -402,30 +257,27 @@
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0">
-    <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-      <p class="text-center text-gray-500 dark:text-gray-400 text-sm">
-        &copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.
+  {{-- ============================================================
+       FOOTER - Always at bottom
+       ============================================================ --}}
+  <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3">
+      <p class="text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+        &copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago
       </p>
     </div>
   </footer>
 
+  {{-- Scripts --}}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
     function layoutData() {
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
-
         init() {
-          if (this.darkMode) {
-            document.documentElement.classList.add('dark');
-          }
-          toastr.options = {
-            closeButton: true, progressBar: true,
-            positionClass: "toast-top-right", timeOut: "3000"
-          };
+          if (this.darkMode) document.documentElement.classList.add('dark');
+          toastr.options = { closeButton: true, progressBar: true, positionClass: "toast-top-right", timeOut: "3000" };
           @if(session('success')) toastr.success("{{ session('success') }}"); @endif
           @if(session('error')) toastr.error("{{ session('error') }}"); @endif
           @if(session('warning')) toastr.warning("{{ session('warning') }}"); @endif
