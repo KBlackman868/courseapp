@@ -438,18 +438,22 @@ class MoodleService
     }
 
     /**
-     * Generate auto-login URL for a course
+     * Generate auto-login URL for a course.
+     *
+     * Calls Moodle's auth_userkey plugin to get a one-time SSO login URL.
+     * If SSO fails, throws an exception so the caller can handle it
+     * (instead of silently falling back to a guest URL).
      *
      * @param \App\Models\User $user The user object
      * @param int $moodleCourseId Moodle course ID
-     * @return string The auto-login URL to the course
+     * @return string The SSO auto-login URL to the course
+     * @throws \App\Exceptions\MoodleException If SSO is not available
      */
     public function generateCourseLoginUrl($user, int $moodleCourseId): string
     {
         $courseUrl = $this->getCourseUrl($moodleCourseId);
 
         // Build user data array with all fields needed for auth_userkey
-        // Username is typically the part before @ in email for MOH users
         $username = $user->username ?? explode('@', $user->email)[0];
 
         $userData = [
@@ -461,7 +465,19 @@ class MoodleService
 
         $loginUrl = $this->generateLoginUrl($userData, $courseUrl);
 
-        // If SSO failed, return the direct course URL
-        return $loginUrl ?? $courseUrl;
+        // Verify we got an actual SSO URL, not just the raw course URL back.
+        // If generateLoginUrl() returned null or the same course URL, SSO failed.
+        if ($loginUrl && $loginUrl !== $courseUrl && $loginUrl !== $this->baseUrl) {
+            return $loginUrl;
+        }
+
+        // SSO failed — throw so the caller shows a proper error instead of
+        // redirecting the user to Moodle as an unauthenticated guest.
+        throw new \App\Exceptions\MoodleException(
+            "Moodle SSO is not available. A Moodle administrator must: "
+            . "(1) Install and enable the auth_userkey plugin, "
+            . "(2) Add 'auth_userkey_request_login_url' to the external service's allowed functions "
+            . "under Site Administration > Server > Web services > External services."
+        );
     }
 }
