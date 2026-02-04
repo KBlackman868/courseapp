@@ -506,11 +506,23 @@ class CourseController extends Controller
             'description' => 'required|string',
             'status'      => 'required|string|max:255',
             'image'       => 'nullable|image|max:2048',
+            // Access control
+            'audience_type' => 'nullable|string|in:moh,external,all,MOH_ONLY,EXTERNAL_ONLY,BOTH',
+            'is_free'       => 'nullable|boolean',
             // Optional Moodle fields
             'sync_to_moodle' => 'nullable|boolean',
             'moodle_course_shortname' => 'nullable|required_if:sync_to_moodle,true|string|max:255|unique:courses,moodle_course_shortname',
             'moodle_category_id' => 'nullable|required_if:sync_to_moodle,true|integer',
         ]);
+
+        // Derive is_active from status so the learner dashboard can find this course
+        $validated['is_active'] = ($validated['status'] === 'active');
+
+        // Default audience_type if not provided
+        $validated['audience_type'] = $validated['audience_type'] ?? 'moh';
+
+        // Set creator
+        $validated['creator_id'] = auth()->id();
 
         if ($request->hasFile('image')){
             $path = $request->file('image')->store('courses','public');
@@ -616,13 +628,19 @@ class CourseController extends Controller
             'description' => 'required|string',
             'status'      => 'required|string|max:255',
             'image'       => 'nullable|image|max:2048',
+            // Access control
+            'audience_type' => 'nullable|string|in:moh,external,all,MOH_ONLY,EXTERNAL_ONLY,BOTH',
+            'is_free'       => 'nullable|boolean',
             'sync_to_moodle' => 'nullable|boolean',
             'moodle_course_shortname' => 'nullable|string|max:255|unique:courses,moodle_course_shortname,' . $id,
             'moodle_category_id' => 'nullable|integer',
         ]);
 
+        // Derive is_active from status
+        $validated['is_active'] = ($validated['status'] === 'active');
+
         // Store old values for logging
-        $oldValues = $course->only(['title', 'description', 'status', 'moodle_course_id']);
+        $oldValues = $course->only(['title', 'description', 'status', 'audience_type', 'is_free', 'moodle_course_id']);
 
         if ($request->hasFile('image')){
             $path = $request->file('image')->store('courses','public');
