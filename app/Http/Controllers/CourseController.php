@@ -350,26 +350,26 @@ class CourseController extends Controller
                 ->with('error', 'This course is not yet available in Moodle.');
         }
 
-        // -- STEP 3: Ensure user has a Moodle account --
-        // If user doesn't have a moodle_user_id, create/link their Moodle account now.
-        // This calls core_user_create_users or core_user_get_users_by_field on Moodle.
-        if (!$user->moodle_user_id) {
-            try {
-                CreateOrLinkMoodleUser::dispatchSync($user);
-                $user->refresh();
-            } catch (\Exception $e) {
-                Log::error('Failed to create Moodle account for user', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage(),
-                ]);
-                return redirect()->route('courses.show', $course)
-                    ->with('error', 'Could not create your Moodle account: ' . $e->getMessage());
-            }
+        // -- STEP 3: Ensure user has a Moodle account with correct auth method --
+        // Creates the Moodle account if missing, OR updates the existing account's
+        // auth method to 'userkey' so SSO works. This is critical because users
+        // who were found by email (not freshly created) may have auth='manual',
+        // which causes auth_userkey_request_login_url to fail with HTTP 500.
+        try {
+            CreateOrLinkMoodleUser::dispatchSync($user);
+            $user->refresh();
+        } catch (\Exception $e) {
+            Log::error('Failed to create/update Moodle account for user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            return redirect()->route('courses.show', $course)
+                ->with('error', 'Could not set up your Moodle account: ' . $e->getMessage());
+        }
 
-            if (!$user->moodle_user_id) {
-                return redirect()->route('courses.show', $course)
-                    ->with('error', 'Could not create your Moodle account. Please contact a system administrator.');
-            }
+        if (!$user->moodle_user_id) {
+            return redirect()->route('courses.show', $course)
+                ->with('error', 'Could not create your Moodle account. Please contact a system administrator.');
         }
 
         // -- STEP 4: Ensure user is enrolled in the Moodle course --
