@@ -52,15 +52,24 @@ class MoodleService
             
             if ($response->successful()) {
                 $data = $response->json();
-                
+
                 // Check for Moodle errors
                 if (isset($data['exception'])) {
                     throw new \Exception("Moodle error: " . ($data['message'] ?? 'Unknown error'));
                 }
-                
+
                 return $data;
             } else {
-                throw new \Exception("HTTP request failed with status: " . $response->status());
+                $body = $response->body();
+                Log::error('Moodle HTTP error response', [
+                    'function' => $function,
+                    'status' => $response->status(),
+                    'body' => substr($body, 0, 2000),
+                ]);
+                throw new \Exception(
+                    "HTTP request failed with status: " . $response->status()
+                    . " — " . substr($body, 0, 500)
+                );
             }
         } catch (\Exception $e) {
             Log::error('Moodle API call failed', [
@@ -464,7 +473,11 @@ class MoodleService
 
         // Build user data for auth_userkey lookup.
         // The plugin matches Moodle users by email (primary) or username.
-        $username = $user->username ?? explode('@', $user->email)[0];
+        // IMPORTANT: username must match what CreateOrLinkMoodleUser::generateUsername()
+        // produces — lowercase email prefix with ONLY alphanumeric chars and dots
+        // (hyphens are stripped). A mismatch causes auth_userkey to fail.
+        $rawUsername = $user->username ?? strtolower(explode('@', $user->email)[0]);
+        $username = preg_replace('/[^a-z0-9.]/', '', strtolower($rawUsername));
 
         $userData = [
             'username' => $username,
