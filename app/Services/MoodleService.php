@@ -307,72 +307,81 @@ class MoodleService
     }
 
     /**
-     * Generate an auto-login URL for a user using auth_userkey plugin
-     * This allows users to be automatically logged into Moodle
+     * Generate an auto-login URL for a user using auth_userkey plugin.
+     *
+     * Tries auth_userkey_request_login_url first, then auth_userkey_generatekey.
+     * On success, returns the SSO login URL with optional redirect.
+     * On failure, returns null and populates $lastSsoError with the reason.
      *
      * @param array $userData User data with username, email, firstname, lastname
-     * @param string|null $redirectUrl Optional URL to redirect after login (e.g., course page)
+     * @param string|null $redirectUrl Optional URL to redirect after login
+     * @param string|null &$lastSsoError Populated with error details on failure
      * @return string|null The auto-login URL or null on failure
      */
-    public function generateLoginUrl(array $userData, ?string $redirectUrl = null): ?string
+    public function generateLoginUrl(array $userData, ?string $redirectUrl = null, ?string &$lastSsoError = null): ?string
     {
+        $params = ['user' => $userData];
+        $lastSsoError = null;
+
+        // Try the newer function name first (auth_userkey v2+)
         try {
-            // Send all user fields - auth_userkey may match on any of these
-            $params = ['user' => $userData];
-            $response = null;
-            $functionName = null;
-
-            // Try the newer function first
-            try {
-                $response = $this->call('auth_userkey_request_login_url', $params);
-                $functionName = 'auth_userkey_request_login_url';
-            } catch (\Exception $e) {
-                Log::info('auth_userkey_request_login_url not available, trying generatekey', [
-                    'error' => $e->getMessage()
-                ]);
-            }
-
-            // If that fails, try the older function name
-            if (!$response || !isset($response['loginurl'])) {
-                try {
-                    $response = $this->call('auth_userkey_generatekey', $params);
-                    $functionName = 'auth_userkey_generatekey';
-                } catch (\Exception $e) {
-                    Log::warning('auth_userkey_generatekey also failed', [
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
+            $response = $this->call('auth_userkey_request_login_url', $params);
 
             if (isset($response['loginurl'])) {
                 $loginUrl = $response['loginurl'];
-
-                // Append redirect URL if provided
                 if ($redirectUrl) {
                     $separator = (strpos($loginUrl, '?') !== false) ? '&' : '?';
                     $loginUrl .= $separator . 'wantsurl=' . urlencode($redirectUrl);
                 }
 
-                Log::info('Generated Moodle auto-login URL', [
-                    'username' => $userData['username'] ?? 'N/A',
+                Log::info('Generated Moodle SSO URL via auth_userkey_request_login_url', [
                     'email' => $userData['email'] ?? 'N/A',
-                    'function' => $functionName,
-                    'has_redirect' => !empty($redirectUrl)
                 ]);
-
                 return $loginUrl;
             }
 
-            return null;
+            // Function returned a response but no loginurl key — log the raw response
+            $lastSsoError = 'auth_userkey_request_login_url returned unexpected response: ' . json_encode($response);
+            Log::warning($lastSsoError);
         } catch (\Exception $e) {
-            // If auth_userkey is not installed, try fallback method
-            Log::warning('auth_userkey not available, falling back to direct URL', [
+            $lastSsoError = 'auth_userkey_request_login_url: ' . $e->getMessage();
+            Log::warning('SSO function call failed', [
+                'function' => 'auth_userkey_request_login_url',
                 'error' => $e->getMessage(),
-                'email' => $userData['email'] ?? 'N/A'
+                'email' => $userData['email'] ?? 'N/A',
             ]);
-
-            return $this->generateFallbackLoginUrl($userData['email'] ?? '', $redirectUrl);
         }
+
+        // Try the older function name (auth_userkey v1)
+        try {
+            $response = $this->call('auth_userkey_generatekey', $params);
+
+            if (isset($response['loginurl'])) {
+                $loginUrl = $response['loginurl'];
+                if ($redirectUrl) {
+                    $separator = (strpos($loginUrl, '?') !== false) ? '&' : '?';
+                    $loginUrl .= $separator . 'wantsurl=' . urlencode($redirectUrl);
+                }
+
+                Log::info('Generated Moodle SSO URL via auth_userkey_generatekey', [
+                    'email' => $userData['email'] ?? 'N/A',
+                ]);
+                return $loginUrl;
+            }
+
+            $lastSsoError = 'auth_userkey_generatekey returned unexpected response: ' . json_encode($response);
+            Log::warning($lastSsoError);
+        } catch (\Exception $e) {
+            $lastSsoError = 'auth_userkey_generatekey: ' . $e->getMessage();
+            Log::warning('SSO function call failed', [
+                'function' => 'auth_userkey_generatekey',
+                'error' => $e->getMessage(),
+                'email' => $userData['email'] ?? 'N/A',
+            ]);
+        }
+
+        // Both function calls failed
+        return null;
     }
 
     /**
@@ -441,19 +450,20 @@ class MoodleService
      * Generate auto-login URL for a course.
      *
      * Calls Moodle's auth_userkey plugin to get a one-time SSO login URL.
-     * If SSO fails, throws an exception so the caller can handle it
+     * If SSO fails, throws an exception with the ACTUAL Moodle error
      * (instead of silently falling back to a guest URL).
      *
      * @param \App\Models\User $user The user object
      * @param int $moodleCourseId Moodle course ID
      * @return string The SSO auto-login URL to the course
-     * @throws \App\Exceptions\MoodleException If SSO is not available
+     * @throws \App\Exceptions\MoodleException If SSO login URL cannot be generated
      */
     public function generateCourseLoginUrl($user, int $moodleCourseId): string
     {
         $courseUrl = $this->getCourseUrl($moodleCourseId);
 
-        // Build user data array with all fields needed for auth_userkey
+        // Build user data for auth_userkey lookup.
+        // The plugin matches Moodle users by email (primary) or username.
         $username = $user->username ?? explode('@', $user->email)[0];
 
         $userData = [
@@ -463,21 +473,19 @@ class MoodleService
             'lastname' => $user->last_name ?? $user->lastname ?? explode('.', $username)[1] ?? 'User',
         ];
 
-        $loginUrl = $this->generateLoginUrl($userData, $courseUrl);
+        // $ssoError will be populated with the actual Moodle error if SSO fails
+        $ssoError = null;
+        $loginUrl = $this->generateLoginUrl($userData, $courseUrl, $ssoError);
 
-        // Verify we got an actual SSO URL, not just the raw course URL back.
-        // If generateLoginUrl() returned null or the same course URL, SSO failed.
-        if ($loginUrl && $loginUrl !== $courseUrl && $loginUrl !== $this->baseUrl) {
+        if ($loginUrl) {
             return $loginUrl;
         }
 
-        // SSO failed — throw so the caller shows a proper error instead of
-        // redirecting the user to Moodle as an unauthenticated guest.
+        // SSO failed — throw with the ACTUAL error from Moodle so the user/admin
+        // can see exactly what went wrong (e.g., "User not found", "Invalid auth",
+        // "Access control exception", etc.)
         throw new \App\Exceptions\MoodleException(
-            "Moodle SSO is not available. A Moodle administrator must: "
-            . "(1) Install and enable the auth_userkey plugin, "
-            . "(2) Add 'auth_userkey_request_login_url' to the external service's allowed functions "
-            . "under Site Administration > Server > Web services > External services."
+            "Moodle SSO login failed. " . ($ssoError ?? 'No error details available.')
         );
     }
 }
