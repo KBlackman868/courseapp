@@ -155,10 +155,18 @@ class EnhancedAuthController extends Controller
             ]);
         }
 
-        // Set user_type if not already set (preserve existing user_type for MOH staff)
-        if (!$user->user_type) {
-            // Determine user_type based on email domain
-            $userType = User::isMohEmail($user->email) ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL;
+        // Set user_type based on email domain:
+        // - health.gov.tt users are always internal (MOH staff), even when using
+        //   the email/password login form instead of LDAP
+        // - All other users are external
+        if (User::isMohEmail($user->email)) {
+            if ($user->user_type !== 'internal') {
+                $user->update([
+                    'user_type' => 'internal',
+                    'auth_method' => 'local',
+                ]);
+            }
+        } elseif ($user->user_type !== 'external') {
             $user->update([
                 'user_type' => $userType,
                 'auth_method' => 'local',

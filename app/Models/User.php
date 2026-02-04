@@ -473,15 +473,27 @@ class User extends Authenticatable implements MustVerifyEmail
         return false;
     }
 
-    // User type check methods
+    /**
+     * Check if user is an internal (MOH) user.
+     * Returns true if user_type is 'internal' OR if their email is @health.gov.tt.
+     * The email domain check is a safety net - if a health.gov.tt user logs in
+     * through the external form, their user_type gets overwritten to 'external',
+     * but they should still be treated as internal.
+     */
     public function isInternal(): bool
     {
-        return $this->user_type === self::TYPE_INTERNAL;
+        return $this->user_type === self::TYPE_INTERNAL || $this->hasMohEmail();
     }
 
+    /**
+     * Check if user is an external user.
+     * A user is only external if their user_type is 'external' AND they don't
+     * have an MOH email domain. This prevents health.gov.tt users from being
+     * incorrectly treated as external.
+     */
     public function isExternal(): bool
     {
-        return $this->user_type === self::TYPE_EXTERNAL;
+        return $this->user_type === self::TYPE_EXTERNAL && !$this->hasMohEmail();
     }
 
     // Account status check methods
