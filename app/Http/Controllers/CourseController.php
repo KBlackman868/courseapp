@@ -329,13 +329,18 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
         $user = auth()->user();
 
-        // -- STEP 1: Verify local enrollment exists --
+        // -- STEP 1: Verify user has access (via Enrollment OR approved CourseAccessRequest) --
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->where('status', 'approved')
             ->first();
 
-        if (!$enrollment) {
+        $accessRequest = CourseAccessRequest::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('status', 'approved')
+            ->first();
+
+        if (!$enrollment && !$accessRequest) {
             ActivityLogger::logCourse('access_denied', $course,
                 "User attempted to access Moodle course without enrollment",
                 ['user_id' => $user->id, 'user_email' => $user->email]
