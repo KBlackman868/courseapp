@@ -170,6 +170,7 @@ class Saml2Controller extends Controller
                 'first_name' => $attributes['givenName'][0] ?? '',
                 'last_name' => $attributes['sn'][0] ?? '',
                 'department' => $attributes['department'][0] ?? 'Unknown',
+                'organization' => $attributes['organization'][0] ?? '',
                 'password' => bcrypt(str()->random(32)), // Random password for SSO users
             ]);
             

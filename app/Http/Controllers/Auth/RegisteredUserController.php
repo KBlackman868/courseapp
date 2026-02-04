@@ -38,10 +38,14 @@ class RegisteredUserController extends Controller
         ]);
 
         // Create the user in Laravel
+        $nameParts = explode(' ', trim($request->name), 2);
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $nameParts[0],
+            'last_name' => $nameParts[1] ?? $nameParts[0],
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'department' => 'General',
+            'organization' => '',
         ]);
 
         // MOODLE INTEGRATION START

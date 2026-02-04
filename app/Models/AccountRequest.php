@@ -179,7 +179,7 @@ class AccountRequest extends Model
             'email' => $this->email,
             'password' => $this->password, // Already hashed
             'department' => $this->department,
-            'organization' => $this->organization,
+            'organization' => $this->organization ?? '',
             'user_type' => $this->isMohStaffRequest() ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL,
             'account_status' => User::STATUS_ACTIVE,
             'email_verified_at' => now(), // Email verified through approval process
