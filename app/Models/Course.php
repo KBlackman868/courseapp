@@ -149,7 +149,12 @@ class Course extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        // Check both is_active flag and status column for backward compatibility.
+        // Older courses may have status='active' but is_active was never set.
+        return $query->where(function ($q) {
+            $q->where('is_active', true)
+              ->orWhere('status', 'active');
+        });
     }
 
     /**
