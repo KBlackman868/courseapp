@@ -9,12 +9,17 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * CheckCourseAdmin Middleware
  *
- * This middleware checks if the user has Course Admin permission.
+ * Controls access to course management pages (course access requests, etc.).
  *
  * WHO CAN PASS THIS MIDDLEWARE:
- * - SuperAdmin (always has Course Admin capabilities)
- * - Users with course_admin role
- * - Admin users with is_course_admin flag = true
+ * - SuperAdmin (always has full access)
+ * - Admin users (all admins can view/manage course access requests)
+ * - Users with the course_admin role
+ *
+ * WHY ALLOW ALL ADMINS:
+ * The navigation menu shows course management links to all admin-level users.
+ * Blocking regular admins here would create a confusing experience where they
+ * see the link but get a 403 error when clicking it.
  *
  * USAGE IN ROUTES:
  * Route::middleware('course.admin')->group(function () { ... });
@@ -44,27 +49,33 @@ class CheckCourseAdmin
             return redirect()->route('login');
         }
 
-        // SuperAdmin always has Course Admin capabilities
+        // SuperAdmin always has full access
         if ($user->isSuperAdmin()) {
             return $next($request);
         }
 
-        // Check if user is Admin with Course Admin permission
+        // All Admin users can access course management pages
+        // This matches the navigation which shows the link to all admins
+        if ($user->isAdmin()) {
+            return $next($request);
+        }
+
+        // Users with explicit course_admin role
         if ($user->isCourseAdmin()) {
             return $next($request);
         }
 
-        // User doesn't have Course Admin permission
+        // User doesn't have sufficient permission
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Forbidden.',
-                'error' => 'You do not have Course Administrator permission.'
+                'error' => 'You do not have permission to manage course access requests.'
             ], 403);
         }
 
         // Redirect to dashboard with error message
         return redirect()->route('dashboard')->with('error',
-            'You do not have permission to access that page. Course Administrator permission is required.'
+            'You do not have permission to access that page. Admin or Course Admin role is required.'
         );
     }
 }

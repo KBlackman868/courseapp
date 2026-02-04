@@ -232,13 +232,15 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Check if user can approve course access requests
+     * Check if user can approve/reject course access requests.
+     * All admin-level users can manage course access requests,
+     * matching the navigation which shows the link to all admins.
      *
      * @return bool
      */
     public function canApproveCourseAccess(): bool
     {
-        return $this->isSuperAdmin() || $this->isCourseAdmin();
+        return $this->isSuperAdmin() || $this->isAdmin() || $this->isCourseAdmin();
     }
 
     /**

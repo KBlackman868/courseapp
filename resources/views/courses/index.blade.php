@@ -146,127 +146,134 @@
         </div>
 
         <!-- Courses Table -->
-        <div class="card bg-base-100 shadow">
-            <div class="overflow-x-auto">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Course</th>
-                            <th>Moodle</th>
-                            <th>Enrollments</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($courses as $course)
-                            <tr class="hover">
-                                <td>
-                                    <div class="flex items-center gap-3">
-                                        @if($course->image)
-                                            <div class="avatar">
-                                                <div class="mask mask-squircle w-12 h-12">
-                                                    <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" loading="lazy">
-                                                </div>
-                                            </div>
-                                        @else
-                                            <div class="avatar placeholder">
-                                                <div class="bg-primary text-primary-content mask mask-squircle w-12 h-12">
-                                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        @endif
-                                        <div>
-                                            <div class="font-bold">{{ $course->title }}</div>
-                                            <div class="text-sm opacity-50">{{ Str::limit($course->description, 50) }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if($course->moodle_course_id)
-                                        <div class="badge badge-success gap-1">
-                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                            </svg>
-                                            ID: {{ $course->moodle_course_id }}
-                                        </div>
-                                    @else
-                                        <span class="badge badge-ghost">Not Synced</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="badge badge-info">{{ $course->enrollments->count() }}</span>
-                                </td>
-                                <td>
-                                    <span class="badge {{ $course->status === 'active' ? 'badge-success' : 'badge-error' }}">
-                                        {{ ucfirst($course->status) }}
-                                    </span>
-                                </td>
-                                <td class="text-sm">
-                                    {{ $course->created_at->format('M d, Y') }}
-                                </td>
-                                <td>
-                                    <div class="flex items-center justify-center gap-1">
-                                        <a href="{{ route('courses.show', $course->id) }}"
-                                           class="btn btn-ghost btn-xs" title="View">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                            </svg>
-                                        </a>
-
-                                        <a href="{{ route('courses.edit', $course->id) }}"
-                                           class="btn btn-ghost btn-xs" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                            </svg>
-                                        </a>
-
-                                        <form action="{{ route('courses.destroy', $course->id) }}" method="POST" class="inline"
-                                              onsubmit="return confirm('Delete this course? This action cannot be undone.');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-ghost btn-xs text-error" title="Delete">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-12">
-                                    <svg class="mx-auto h-12 w-12 text-base-content/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                                    </svg>
-                                    <h3 class="text-lg font-medium text-base-content">No courses found</h3>
-                                    <p class="mt-1 text-sm text-base-content/60">Get started by creating a new course or syncing from Moodle.</p>
-                                    <div class="mt-6">
-                                        <a href="{{ route('courses.create') }}" class="btn btn-primary gap-2">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                            </svg>
-                                            Create Course
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+        <div id="courseResultsContainer" class="relative">
+            {{-- Loading overlay (hidden by default) --}}
+            <div id="courseLoadingOverlay" class="hidden absolute inset-0 bg-base-100/60 z-10 flex items-center justify-center rounded-2xl">
+                <span class="loading loading-spinner loading-md"></span>
             </div>
 
-            <!-- Pagination -->
-            @if($courses->hasPages())
-                <div class="px-6 py-4 border-t border-base-200">
-                    {{ $courses->links() }}
+            <div class="card bg-base-100 shadow">
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Moodle</th>
+                                <th>Enrollments</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($courses as $course)
+                                <tr class="hover">
+                                    <td>
+                                        <div class="flex items-center gap-3">
+                                            @if($course->image)
+                                                <div class="avatar">
+                                                    <div class="mask mask-squircle w-12 h-12">
+                                                        <img src="{{ Storage::url($course->image) }}" alt="{{ $course->title }}" loading="lazy">
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="avatar placeholder">
+                                                    <div class="bg-primary text-primary-content mask mask-squircle w-12 h-12">
+                                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <div class="font-bold">{{ $course->title }}</div>
+                                                <div class="text-sm opacity-50">{{ Str::limit($course->description, 50) }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if($course->moodle_course_id)
+                                            <div class="badge badge-success gap-1">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                </svg>
+                                                ID: {{ $course->moodle_course_id }}
+                                            </div>
+                                        @else
+                                            <span class="badge badge-ghost">Not Synced</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info">{{ $course->enrollments->count() }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ $course->status === 'active' ? 'badge-success' : 'badge-error' }}">
+                                            {{ ucfirst($course->status) }}
+                                        </span>
+                                    </td>
+                                    <td class="text-sm">
+                                        {{ $course->created_at->format('M d, Y') }}
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center justify-center gap-1">
+                                            <a href="{{ route('courses.show', $course->id) }}"
+                                               class="btn btn-ghost btn-xs" title="View">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                </svg>
+                                            </a>
+
+                                            <a href="{{ route('courses.edit', $course->id) }}"
+                                               class="btn btn-ghost btn-xs" title="Edit">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                            </a>
+
+                                            <form action="{{ route('courses.destroy', $course->id) }}" method="POST" class="inline"
+                                                  onsubmit="return confirm('Delete this course? This action cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-ghost btn-xs text-error" title="Delete">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center py-12">
+                                        <svg class="mx-auto h-12 w-12 text-base-content/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                        </svg>
+                                        <h3 class="text-lg font-medium text-base-content">No courses found</h3>
+                                        <p class="mt-1 text-sm text-base-content/60">Get started by creating a new course or syncing from Moodle.</p>
+                                        <div class="mt-6">
+                                            <a href="{{ route('courses.create') }}" class="btn btn-primary gap-2">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                                </svg>
+                                                Create Course
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-            @endif
+
+                <!-- Pagination -->
+                @if($courses->hasPages())
+                    <div class="px-6 py-4 border-t border-base-200">
+                        {{ $courses->links() }}
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -276,23 +283,75 @@
             const searchInput = document.getElementById('courseSearchInput');
             const statusFilter = document.getElementById('statusFilter');
             const syncFilter = document.getElementById('syncFilter');
+            const resultsContainer = document.getElementById('courseResultsContainer');
+            const overlay = document.getElementById('courseLoadingOverlay');
             let debounceTimer = null;
+            let abortController = null;
 
-            function submitForm() {
-                if (form) form.submit();
-            }
+            function fetchResults() {
+                // Cancel any in-flight request
+                if (abortController) abortController.abort();
+                abortController = new AbortController();
 
-            // Debounced auto-submit on typing (300ms delay)
-            if (searchInput) {
-                searchInput.addEventListener('input', function () {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(submitForm, 300);
+                // Build query string from form inputs
+                const params = new URLSearchParams(new FormData(form));
+                // Strip empty/default values to keep URL clean
+                for (const [key, val] of [...params]) {
+                    if (!val || val === 'all') params.delete(key);
+                }
+
+                const url = form.action + (params.toString() ? '?' + params.toString() : '');
+
+                // Show loading spinner
+                overlay.classList.remove('hidden');
+
+                fetch(url, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: abortController.signal
+                })
+                .then(function (res) { return res.text(); })
+                .then(function (html) {
+                    // Parse the returned full page and extract just the results container
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    var newResults = doc.getElementById('courseResultsContainer');
+                    if (newResults) {
+                        resultsContainer.innerHTML = newResults.innerHTML;
+                    }
+
+                    // Update browser URL without reload
+                    history.replaceState(null, '', url);
+
+                    // Hide loading spinner (new HTML has it hidden by default)
+                    var newOverlay = document.getElementById('courseLoadingOverlay');
+                    if (newOverlay) newOverlay.classList.add('hidden');
+                })
+                .catch(function (err) {
+                    if (err.name !== 'AbortError') {
+                        overlay.classList.add('hidden');
+                    }
                 });
             }
 
-            // Immediate submit on dropdown change
-            if (statusFilter) statusFilter.addEventListener('change', submitForm);
-            if (syncFilter) syncFilter.addEventListener('change', submitForm);
+            // Debounced search on typing (300ms)
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(fetchResults, 300);
+                });
+            }
+
+            // Immediate fetch on dropdown change
+            if (statusFilter) statusFilter.addEventListener('change', fetchResults);
+            if (syncFilter) syncFilter.addEventListener('change', fetchResults);
+
+            // Intercept form submit (Filter button / Enter key) to use AJAX too
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    clearTimeout(debounceTimer);
+                    fetchResults();
+                });
+            }
         });
     </script>
 </x-layouts>
