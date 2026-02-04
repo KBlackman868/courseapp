@@ -121,6 +121,11 @@ class CourseAccessRequestController extends Controller
 
             // Queue Moodle account creation (if needed) and enrollment
             if ($course->hasMoodleIntegration()) {
+                // Mark as syncing BEFORE dispatching, because with the sync queue
+                // driver the job runs immediately and calls markSynced() on completion.
+                // If markSyncing() runs after dispatch(), it overwrites 'synced' with 'syncing'.
+                $courseAccessRequest->markSyncing();
+
                 // First, ensure user has a Moodle account
                 if (!$user->hasMoodleAccount()) {
                     CreateOrLinkMoodleUser::dispatch($user)->chain([
@@ -130,9 +135,6 @@ class CourseAccessRequestController extends Controller
                     // User already has Moodle account, just enroll
                     EnrollUserIntoMoodleCourse::dispatch($user, $course, $courseAccessRequest);
                 }
-
-                // Mark as syncing
-                $courseAccessRequest->markSyncing();
             } else {
                 // No Moodle integration, mark as synced immediately
                 $courseAccessRequest->markSynced();
@@ -278,6 +280,7 @@ class CourseAccessRequestController extends Controller
                         $accessRequest->approve(auth()->user(), 'Bulk approved');
 
                         if ($course->hasMoodleIntegration()) {
+                            $accessRequest->markSyncing();
                             if (!$user->hasMoodleAccount()) {
                                 CreateOrLinkMoodleUser::dispatch($user)->chain([
                                     new EnrollUserIntoMoodleCourse($user, $course, $accessRequest),
@@ -285,7 +288,6 @@ class CourseAccessRequestController extends Controller
                             } else {
                                 EnrollUserIntoMoodleCourse::dispatch($user, $course, $accessRequest);
                             }
-                            $accessRequest->markSyncing();
                         } else {
                             $accessRequest->markSynced();
                         }
