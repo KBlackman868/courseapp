@@ -278,10 +278,12 @@ class CourseController extends Controller
                     $user->refresh();
                 }
 
-                // Enroll the user in the Moodle course (dispatched as background job)
-                // Job expects (User, Course) - not the moodle_course_id integer
+                // Enroll the user in the Moodle course SYNCHRONOUSLY.
+                // This must complete before the page renders, otherwise the user
+                // clicks "Access Course in Moodle" and lands as a guest because
+                // the async queue job hasn't processed yet.
                 if ($user->moodle_user_id) {
-                    EnrollUserIntoMoodleCourse::dispatch($user, $course);
+                    EnrollUserIntoMoodleCourse::dispatchSync($user, $course);
                 }
             } catch (\Exception $e) {
                 // Don't fail the page load if Moodle sync fails.
@@ -338,16 +340,29 @@ class CourseController extends Controller
                 ->with('error', 'This course is not yet available in Moodle.');
         }
 
-        // Ensure user has Moodle account
+        // Ensure user has a Moodle account (create if missing)
         if (!$user->moodle_user_id) {
-            // Trigger Moodle user creation if needed
-            \App\Jobs\CreateOrLinkMoodleUser::dispatchSync($user);
+            CreateOrLinkMoodleUser::dispatchSync($user);
             $user->refresh();
 
             if (!$user->moodle_user_id) {
                 return redirect()->route('courses.show', $course)
                     ->with('info', 'Your Moodle account is being set up. Please try again in a few moments.');
             }
+        }
+
+        // SAFETY NET: Ensure user is enrolled in the Moodle course before redirecting.
+        // The auto-enrollment in show() runs this synchronously, but if it was skipped
+        // (e.g., user bookmarked the link, or the queue was used instead), we enroll now.
+        try {
+            EnrollUserIntoMoodleCourse::dispatchSync($user, $course);
+        } catch (\Exception $e) {
+            Log::warning('Moodle enrollment sync failed during course access', [
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Don't block access - the user may already be enrolled from a previous sync
         }
 
         // Log Moodle access
