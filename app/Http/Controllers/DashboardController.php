@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -312,21 +313,38 @@ class DashboardController extends Controller
     }
 
     /**
-     * Check if user should see onboarding banner
+     * Check if user should see onboarding banner.
+     * Handles the case where the onboarding_completed_at column
+     * may not exist yet (migration not run).
      */
     private function shouldShowOnboarding(User $user): bool
     {
-        // Show onboarding if onboarding_completed_at is null
-        return is_null($user->onboarding_completed_at);
+        try {
+            // Show onboarding if onboarding_completed_at is null (never dismissed)
+            return is_null($user->onboarding_completed_at);
+        } catch (\Exception $e) {
+            // Column doesn't exist yet - don't show onboarding banner
+            // The migration 2026_01_30_000007_add_onboarding_to_users_table needs to be run
+            return false;
+        }
     }
 
     /**
-     * Mark onboarding as completed (dismiss banner)
+     * Mark onboarding as completed (dismiss welcome banner).
+     * Handles the case where the onboarding_completed_at column
+     * may not exist yet (migration not run).
      */
     public function completeOnboarding(Request $request)
     {
         $user = auth()->user();
-        $user->update(['onboarding_completed_at' => now()]);
+
+        try {
+            $user->update(['onboarding_completed_at' => now()]);
+        } catch (\Exception $e) {
+            // Column doesn't exist yet - the migration hasn't been run.
+            // Log a warning so the admin knows to run migrations.
+            Log::warning('Cannot dismiss onboarding banner: onboarding_completed_at column missing. Run: php artisan migrate');
+        }
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true]);

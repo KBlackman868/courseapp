@@ -153,23 +153,39 @@ class Course extends Model
     }
 
     /**
-     * Scope to get courses visible to MOH staff
+     * Scope to get courses visible to MOH staff.
+     * Includes both legacy ('moh', 'all') and new ('MOH_ONLY', 'BOTH') constants
+     * since courses may have been created with either format.
      */
     public function scopeForMohStaff($query)
     {
-        return $query->whereIn('audience_type', [self::AUDIENCE_MOH, self::AUDIENCE_ALL]);
+        return $query->whereIn('audience_type', [
+            self::AUDIENCE_MOH_ONLY,   // 'MOH_ONLY' (new constant)
+            self::AUDIENCE_MOH,         // 'moh' (legacy constant)
+            self::AUDIENCE_BOTH,        // 'BOTH' (new constant)
+            self::AUDIENCE_ALL,         // 'all' (legacy constant)
+        ]);
     }
 
     /**
-     * Scope to get courses visible to external users
+     * Scope to get courses visible to external users.
+     * Includes both legacy ('external', 'all') and new ('EXTERNAL_ONLY', 'BOTH') constants
+     * since courses may have been created with either format.
      */
     public function scopeForExternalUsers($query)
     {
-        return $query->whereIn('audience_type', [self::AUDIENCE_EXTERNAL, self::AUDIENCE_ALL]);
+        return $query->whereIn('audience_type', [
+            self::AUDIENCE_EXTERNAL_ONLY, // 'EXTERNAL_ONLY' (new constant)
+            self::AUDIENCE_EXTERNAL,       // 'external' (legacy constant)
+            self::AUDIENCE_BOTH,           // 'BOTH' (new constant)
+            self::AUDIENCE_ALL,            // 'all' (legacy constant)
+        ]);
     }
 
     /**
-     * Scope to get courses for a specific user based on their type
+     * Scope to get courses for a specific user based on their type.
+     * Internal (MOH) users see MOH + shared courses.
+     * External users see External + shared courses.
      */
     public function scopeForUser($query, User $user)
     {
