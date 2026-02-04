@@ -105,7 +105,7 @@ class TestMoodleUserFlow extends Command
             
             // Sync to Moodle
             try {
-                EnrollUserIntoMoodleCourse::dispatchSync($user, $course->moodle_course_id);
+                EnrollUserIntoMoodleCourse::dispatchSync($user, $course);
                 $this->info("✓ User enrolled in Moodle course");
             } catch (\Exception $e) {
                 $this->error("Error enrolling in Moodle: " . $e->getMessage());

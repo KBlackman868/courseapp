@@ -279,8 +279,9 @@ class CourseController extends Controller
                 }
 
                 // Enroll the user in the Moodle course (dispatched as background job)
+                // Job expects (User, Course) - not the moodle_course_id integer
                 if ($user->moodle_user_id) {
-                    EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
+                    EnrollUserIntoMoodleCourse::dispatch($user, $course);
                 }
             } catch (\Exception $e) {
                 // Don't fail the page load if Moodle sync fails.

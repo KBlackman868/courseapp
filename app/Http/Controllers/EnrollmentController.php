@@ -486,7 +486,7 @@ class EnrollmentController extends Controller
                 }
             }
 
-            EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
+            EnrollUserIntoMoodleCourse::dispatch($user, $course);
 
             Log::info('Moodle enrollment sync dispatched', [
                 'enrollment_id' => $enrollment->id,
@@ -702,7 +702,7 @@ class EnrollmentController extends Controller
             if ($enrollment->user->moodle_user_id) {
                 EnrollUserIntoMoodleCourse::dispatch(
                     $enrollment->user,
-                    $course->moodle_course_id
+                    $course
                 );
                 $syncCount++;
             } else {

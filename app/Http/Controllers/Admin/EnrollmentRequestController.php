@@ -276,7 +276,7 @@ class EnrollmentRequestController extends Controller
             }
 
             if ($user->moodle_user_id) {
-                EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
+                EnrollUserIntoMoodleCourse::dispatch($user, $course);
 
                 ActivityLogger::logMoodle('enrollment_synced',
                     "Enrollment synced to Moodle",
