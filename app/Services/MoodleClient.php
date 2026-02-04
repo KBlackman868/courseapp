@@ -102,15 +102,28 @@ class MoodleClient
 
             // Check if response is successful
             if (!$response->successful()) {
+                $body = $response->body();
+
                 Log::error('Moodle API HTTP error', [
                     'correlation_id' => $correlationId,
                     'function' => $function,
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'body' => $body,
                 ]);
-                
+
+                // Detect access control exceptions in HTTP error responses
+                if (str_contains($body, 'accessexception') || str_contains($body, 'Access control exception')) {
+                    throw new MoodleException(
+                        "Moodle access denied for function '{$function}'. "
+                        . "The web service token does not have permission to call this function. "
+                        . "A Moodle administrator must add '{$function}' to the external service linked to the API token "
+                        . "under Site Administration > Server > Web services > External services.",
+                        'accessexception'
+                    );
+                }
+
                 throw new MoodleException(
-                    'HTTP Error: ' . $response->status() . ' - ' . $response->body(),
+                    'HTTP Error: ' . $response->status() . ' - ' . $body,
                     'http_error'
                 );
             }
@@ -119,24 +132,37 @@ class MoodleClient
 
             // Check for Moodle exceptions in response
             if (isset($result['exception'])) {
+                $errorCode = $result['errorcode'] ?? 'unknown_error';
+                $message = $result['message'] ?? 'Moodle API error occurred';
+                $debugInfo = $result['debuginfo'] ?? null;
+
                 Log::error('Moodle API returned exception', [
                     'correlation_id' => $correlationId,
                     'function' => $function,
                     'exception' => $result['exception'],
-                    'message' => $result['message'] ?? 'Unknown error',
-                    'debuginfo' => $result['debuginfo'] ?? null,
+                    'message' => $message,
+                    'errorcode' => $errorCode,
+                    'debuginfo' => $debugInfo,
                 ]);
 
-                throw new MoodleException(
-                    $result['message'] ?? 'Moodle API error occurred',
-                    $result['errorcode'] ?? 'unknown_error'
-                );
-            }
-                if ($result === null) {
-                    return [];  // Return empty array instead of null
+                // Provide actionable message for access control errors
+                if ($errorCode === 'accessexception' || str_contains($message, 'Access control exception')) {
+                    throw new MoodleException(
+                        "Moodle access denied for function '{$function}'. "
+                        . "The web service token does not have permission to call this function. "
+                        . "A Moodle administrator must add '{$function}' to the external service linked to the API token "
+                        . "under Site Administration > Server > Web services > External services.",
+                        'accessexception'
+                    );
                 }
-                
-                return $result;
+
+                throw new MoodleException($message, $errorCode);
+            }
+
+            if ($result === null) {
+                return [];
+            }
+
             // Check for warnings (non-fatal but should be logged)
             if (isset($result['warnings']) && !empty($result['warnings'])) {
                 Log::warning('Moodle API returned warnings', [
@@ -156,7 +182,7 @@ class MoodleClient
 
         } catch (RequestException $e) {
             $responseBody = $e->response ? $e->response->body() : 'No response body';
-            
+
             Log::error('Moodle API HTTP error', [
                 'correlation_id' => $correlationId,
                 'function' => $function,
@@ -174,8 +200,19 @@ class MoodleClient
                 );
             }
 
+            // Detect access control exceptions in HTTP error responses
+            if (str_contains($responseBody, 'accessexception') || str_contains($responseBody, 'Access control exception')) {
+                throw new MoodleException(
+                    "Moodle access denied for function '{$function}'. "
+                    . "The web service token does not have permission to call this function. "
+                    . "A Moodle administrator must add '{$function}' to the external service linked to the API token "
+                    . "under Site Administration > Server > Web services > External services.",
+                    'accessexception'
+                );
+            }
+
             throw new MoodleException(
-                'Failed to communicate with Moodle: ' . $e->getMessage() . ' Response: ' . $responseBody,
+                'Failed to communicate with Moodle: ' . $e->getMessage(),
                 'http_error'
             );
         } catch (\Exception $e) {

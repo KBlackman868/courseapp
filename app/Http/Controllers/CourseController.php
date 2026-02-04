@@ -289,9 +289,9 @@ class CourseController extends Controller
             $validated['image'] = $path;
         }
 
+        // First, create the course locally in its own transaction
         DB::beginTransaction();
         try {
-            // Create the course locally
             $course = Course::create($validated);
 
             // Log course creation
@@ -305,13 +305,26 @@ class CourseController extends Controller
                 ]
             );
 
-            // Sync to Moodle if requested
-            if ($request->boolean('sync_to_moodle')) {
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to create course locally', [
+                'error' => $e->getMessage(),
+                'course_title' => $validated['title']
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to create course: ' . $e->getMessage());
+        }
+
+        // Then, sync to Moodle separately so the local course is preserved on failure
+        if ($request->boolean('sync_to_moodle')) {
+            try {
                 $moodleCourseId = $this->createMoodleCourse($course, $validated);
                 $course->update(['moodle_course_id' => $moodleCourseId]);
-                
+
                 // Log successful Moodle sync
-                ActivityLogger::logMoodle('course_synced', 
+                ActivityLogger::logMoodle('course_synced',
                     "Course synced to Moodle: {$course->title}",
                     $course,
                     [
@@ -320,39 +333,35 @@ class CourseController extends Controller
                         'moodle_category' => $validated['moodle_category_id'] ?? null
                     ]
                 );
-            }
 
-            DB::commit();
-            
-            $message = $course->moodle_course_id 
-                ? 'Course created successfully and synced to Moodle.'
-                : 'Course created successfully.';
-                
-            return redirect()->route('courses.index')->with('success', $message);
-            
-        } catch (MoodleException $e) {
-            DB::rollBack();
-            Log::error('Failed to create Moodle course', [
-                'error' => $e->getMessage(),
-                'course_title' => $validated['title']
-            ]);
-            
-            // Log Moodle sync failure
-            ActivityLogger::logMoodle('course_sync_failed',
-                "Failed to sync course to Moodle: {$validated['title']}",
-                null,
-                [
+                return redirect()->route('courses.index')
+                    ->with('success', 'Course created successfully and synced to Moodle.');
+
+            } catch (MoodleException $e) {
+                Log::error('Failed to sync course to Moodle', [
                     'error' => $e->getMessage(),
-                    'attempted_by' => auth()->user()->email
-                ],
-                'failed',
-                'error'
-            );
-            
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Course created locally but failed to sync to Moodle: ' . $e->getMessage());
+                    'course_id' => $course->id,
+                    'course_title' => $course->title
+                ]);
+
+                // Log Moodle sync failure
+                ActivityLogger::logMoodle('course_sync_failed',
+                    "Failed to sync course to Moodle: {$course->title}",
+                    $course,
+                    [
+                        'error' => $e->getMessage(),
+                        'attempted_by' => auth()->user()->email
+                    ],
+                    'failed',
+                    'error'
+                );
+
+                return redirect()->route('courses.index')
+                    ->with('warning', 'Course created locally but failed to sync to Moodle. You can retry syncing from the course management page. Error: ' . $e->getMessage());
+            }
         }
+
+        return redirect()->route('courses.index')->with('success', 'Course created successfully.');
     }
 
     // Display the form to edit an existing course
@@ -392,9 +401,9 @@ class CourseController extends Controller
             $validated['image'] = $path;
         }
 
+        // First, save local changes in their own transaction
         DB::beginTransaction();
         try {
-            // Update local course
             $course->update($validated);
 
             // Log course update
@@ -408,57 +417,64 @@ class CourseController extends Controller
                 ]
             );
 
-            // Handle Moodle sync
-            if ($request->boolean('sync_to_moodle')) {
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update course locally', [
+                'error' => $e->getMessage(),
+                'course_id' => $course->id
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to update course: ' . $e->getMessage());
+        }
+
+        // Then, handle Moodle sync separately so local changes are preserved on failure
+        if ($request->boolean('sync_to_moodle')) {
+            try {
                 if ($course->moodle_course_id) {
-                    // Update existing Moodle course
                     $this->updateMoodleCourse($course);
-                    
-                    // Log Moodle update
+
                     ActivityLogger::logMoodle('course_updated',
                         "Course updated in Moodle: {$course->title}",
                         $course,
                         ['moodle_course_id' => $course->moodle_course_id]
                     );
                 } else {
-                    // Create new Moodle course
                     $moodleCourseId = $this->createMoodleCourse($course, $validated);
                     $course->update(['moodle_course_id' => $moodleCourseId]);
-                    
-                    // Log new Moodle sync
+
                     ActivityLogger::logMoodle('course_synced',
                         "Course newly synced to Moodle: {$course->title}",
                         $course,
                         ['moodle_course_id' => $moodleCourseId]
                     );
                 }
-            }
 
-            DB::commit();
-            
-            return redirect()->route('courses.index')
-                ->with('success', 'Course updated successfully.');
-                
-        } catch (MoodleException $e) {
-            DB::rollBack();
-            Log::error('Failed to update Moodle course', [
-                'error' => $e->getMessage(),
-                'course_id' => $course->id
-            ]);
-            
-            // Log Moodle update failure
-            ActivityLogger::logMoodle('course_update_failed',
-                "Failed to update course in Moodle: {$course->title}",
-                $course,
-                ['error' => $e->getMessage()],
-                'failed',
-                'error'
-            );
-            
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Course updated locally but Moodle sync failed: ' . $e->getMessage());
+                return redirect()->route('courses.index')
+                    ->with('success', 'Course updated successfully and synced to Moodle.');
+
+            } catch (MoodleException $e) {
+                Log::error('Failed to sync course update to Moodle', [
+                    'error' => $e->getMessage(),
+                    'course_id' => $course->id
+                ]);
+
+                ActivityLogger::logMoodle('course_update_failed',
+                    "Failed to update course in Moodle: {$course->title}",
+                    $course,
+                    ['error' => $e->getMessage()],
+                    'failed',
+                    'error'
+                );
+
+                return redirect()->route('courses.index')
+                    ->with('warning', 'Course updated locally but Moodle sync failed. You can retry syncing from the course management page. Error: ' . $e->getMessage());
+            }
         }
+
+        return redirect()->route('courses.index')
+            ->with('success', 'Course updated successfully.');
     }
 
     // Remove the specified course from the database
