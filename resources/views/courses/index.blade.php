@@ -99,12 +99,22 @@
             </div>
         @endif
 
+        @if(session('warning'))
+            <div class="alert alert-warning mb-6">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>{{ session('warning') }}</span>
+            </div>
+        @endif
+
         <!-- Filters -->
         <div class="card bg-base-100 shadow mb-6">
             <div class="card-body p-4">
-                <form method="GET" action="{{ route('admin.courses.index') }}" class="flex flex-col lg:flex-row gap-4">
+                <form id="courseFilterForm" method="GET" action="{{ url()->current() }}" class="flex flex-col lg:flex-row gap-4">
                     <div class="form-control flex-1">
                         <input type="text"
+                               id="courseSearchInput"
                                name="search"
                                value="{{ request('search') }}"
                                placeholder="Search courses..."
@@ -112,7 +122,7 @@
                     </div>
 
                     <div class="form-control">
-                        <select name="status" class="select select-bordered">
+                        <select name="status" id="statusFilter" class="select select-bordered">
                             <option value="all">All Status</option>
                             <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
@@ -120,7 +130,7 @@
                     </div>
 
                     <div class="form-control">
-                        <select name="sync_status" class="select select-bordered">
+                        <select name="sync_status" id="syncFilter" class="select select-bordered">
                             <option value="all">All Sync Status</option>
                             <option value="synced" {{ request('sync_status') === 'synced' ? 'selected' : '' }}>Synced</option>
                             <option value="not_synced" {{ request('sync_status') === 'not_synced' ? 'selected' : '' }}>Not Synced</option>
@@ -129,7 +139,7 @@
 
                     <div class="flex gap-2">
                         <button type="submit" class="btn btn-primary">Filter</button>
-                        <a href="{{ route('admin.courses.index') }}" class="btn btn-ghost">Clear</a>
+                        <a href="{{ url()->current() }}" class="btn btn-ghost">Clear</a>
                     </div>
                 </form>
             </div>
@@ -259,4 +269,30 @@
             @endif
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('courseFilterForm');
+            const searchInput = document.getElementById('courseSearchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const syncFilter = document.getElementById('syncFilter');
+            let debounceTimer = null;
+
+            function submitForm() {
+                if (form) form.submit();
+            }
+
+            // Debounced auto-submit on typing (300ms delay)
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(submitForm, 300);
+                });
+            }
+
+            // Immediate submit on dropdown change
+            if (statusFilter) statusFilter.addEventListener('change', submitForm);
+            if (syncFilter) syncFilter.addEventListener('change', submitForm);
+        });
+    </script>
 </x-layouts>
