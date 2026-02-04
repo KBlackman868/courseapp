@@ -56,11 +56,40 @@ class CreateOrLinkMoodleUser implements ShouldQueue
         $existingMoodleUser = $this->findMoodleUserByEmail($moodleClient, $email);
 
         if ($existingMoodleUser) {
-            // Link existing Moodle user
+            // Link existing Moodle user to our local user record
             $this->user->update(['moodle_user_id' => $existingMoodleUser['id']]);
+
+            // Ensure the Moodle user's auth method is set to 'userkey' so SSO works.
+            // Existing users may have been created with 'manual' or 'email' auth,
+            // which causes auth_userkey_request_login_url to fail with HTTP 500.
+            $requiredAuth = config('moodle.sso_enabled', true) ? 'userkey' : 'manual';
+            $currentAuth = $existingMoodleUser['auth'] ?? 'unknown';
+
+            if ($currentAuth !== $requiredAuth) {
+                try {
+                    $moodleClient->call('core_user_update_users', [
+                        'users' => [[
+                            'id' => $existingMoodleUser['id'],
+                            'auth' => $requiredAuth,
+                        ]],
+                    ]);
+                    Log::info('Updated Moodle user auth method for SSO', [
+                        'moodle_user_id' => $existingMoodleUser['id'],
+                        'old_auth' => $currentAuth,
+                        'new_auth' => $requiredAuth,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Could not update Moodle user auth method', [
+                        'moodle_user_id' => $existingMoodleUser['id'],
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             Log::info('Linked existing Moodle user', [
                 'user_id' => $this->user->id,
                 'moodle_user_id' => $existingMoodleUser['id'],
+                'auth' => $requiredAuth,
             ]);
         } else {
             // Create new Moodle user
@@ -167,14 +196,19 @@ class CreateOrLinkMoodleUser implements ShouldQueue
     }
 
     /**
-     * Update an existing Moodle user
+     * Update an existing Moodle user.
+     * Also ensures their auth method is set correctly for SSO.
      */
     private function updateMoodleUser(MoodleClient $moodleClient): void
     {
+        // Always ensure auth method is correct for SSO to work
+        $requiredAuth = config('moodle.sso_enabled', true) ? 'userkey' : 'manual';
+
         $updateData = [
             'users' => [
                 [
                     'id' => $this->user->moodle_user_id,
+                    'auth' => $requiredAuth,
                 ],
             ],
         ];
@@ -189,15 +223,13 @@ class CreateOrLinkMoodleUser implements ShouldQueue
             $updateData['users'][0]['lastname'] = $this->lastName;
         }
 
-        // Only call update if there are fields to update
-        if (count($updateData['users'][0]) > 1) {
-            $moodleClient->call('core_user_update_users', $updateData);
-            
-            Log::info('Updated Moodle user profile', [
-                'user_id' => $this->user->id,
-                'moodle_user_id' => $this->user->moodle_user_id,
-            ]);
-        }
+        $moodleClient->call('core_user_update_users', $updateData);
+
+        Log::info('Updated Moodle user profile and auth method', [
+            'user_id' => $this->user->id,
+            'moodle_user_id' => $this->user->moodle_user_id,
+            'auth' => $requiredAuth,
+        ]);
     }
 
     /**
