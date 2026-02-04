@@ -45,10 +45,21 @@ class CreateOrLinkMoodleUser implements ShouldQueue
      */
     public function handle(MoodleClient $moodleClient): void
     {
-        // If user already has a Moodle ID, update their profile
+        // If user already has a Moodle ID, try to update their profile.
+        // If the Moodle user was deleted, updateMoodleUser() returns false
+        // and we fall through to re-create the account.
         if ($this->user->moodle_user_id) {
-            $this->updateMoodleUser($moodleClient);
-            return;
+            $userStillExists = $this->updateMoodleUser($moodleClient);
+            if ($userStillExists) {
+                return;
+            }
+            // Moodle user was deleted — clear the stale ID and fall through
+            Log::warning('Moodle user was deleted, clearing stale ID and re-creating', [
+                'user_id' => $this->user->id,
+                'stale_moodle_user_id' => $this->user->moodle_user_id,
+            ]);
+            $this->user->update(['moodle_user_id' => null]);
+            $this->user->refresh();
         }
 
         // Try to find existing Moodle user by email
@@ -198,8 +209,10 @@ class CreateOrLinkMoodleUser implements ShouldQueue
     /**
      * Update an existing Moodle user.
      * Also ensures their auth method is set correctly for SSO.
+     *
+     * @return bool True if the user still exists in Moodle, false if deleted/gone.
      */
-    private function updateMoodleUser(MoodleClient $moodleClient): void
+    private function updateMoodleUser(MoodleClient $moodleClient): bool
     {
         // Always ensure auth method is correct for SSO to work
         $requiredAuth = config('moodle.sso_enabled', true) ? 'userkey' : 'manual';
@@ -223,13 +236,31 @@ class CreateOrLinkMoodleUser implements ShouldQueue
             $updateData['users'][0]['lastname'] = $this->lastName;
         }
 
-        $moodleClient->call('core_user_update_users', $updateData);
+        $response = $moodleClient->call('core_user_update_users', $updateData);
+
+        // Check if Moodle reported the user as deleted or non-existent.
+        // Moodle returns: {"warnings":[{"warningcode":"usernotupdateddeleted",...}]}
+        if (!empty($response['warnings'])) {
+            foreach ($response['warnings'] as $warning) {
+                $code = $warning['warningcode'] ?? '';
+                if ($code === 'usernotupdateddeleted' || $code === 'usernotupdatednotexist') {
+                    Log::warning('Moodle user is deleted or does not exist', [
+                        'user_id' => $this->user->id,
+                        'moodle_user_id' => $this->user->moodle_user_id,
+                        'warning' => $warning,
+                    ]);
+                    return false;
+                }
+            }
+        }
 
         Log::info('Updated Moodle user profile and auth method', [
             'user_id' => $this->user->id,
             'moodle_user_id' => $this->user->moodle_user_id,
             'auth' => $requiredAuth,
         ]);
+
+        return true;
     }
 
     /**
