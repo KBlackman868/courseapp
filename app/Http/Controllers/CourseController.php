@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CourseAccessRequest;
 use App\Services\MoodleClient;
 use App\Services\ActivityLogger;
 use App\Exceptions\MoodleException;
+use App\Jobs\CreateOrLinkMoodleUser;
+use App\Jobs\EnrollUserIntoMoodleCourse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -84,13 +87,32 @@ class CourseController extends Controller
         $course = Course::findOrFail($id);
         $user = auth()->user();
 
-        // Get user's enrollment status for this course
+        // Get user's existing enrollment for this course (any status)
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->first();
 
-        // Determine access level based on user type
-        $accessLevel = $this->determineAccessLevel($user, $course, $enrollment);
+        // AUTO-ENROLL INTERNAL (MOH) USERS:
+        // Internal users get immediate approved enrollment without clicking any button.
+        // This means they see "Access Course in Moodle" directly on the course page.
+        // Only auto-enroll if they have no enrollment record at all (preserves denied/cancelled states).
+        if (!$enrollment && $user->isInternal()) {
+            $enrollment = $this->autoEnrollInternalUser($user, $course);
+        }
+
+        // For external users, check if they have a CourseAccessRequest
+        // (this is separate from the Enrollment system - external users go through
+        // the request/approval workflow via CourseAccessRequest)
+        $accessRequest = null;
+        if (!$user->isInternal()) {
+            $accessRequest = CourseAccessRequest::where('user_id', $user->id)
+                ->where('course_id', $course->id)
+                ->latest('requested_at')
+                ->first();
+        }
+
+        // Determine what buttons/messages to show based on enrollment and access request status
+        $accessLevel = $this->determineAccessLevel($user, $course, $enrollment, $accessRequest);
 
         // Log course view
         ActivityLogger::logCourse('viewed', $course,
@@ -98,7 +120,8 @@ class CourseController extends Controller
             [
                 'user_id' => $user->id,
                 'user_type' => $user->user_type,
-                'enrollment_status' => $enrollment?->status
+                'enrollment_status' => $enrollment?->status,
+                'access_request_status' => $accessRequest?->status,
             ]
         );
 
@@ -106,15 +129,34 @@ class CourseController extends Controller
     }
 
     /**
-     * Determine course access level for a user
-     * Returns: 'direct_access' | 'enrolled' | 'pending' | 'request_access' | 'enroll' | 'denied'
+     * Determine course access level for a user.
+     *
+     * ACCESS LEVEL FLOW:
+     * ┌─────────────────────────────────────────────────────────────┐
+     * │ Internal (MOH) users:                                       │
+     * │   - Auto-enrolled in show() → always see "Access Course"    │
+     * │   - Fallback: "Enroll Now" (auto-approved on click)         │
+     * │                                                              │
+     * │ External users:                                              │
+     * │   - No request yet → "Request Access" (creates access req)  │
+     * │   - Pending request → "Awaiting Approval"                   │
+     * │   - Approved request → "Access Course in Moodle"            │
+     * │   - Rejected request → "Request Again" option               │
+     * └─────────────────────────────────────────────────────────────┘
+     *
+     * @param mixed $user The authenticated user
+     * @param Course $course The course being viewed
+     * @param Enrollment|null $enrollment User's enrollment record (if any)
+     * @param CourseAccessRequest|null $accessRequest User's access request (external users only)
+     * @return array Access level data for the view
      */
-    private function determineAccessLevel($user, Course $course, ?Enrollment $enrollment): array
+    private function determineAccessLevel($user, Course $course, ?Enrollment $enrollment, ?CourseAccessRequest $accessRequest = null): array
     {
         $isInternal = $user->isInternal();
         $hasMoodleSync = $course->moodle_course_id !== null;
 
-        // Check enrollment status first
+        // ── STEP 1: Check existing enrollment status ──
+        // This covers internal auto-enrolled users and any legacy enrollments
         if ($enrollment) {
             switch ($enrollment->status) {
                 case 'approved':
@@ -141,9 +183,50 @@ class CourseController extends Controller
             }
         }
 
-        // No enrollment - determine action based on user type
+        // ── STEP 2: For external users, check CourseAccessRequest status ──
+        // External users go through the request/approval workflow.
+        // Their requests are managed by course admins in the Course Access admin page.
+        if (!$isInternal && $accessRequest) {
+            if ($accessRequest->isPending()) {
+                return [
+                    'level' => 'pending',
+                    'can_access_moodle' => false,
+                    'message' => 'Your access request is pending approval by a course administrator.',
+                    'action' => 'wait'
+                ];
+            }
+
+            if ($accessRequest->isApproved()) {
+                // Approved access request - user can access the course
+                return [
+                    'level' => 'enrolled',
+                    'can_access_moodle' => $hasMoodleSync && $user->moodle_user_id,
+                    'message' => 'Your access has been approved! You can now access this course.',
+                    'action' => $hasMoodleSync ? 'access_course' : 'view_content'
+                ];
+            }
+
+            if ($accessRequest->isRejected()) {
+                // Rejected - show reason and allow re-request
+                $reason = 'Your access request was not approved.';
+                if ($accessRequest->rejection_reason) {
+                    $reason .= " Reason: {$accessRequest->rejection_reason}";
+                }
+                return [
+                    'level' => 'denied',
+                    'can_access_moodle' => false,
+                    'message' => $reason,
+                    'action' => 'contact',
+                    'can_request_again' => true,
+                ];
+            }
+        }
+
+        // ── STEP 3: No enrollment or access request - show action button ──
         if ($isInternal) {
-            // MOH staff: Direct enrollment path
+            // Safety fallback for internal users.
+            // Normally, auto-enrollment in show() handles this, but if it failed
+            // (e.g., DB error), we still show an "Enroll Now" button as backup.
             return [
                 'level' => 'enroll',
                 'can_access_moodle' => false,
@@ -153,16 +236,74 @@ class CourseController extends Controller
                 'button_style' => 'primary'
             ];
         } else {
-            // External users: Request-approval path
+            // External users: Show "Request Access" button.
+            // This submits a CourseAccessRequest for admin review.
             return [
                 'level' => 'request_access',
                 'can_access_moodle' => false,
-                'message' => 'External users require approval to access this course.',
+                'message' => 'This course requires approval. Submit a request to get access.',
                 'action' => 'request_access',
                 'button_text' => 'Request Access',
                 'button_style' => 'secondary'
             ];
         }
+    }
+
+    /**
+     * Auto-enroll an internal (MOH) user in a course.
+     *
+     * Internal users get immediate approved enrollment without clicking any button.
+     * This creates the enrollment record and triggers Moodle sync in the background.
+     *
+     * @param mixed $user The authenticated internal user
+     * @param Course $course The course to enroll in
+     * @return Enrollment The created enrollment record
+     */
+    private function autoEnrollInternalUser($user, Course $course): Enrollment
+    {
+        // Create an approved enrollment immediately - MOH staff don't need approval
+        $enrollment = Enrollment::create([
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+            'status' => 'approved',
+        ]);
+
+        // Sync to Moodle if the course has Moodle integration
+        // This runs in the background so the page load isn't delayed
+        if ($course->moodle_course_id) {
+            try {
+                // Ensure user has a Moodle account (creates one if needed)
+                if (!$user->moodle_user_id) {
+                    CreateOrLinkMoodleUser::dispatchSync($user);
+                    $user->refresh();
+                }
+
+                // Enroll the user in the Moodle course (dispatched as background job)
+                if ($user->moodle_user_id) {
+                    EnrollUserIntoMoodleCourse::dispatch($user, $course->moodle_course_id);
+                }
+            } catch (\Exception $e) {
+                // Don't fail the page load if Moodle sync fails.
+                // The enrollment is saved locally; Moodle sync can be retried later.
+                Log::warning('Auto-enrollment Moodle sync failed', [
+                    'user_id' => $user->id,
+                    'course_id' => $course->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Log the auto-enrollment
+        ActivityLogger::logEnrollment('auto_enrolled', $enrollment,
+            "MOH staff auto-enrolled when viewing course: {$course->title}",
+            [
+                'user_email' => $user->email,
+                'course_id' => $course->id,
+                'moodle_synced' => (bool) $course->moodle_course_id,
+            ]
+        );
+
+        return $enrollment;
     }
 
     /**

@@ -140,7 +140,8 @@
 
                     @elseif($accessLevel['level'] === 'request_access')
                         {{-- External users without enrollment: Request Access --}}
-                        <form action="{{ route('courses.enroll.store', ['course' => $course->id]) }}" method="POST" class="inline">
+                        {{-- Posts to CourseAccessRequestController@store so admins can see/manage requests --}}
+                        <form action="{{ route('courses.request-access', ['course' => $course->id]) }}" method="POST" class="inline">
                             @csrf
                             <button type="submit"
                                     class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl">

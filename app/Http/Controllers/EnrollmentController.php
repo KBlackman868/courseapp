@@ -177,7 +177,7 @@ class EnrollmentController extends Controller
             }
         }
 
-        // PERFORMANCE FIX: Queue notification emails to superadmins instead of sending synchronously
+        // Queue notification emails to superadmins instead of sending synchronously
         try {
             $superadmins = User::role('superadmin')->get();
             foreach ($superadmins as $admin) {
@@ -186,8 +186,8 @@ class EnrollmentController extends Controller
             }
             Log::info('Admin notifications sent', [
                 'enrollment_id' => $enrollment->id,
-                'admin_count' => $courseAdmins->count(),
-                'admin_emails' => $courseAdmins->pluck('email')->toArray()
+                'admin_count' => $superadmins->count(),
+                'admin_emails' => $superadmins->pluck('email')->toArray()
             ]);
 
             // Log admin notification
@@ -195,7 +195,7 @@ class EnrollmentController extends Controller
                 "Admin notifications sent for new enrollment",
                 [
                     'enrollment_id' => $enrollment->id,
-                    'admin_count' => $courseAdmins->count(),
+                    'admin_count' => $superadmins->count(),
                     'course_id' => $course->id,
                     'course_title' => $course->title,
                     'user_type' => $user->user_type
