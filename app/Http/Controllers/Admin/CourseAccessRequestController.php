@@ -422,7 +422,7 @@ class CourseAccessRequestController extends Controller
                 // Allow re-request - update the existing request
                 $existingRequest->update([
                     'status' => CourseAccessRequest::STATUS_PENDING,
-                    'request_reason' => $validated['request_reason'],
+                    'request_reason' => $validated['request_reason'] ?? null,
                     'rejection_reason' => null,
                     'admin_notes' => null,
                     'approved_by' => null,
@@ -443,7 +443,7 @@ class CourseAccessRequestController extends Controller
         $accessRequest = CourseAccessRequest::createRequest(
             $user,
             $course,
-            $validated['request_reason']
+            $validated['request_reason'] ?? null
         );
 
         // Notify Course Admins
