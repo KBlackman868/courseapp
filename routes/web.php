@@ -244,26 +244,27 @@ Route::middleware('auth')->group(function () {
         Route::prefix('courses')->name('courses.')->group(function () {
             // LIST route (static)
             Route::get('/', [CourseController::class, 'index'])->name('index');
-            
+
             // CREATE route (static) - MUST come before {course} routes
             Route::middleware('role:admin|superadmin|course_admin')->group(function () {
                 Route::get('/create', [CourseController::class, 'create'])->name('create');
                 Route::post('/store', [CourseController::class, 'store'])->name('store');
             });
-            
-            // DYNAMIC routes - These come AFTER static routes
-            Route::get('/{course}', [CourseController::class, 'show'])->name('show');
-            Route::get('/{course}/register', [CourseController::class, 'register'])->name('register');
-            Route::post('/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store');
-            Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle');
-            
-            // Admin dynamic routes
+
+            // Admin dynamic routes - MUST come before the public show route
+            // so that /courses/{id}/edit is matched before /courses/{course}
             Route::middleware('role:admin|superadmin|course_admin')->group(function () {
-                Route::get('/{course}/edit', [CourseController::class, 'edit'])->name('edit');
-                Route::put('/{course}', [CourseController::class, 'update'])->name('update');
-                Route::delete('/{course}', [CourseController::class, 'destroy'])->name('destroy');
-                Route::post('/{course}/sync-to-moodle', [CourseController::class, 'syncToMoodle'])->name('syncToMoodle');
+                Route::get('/{course}/edit', [CourseController::class, 'edit'])->name('edit')->where('course', '[0-9]+');
+                Route::put('/{course}', [CourseController::class, 'update'])->name('update')->where('course', '[0-9]+');
+                Route::delete('/{course}', [CourseController::class, 'destroy'])->name('destroy')->where('course', '[0-9]+');
+                Route::post('/{course}/sync-to-moodle', [CourseController::class, 'syncToMoodle'])->name('syncToMoodle')->where('course', '[0-9]+');
             });
+
+            // DYNAMIC routes - These come AFTER static routes
+            Route::get('/{course}', [CourseController::class, 'show'])->name('show')->where('course', '[0-9]+');
+            Route::get('/{course}/register', [CourseController::class, 'register'])->name('register')->where('course', '[0-9]+');
+            Route::post('/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store')->where('course', '[0-9]+');
+            Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle')->where('course', '[0-9]+');
         });
         
         // My Courses (Legacy)
