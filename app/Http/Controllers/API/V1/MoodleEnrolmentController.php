@@ -19,33 +19,27 @@ class MoodleEnrolmentController extends Controller
     public function store(CreateMoodleEnrolmentRequest $request): JsonResponse
     {
         $user = User::findOrFail($request->user_id);
-        
-        // Determine Moodle course ID
-        $moodleCourseId = $request->moodle_course_id;
-        
-        if (!$moodleCourseId && $request->course_id) {
-            // If using local course_id, resolve to moodle_course_id
-            // Assuming you have a courses table with moodle_course_id field
-            // $course = Course::findOrFail($request->course_id);
-            // $moodleCourseId = $course->moodle_course_id;
-            
-            // Alternative: Use a mapping service or configuration
-            // $moodleCourseId = $this->resolveMoodleCourseId($request->course_id);
-            
-            // For now, we'll use a simple mapping (you should implement your own logic)
-            $moodleCourseId = $request->course_id; // Temporary direct mapping
+
+        // Resolve the Course model - either by local course_id or by moodle_course_id
+        $course = null;
+        if ($request->course_id) {
+            $course = Course::findOrFail($request->course_id);
+        } elseif ($request->moodle_course_id) {
+            $course = Course::where('moodle_course_id', $request->moodle_course_id)->first();
         }
 
-        if (!$moodleCourseId) {
+        if (!$course || !$course->moodle_course_id) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unable to determine Moodle course ID',
+                'message' => 'Unable to determine Moodle course. Provide a valid course_id or moodle_course_id.',
             ], 422);
         }
 
+        // Job expects (User, Course, ?CourseAccessRequest, ?int roleId)
         EnrollUserIntoMoodleCourse::dispatch(
             $user,
-            $moodleCourseId,
+            $course,
+            null,
             $request->role_id
         );
 

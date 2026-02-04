@@ -57,7 +57,7 @@ class AdminController extends Controller
         if ($enrollment->course->moodle_course_id && $enrollment->user->moodle_user_id) {
             EnrollUserIntoMoodleCourse::dispatch(
                 $enrollment->user,
-                $enrollment->course->moodle_course_id
+                $enrollment->course
             );
         } elseif ($enrollment->course->moodle_course_id) {
             // Create Moodle user first, then enroll
