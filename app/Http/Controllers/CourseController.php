@@ -21,17 +21,61 @@ class CourseController extends Controller
     }
 
     // Display a list of all courses
-    public function index()
+    public function index(Request $request)
     {
-        $courses = Course::with('enrollments')->paginate(12);
-        
+        $query = Course::with('enrollments');
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('moodle_course_shortname', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by status
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by sync status
+        if ($request->has('sync_status')) {
+            if ($request->sync_status === 'synced') {
+                $query->whereNotNull('moodle_course_id');
+            } elseif ($request->sync_status === 'not_synced') {
+                $query->whereNull('moodle_course_id');
+            }
+        }
+
+        $query->orderBy('created_at', 'desc');
+        $courses = $query->paginate(12)->withQueryString();
+
+        // Statistics
+        $statsRaw = DB::table('courses')
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active")
+            ->selectRaw("SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive")
+            ->selectRaw('SUM(CASE WHEN moodle_course_id IS NOT NULL THEN 1 ELSE 0 END) as synced')
+            ->selectRaw('SUM(CASE WHEN moodle_course_id IS NULL THEN 1 ELSE 0 END) as not_synced')
+            ->first();
+
+        $stats = [
+            'total' => (int) $statsRaw->total,
+            'active' => (int) $statsRaw->active,
+            'inactive' => (int) $statsRaw->inactive,
+            'synced' => (int) $statsRaw->synced,
+            'not_synced' => (int) $statsRaw->not_synced,
+        ];
+
         // Log viewing courses
         ActivityLogger::logSystem('courses_viewed',
             "User viewed course listing",
-            ['page' => request()->get('page', 1)]
+            ['page' => $request->get('page', 1)]
         );
-        
-        return view('courses.index', compact('courses'));
+
+        return view('courses.index', compact('courses', 'stats'));
     }
     
     // Display details for a single course
@@ -876,7 +920,7 @@ class CourseController extends Controller
             ]
         );
         
-        return view('admin.courses.index', compact('courses', 'stats'));
+        return view('courses.index', compact('courses', 'stats'));
     }
 
     /**

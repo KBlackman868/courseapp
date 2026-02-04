@@ -99,12 +99,22 @@
             </div>
         @endif
 
+        @if(session('warning'))
+            <div class="alert alert-warning mb-6">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>{{ session('warning') }}</span>
+            </div>
+        @endif
+
         <!-- Filters -->
         <div class="card bg-base-100 shadow mb-6">
             <div class="card-body p-4">
-                <form method="GET" action="{{ route('admin.courses.index') }}" class="flex flex-col lg:flex-row gap-4">
+                <form method="GET" action="{{ url()->current() }}" class="flex flex-col lg:flex-row gap-4">
                     <div class="form-control flex-1">
                         <input type="text"
+                               id="courseSearchInput"
                                name="search"
                                value="{{ request('search') }}"
                                placeholder="Search courses..."
@@ -112,7 +122,7 @@
                     </div>
 
                     <div class="form-control">
-                        <select name="status" class="select select-bordered">
+                        <select name="status" id="statusFilter" class="select select-bordered">
                             <option value="all">All Status</option>
                             <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                             <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
@@ -120,7 +130,7 @@
                     </div>
 
                     <div class="form-control">
-                        <select name="sync_status" class="select select-bordered">
+                        <select name="sync_status" id="syncFilter" class="select select-bordered">
                             <option value="all">All Sync Status</option>
                             <option value="synced" {{ request('sync_status') === 'synced' ? 'selected' : '' }}>Synced</option>
                             <option value="not_synced" {{ request('sync_status') === 'not_synced' ? 'selected' : '' }}>Not Synced</option>
@@ -129,7 +139,7 @@
 
                     <div class="flex gap-2">
                         <button type="submit" class="btn btn-primary">Filter</button>
-                        <a href="{{ route('admin.courses.index') }}" class="btn btn-ghost">Clear</a>
+                        <a href="{{ url()->current() }}" class="btn btn-ghost">Clear</a>
                     </div>
                 </form>
             </div>
@@ -149,9 +159,14 @@
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="courseTableBody">
                         @forelse($courses as $course)
-                            <tr class="hover">
+                            <tr class="hover course-row"
+                                data-title="{{ strtolower($course->title) }}"
+                                data-description="{{ strtolower($course->description) }}"
+                                data-shortname="{{ strtolower($course->moodle_course_shortname ?? '') }}"
+                                data-status="{{ $course->status }}"
+                                data-synced="{{ $course->moodle_course_id ? 'synced' : 'not_synced' }}">
                                 <td>
                                     <div class="flex items-center gap-3">
                                         @if($course->image)
@@ -229,7 +244,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr>
+                            <tr id="emptyRow">
                                 <td colspan="6" class="text-center py-12">
                                     <svg class="mx-auto h-12 w-12 text-base-content/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
@@ -247,6 +262,11 @@
                                 </td>
                             </tr>
                         @endforelse
+                        <tr id="noFilterResults" class="hidden">
+                            <td colspan="6" class="text-center py-8">
+                                <p class="text-base-content/60">No courses match your search.</p>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -259,4 +279,52 @@
             @endif
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('courseSearchInput');
+            const statusFilter = document.getElementById('statusFilter');
+            const syncFilter = document.getElementById('syncFilter');
+            const rows = document.querySelectorAll('.course-row');
+            const noFilterResults = document.getElementById('noFilterResults');
+
+            function filterRows() {
+                const query = searchInput.value.toLowerCase().trim();
+                const status = statusFilter.value;
+                const sync = syncFilter.value;
+                let visibleCount = 0;
+
+                rows.forEach(function (row) {
+                    const title = row.dataset.title || '';
+                    const description = row.dataset.description || '';
+                    const shortname = row.dataset.shortname || '';
+                    const rowStatus = row.dataset.status || '';
+                    const rowSync = row.dataset.synced || '';
+
+                    const matchesSearch = !query
+                        || title.includes(query)
+                        || description.includes(query)
+                        || shortname.includes(query);
+                    const matchesStatus = status === 'all' || rowStatus === status;
+                    const matchesSync = sync === 'all' || rowSync === sync;
+
+                    if (matchesSearch && matchesStatus && matchesSync) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                if (noFilterResults) {
+                    noFilterResults.style.display = (rows.length > 0 && visibleCount === 0) ? '' : 'none';
+                    noFilterResults.classList.toggle('hidden', rows.length === 0 || visibleCount > 0);
+                }
+            }
+
+            if (searchInput) searchInput.addEventListener('input', filterRows);
+            if (statusFilter) statusFilter.addEventListener('change', filterRows);
+            if (syncFilter) syncFilter.addEventListener('change', filterRows);
+        });
+    </script>
 </x-layouts>
