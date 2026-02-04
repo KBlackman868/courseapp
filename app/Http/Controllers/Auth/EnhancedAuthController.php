@@ -246,6 +246,7 @@ class EnhancedAuthController extends Controller
             'email' => $email,
             'password' => Hash::make(\Str::random(32)), // Random password for LDAP users
             'department' => $ldapUser['department'] ?? 'Ministry of Health',
+            'organization' => 'Ministry of Health Trinidad and Tobago',
             'ldap_guid' => $ldapUser['ldap_guid'],
             'ldap_username' => $ldapUser['ldap_username'],
             'user_type' => 'internal',

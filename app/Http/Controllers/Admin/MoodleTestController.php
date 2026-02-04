@@ -97,7 +97,8 @@ class MoodleTestController extends Controller
                 'last_name' => $request->lastname,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'department' => 'Test Department'
+                'department' => 'Test Department',
+                'organization' => 'Test Organization',
             ]);
             
             $user->assignRole('user');
