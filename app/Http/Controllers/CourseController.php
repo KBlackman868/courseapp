@@ -313,12 +313,23 @@ class CourseController extends Controller
      * Direct access to Moodle course for enrolled users
      * MOH users with approved enrollment are redirected directly to Moodle via SSO
      */
+    /**
+     * Redirect user to Moodle course via SSO.
+     *
+     * This method ensures three things before redirecting:
+     * 1. User has a Moodle account (creates one if missing)
+     * 2. User is enrolled in the Moodle course (enrolls if missing)
+     * 3. SSO login URL is generated (so user is logged in, not a guest)
+     *
+     * If ANY step fails, the user is redirected back with a clear error
+     * instead of landing on Moodle as an unauthenticated guest.
+     */
     public function accessMoodle($id)
     {
         $course = Course::findOrFail($id);
         $user = auth()->user();
 
-        // Verify user has approved enrollment
+        // -- STEP 1: Verify local enrollment exists --
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->where('status', 'approved')
@@ -329,72 +340,88 @@ class CourseController extends Controller
                 "User attempted to access Moodle course without enrollment",
                 ['user_id' => $user->id, 'user_email' => $user->email]
             );
-
             return redirect()->route('courses.show', $course)
                 ->with('error', 'You must be enrolled in this course to access it.');
         }
 
-        // Verify course has Moodle integration
+        // -- STEP 2: Verify course has Moodle integration --
         if (!$course->moodle_course_id) {
             return redirect()->route('courses.show', $course)
                 ->with('error', 'This course is not yet available in Moodle.');
         }
 
-        // Ensure user has a Moodle account (create if missing)
+        // -- STEP 3: Ensure user has a Moodle account --
+        // If user doesn't have a moodle_user_id, create/link their Moodle account now.
+        // This calls core_user_create_users or core_user_get_users_by_field on Moodle.
         if (!$user->moodle_user_id) {
-            CreateOrLinkMoodleUser::dispatchSync($user);
-            $user->refresh();
+            try {
+                CreateOrLinkMoodleUser::dispatchSync($user);
+                $user->refresh();
+            } catch (\Exception $e) {
+                Log::error('Failed to create Moodle account for user', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+                return redirect()->route('courses.show', $course)
+                    ->with('error', 'Could not create your Moodle account: ' . $e->getMessage());
+            }
 
             if (!$user->moodle_user_id) {
                 return redirect()->route('courses.show', $course)
-                    ->with('info', 'Your Moodle account is being set up. Please try again in a few moments.');
+                    ->with('error', 'Could not create your Moodle account. Please contact a system administrator.');
             }
         }
 
-        // SAFETY NET: Ensure user is enrolled in the Moodle course before redirecting.
-        // The auto-enrollment in show() runs this synchronously, but if it was skipped
-        // (e.g., user bookmarked the link, or the queue was used instead), we enroll now.
+        // -- STEP 4: Ensure user is enrolled in the Moodle course --
+        // Calls enrol_manual_enrol_users on Moodle. Idempotent — safe to call
+        // even if user is already enrolled.
         try {
             EnrollUserIntoMoodleCourse::dispatchSync($user, $course);
         } catch (\Exception $e) {
-            Log::warning('Moodle enrollment sync failed during course access', [
+            Log::error('Failed to enroll user in Moodle course', [
                 'user_id' => $user->id,
                 'course_id' => $course->id,
+                'moodle_course_id' => $course->moodle_course_id,
                 'error' => $e->getMessage(),
             ]);
-            // Don't block access - the user may already be enrolled from a previous sync
+            return redirect()->route('courses.show', $course)
+                ->with('error', 'Could not enroll you in the Moodle course: ' . $e->getMessage());
         }
 
-        // Log Moodle access
-        ActivityLogger::logMoodle('course_accessed',
-            "User accessed Moodle course: {$course->title}",
-            $course,
-            [
-                'user_id' => $user->id,
-                'user_email' => $user->email,
-                'user_type' => $user->user_type,
-                'moodle_user_id' => $user->moodle_user_id
-            ]
-        );
-
-        // Try to generate auto-login URL using SSO (pass full user object)
+        // -- STEP 5: Generate SSO login URL and redirect --
+        // Uses auth_userkey plugin to create a one-time login URL.
+        // If SSO fails, redirect back with error instead of sending user as guest.
         try {
             $moodleService = app(\App\Services\MoodleService::class);
             $moodleUrl = $moodleService->generateCourseLoginUrl($user, $course->moodle_course_id);
 
+            ActivityLogger::logMoodle('course_accessed',
+                "User accessed Moodle course via SSO: {$course->title}",
+                $course,
+                [
+                    'user_id' => $user->id,
+                    'moodle_user_id' => $user->moodle_user_id,
+                ]
+            );
+
             return redirect()->away($moodleUrl);
         } catch (\Exception $e) {
-            // Fallback to direct URL if SSO fails
-            \Illuminate\Support\Facades\Log::warning('Moodle SSO failed, using direct URL', [
+            Log::error('Moodle SSO login failed', [
                 'error' => $e->getMessage(),
                 'user_id' => $user->id,
-                'course_id' => $course->id
+                'moodle_user_id' => $user->moodle_user_id,
+                'course_id' => $course->id,
             ]);
 
-            $moodleBaseUrl = config('moodle.base_url', 'https://learnabouthealth.hin.gov.tt');
-            $moodleUrl = $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
-
-            return redirect()->away($moodleUrl);
+            // Don't redirect to Moodle without SSO — user would land as guest.
+            // Redirect back with a clear error explaining what needs to be configured.
+            return redirect()->route('courses.show', $course)
+                ->with('error',
+                    'Could not log you into Moodle automatically. '
+                    . 'Your account and enrollment have been created, but the SSO login plugin '
+                    . '(auth_userkey) needs to be configured by a Moodle administrator. '
+                    . 'Error: ' . $e->getMessage()
+                );
         }
     }
 
