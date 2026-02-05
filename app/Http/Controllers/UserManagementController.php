@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Enrollment;
+use App\Models\CourseAccessRequest;
 use App\Services\MoodleService;
 use App\Jobs\DeleteMoodleUser;
 use Illuminate\Http\Request;
@@ -84,15 +85,16 @@ class UserManagementController extends Controller
         }
 
         DB::beginTransaction();
-        
+
         try {
             // Store Moodle ID before deletion
             $moodleUserId = $user->moodle_user_id;
             $userId = $user->id;
 
-            // Delete related records first
+            // Delete all related records first to avoid foreign key constraints
             Enrollment::where('user_id', $user->id)->delete();
-            
+            CourseAccessRequest::where('user_id', $user->id)->delete();
+
             // Delete the user from Laravel
             $user->delete();
 
@@ -239,9 +241,10 @@ class UserManagementController extends Controller
             $deletableUserIds[] = $userId;
         }
 
-        // PERFORMANCE FIX: Batch delete enrollments for all deletable users
+        // PERFORMANCE FIX: Batch delete related records for all deletable users
         if (!empty($deletableUserIds)) {
             Enrollment::whereIn('user_id', $deletableUserIds)->delete();
+            CourseAccessRequest::whereIn('user_id', $deletableUserIds)->delete();
         }
 
         // Now delete users and queue Moodle deletions
