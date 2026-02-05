@@ -8,6 +8,7 @@ use App\Services\ActivityLogger;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class RoleManagementController extends Controller
 {
@@ -25,12 +26,23 @@ class RoleManagementController extends Controller
         });
     }
 
+    /**
+     * Display role assignments page
+     * Returns ALL users for client-side filtering (no server pagination)
+     */
     public function index()
     {
-        $users = User::with('roles')->paginate(20);
+        // Load all users with roles for client-side filtering
+        $users = User::with('roles')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         $roles = Role::all();
 
-        return view('admin.role-management', compact('users', 'roles'));
+        return Inertia::render('Admin/RoleAssignmentsIndex', [
+            'users' => $users,
+            'roles' => $roles,
+        ]);
     }
 
     public function assignRole(Request $request, User $user)
