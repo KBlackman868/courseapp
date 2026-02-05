@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Enrollment;
 use App\Models\CourseAccessRequest;
 use App\Models\SystemNotification;
+use App\Models\AccountRequest;
 use App\Services\MoodleService;
 use App\Jobs\DeleteMoodleUser;
 use Illuminate\Http\Request;
@@ -96,6 +97,10 @@ class UserManagementController extends Controller
             Enrollment::where('user_id', $user->id)->delete();
             CourseAccessRequest::where('user_id', $user->id)->delete();
             SystemNotification::where('user_id', $user->id)->delete();
+
+            // Handle AccountRequest records - delete where user_id matches, nullify reviewed_by
+            AccountRequest::where('user_id', $user->id)->delete();
+            AccountRequest::where('reviewed_by', $user->id)->update(['reviewed_by' => null]);
 
             // Delete the user from Laravel
             $user->delete();
@@ -248,6 +253,10 @@ class UserManagementController extends Controller
             Enrollment::whereIn('user_id', $deletableUserIds)->delete();
             CourseAccessRequest::whereIn('user_id', $deletableUserIds)->delete();
             SystemNotification::whereIn('user_id', $deletableUserIds)->delete();
+
+            // Handle AccountRequest records - delete where user_id matches, nullify reviewed_by
+            AccountRequest::whereIn('user_id', $deletableUserIds)->delete();
+            AccountRequest::whereIn('reviewed_by', $deletableUserIds)->update(['reviewed_by' => null]);
         }
 
         // Now delete users and queue Moodle deletions
