@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Enrollment;
 use App\Models\CourseAccessRequest;
+use App\Models\SystemNotification;
 use App\Services\MoodleService;
 use App\Jobs\DeleteMoodleUser;
 use Illuminate\Http\Request;
@@ -94,6 +95,7 @@ class UserManagementController extends Controller
             // Delete all related records first to avoid foreign key constraints
             Enrollment::where('user_id', $user->id)->delete();
             CourseAccessRequest::where('user_id', $user->id)->delete();
+            SystemNotification::where('user_id', $user->id)->delete();
 
             // Delete the user from Laravel
             $user->delete();
@@ -245,6 +247,7 @@ class UserManagementController extends Controller
         if (!empty($deletableUserIds)) {
             Enrollment::whereIn('user_id', $deletableUserIds)->delete();
             CourseAccessRequest::whereIn('user_id', $deletableUserIds)->delete();
+            SystemNotification::whereIn('user_id', $deletableUserIds)->delete();
         }
 
         // Now delete users and queue Moodle deletions
