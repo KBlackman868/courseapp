@@ -445,6 +445,115 @@ class MoodleService
     }
 
     /**
+     * Suspend a user in Moodle
+     *
+     * @param \App\Models\User $user The user to suspend
+     * @return bool Success status
+     */
+    public function suspendUser($user): bool
+    {
+        if (!$user->moodle_user_id) {
+            Log::warning('Cannot suspend user in Moodle - no moodle_user_id', [
+                'user_id' => $user->id,
+            ]);
+            return false;
+        }
+
+        try {
+            $this->call('core_user_update_users', [
+                'users' => [
+                    [
+                        'id' => $user->moodle_user_id,
+                        'suspended' => 1,
+                    ]
+                ]
+            ]);
+
+            Log::info('User suspended in Moodle', [
+                'user_id' => $user->id,
+                'moodle_user_id' => $user->moodle_user_id,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to suspend user in Moodle', [
+                'user_id' => $user->id,
+                'moodle_user_id' => $user->moodle_user_id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Reactivate (unsuspend) a user in Moodle
+     *
+     * @param \App\Models\User $user The user to reactivate
+     * @return bool Success status
+     */
+    public function reactivateUser($user): bool
+    {
+        if (!$user->moodle_user_id) {
+            Log::warning('Cannot reactivate user in Moodle - no moodle_user_id', [
+                'user_id' => $user->id,
+            ]);
+            return false;
+        }
+
+        try {
+            $this->call('core_user_update_users', [
+                'users' => [
+                    [
+                        'id' => $user->moodle_user_id,
+                        'suspended' => 0,
+                    ]
+                ]
+            ]);
+
+            Log::info('User reactivated in Moodle', [
+                'user_id' => $user->id,
+                'moodle_user_id' => $user->moodle_user_id,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to reactivate user in Moodle', [
+                'user_id' => $user->id,
+                'moodle_user_id' => $user->moodle_user_id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a user from Moodle
+     *
+     * @param int $moodleUserId The Moodle user ID to delete
+     * @return bool Success status
+     */
+    public function deleteUser(int $moodleUserId): bool
+    {
+        try {
+            $this->call('core_user_delete_users', [
+                'userids' => [$moodleUserId]
+            ]);
+
+            Log::info('User deleted from Moodle', [
+                'moodle_user_id' => $moodleUserId,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to delete user from Moodle', [
+                'moodle_user_id' => $moodleUserId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Build a direct Moodle course URL
      *
      * @param int $moodleCourseId The Moodle course ID
