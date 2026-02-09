@@ -58,6 +58,10 @@ Route::get('/', function () {
 
 Route::get('/home', fn() => redirect('/'));
 
+// Policy Pages (Public)
+Route::get('/terms-and-conditions', fn() => view('policies.terms'))->name('terms');
+Route::get('/privacy-policy', fn() => view('policies.privacy'))->name('privacy-policy');
+
 // SSO to Moodle Dashboard (for navigation link)
 Route::get('/moodle/sso', function () {
     $user = auth()->user();

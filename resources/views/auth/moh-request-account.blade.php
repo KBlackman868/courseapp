@@ -133,6 +133,25 @@
                                    placeholder="+1 (868) XXX-XXXX" />
                         </div>
 
+                        {{-- Date of Birth --}}
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Date of Birth</span>
+                            </label>
+                            <input type="date"
+                                   name="date_of_birth"
+                                   value="{{ old('date_of_birth') }}"
+                                   max="{{ date('Y-m-d', strtotime('-18 years')) }}"
+                                   class="input input-bordered @error('date_of_birth') input-error @enderror"
+                                   required />
+                            @error('date_of_birth')
+                                <label class="label"><span class="label-text-alt text-error">{{ $message }}</span></label>
+                            @enderror
+                            <label class="label">
+                                <span class="label-text-alt text-gray-500">You must be at least 18 years old to register.</span>
+                            </label>
+                        </div>
+
                         {{-- Password --}}
                         <div class="form-control">
                             <label class="label">
@@ -141,7 +160,7 @@
                             <input type="password"
                                    name="password"
                                    class="input input-bordered @error('password') input-error @enderror"
-                                   placeholder="Minimum 8 characters"
+                                   placeholder="Minimum 14 characters"
                                    required />
                         </div>
 
@@ -155,6 +174,19 @@
                                    class="input input-bordered"
                                    placeholder="Confirm your password"
                                    required />
+                        </div>
+
+                        {{-- Terms and Privacy --}}
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-3">
+                                <input type="checkbox" name="terms" required class="checkbox checkbox-primary checkbox-sm" />
+                                <span class="label-text">
+                                    I agree to the
+                                    <a href="{{ route('terms') }}" target="_blank" class="link link-primary">Terms and Conditions</a>
+                                    and
+                                    <a href="{{ route('privacy-policy') }}" target="_blank" class="link link-primary">Privacy Policy</a>
+                                </span>
+                            </label>
                         </div>
 
                         {{-- Submit Button --}}

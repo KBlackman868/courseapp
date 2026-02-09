@@ -53,12 +53,19 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request)
     {
+        $user = $request->user();
+
+        // High-risk accounts (admin, superadmin, course_admin, MOH staff): 14 chars
+        // Standard accounts (external users): 12 chars
+        $isHighRisk = $user->hasRole(['superadmin', 'admin', 'course_admin', 'moh_staff']);
+        $minLength = $isHighRisk ? 14 : 12;
+
         $data = $request->validate([
             'current_password' => 'required',
-            'password'         => 'required|min:8|confirmed',
+            'password'         => "required|min:{$minLength}|confirmed",
+        ], [
+            'password.min' => "Password must be at least {$minLength} characters for " . ($isHighRisk ? 'high-risk' : 'standard') . ' accounts.',
         ]);
-
-        $user = $request->user();
 
         if (! Hash::check($data['current_password'], $user->password)) {
             throw ValidationException::withMessages([
