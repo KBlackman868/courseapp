@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -31,10 +32,18 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Determine password minimum: MOH staff (high-risk) = 14, standard = 12
+        $isMoh = User::isMohEmail($request->email ?? '');
+        $minLength = $isMoh ? 14 : 12;
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Password::min($minLength)->mixedCase()->numbers()],
+            'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
+        ], [
+            'password.min' => "Password must be at least {$minLength} characters.",
+            'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);
 
         // Create the user in Laravel

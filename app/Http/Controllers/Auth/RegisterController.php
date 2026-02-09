@@ -71,14 +71,25 @@ class RegisterController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|string|email|max:255|unique:users|unique:account_requests,email',
-            'password'   => 'required|string|min:8|confirmed',
             'department' => 'required|string|max:255',
             'organization' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
+            'date_of_birth' => 'required|date|before_or_equal:' . now()->subYears(18)->toDateString(),
+        ]);
+
+        // Determine password minimum based on account type
+        // MOH staff (high-risk): 14 chars; External (standard): 12 chars
+        $isMoh = User::isMohEmail($validatedData['email']);
+        $minLength = $isMoh ? 14 : 12;
+        $request->validate([
+            'password' => "required|string|min:{$minLength}|confirmed",
+        ], [
+            'password.min' => "Password must be at least {$minLength} characters for " . ($isMoh ? 'MOH staff (high-risk) accounts' : 'standard accounts') . '.',
+            'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);
 
         // Check if this is an MOH Staff registration
-        if (User::isMohEmail($validatedData['email'])) {
+        if ($isMoh) {
             return $this->handleMohStaffRegistration($request, $validatedData);
         }
 
@@ -150,6 +161,7 @@ class RegisterController extends Controller
         $user = User::create([
             'first_name' => $validatedData['first_name'],
             'last_name'  => $validatedData['last_name'],
+            'date_of_birth' => $validatedData['date_of_birth'],
             'email'      => $validatedData['email'],
             'password'   => Hash::make($validatedData['password']),
             'department' => $validatedData['department'],
@@ -243,9 +255,13 @@ class RegisterController extends Controller
                     }
                 },
             ],
-            'password'   => 'required|string|min:8|confirmed',
+            'password'   => 'required|string|min:14|confirmed',
             'department' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
+            'date_of_birth' => 'required|date|before_or_equal:' . now()->subYears(18)->toDateString(),
+        ], [
+            'password.min' => 'Password must be at least 14 characters for MOH staff (high-risk) accounts.',
+            'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);
 
         // Create account request

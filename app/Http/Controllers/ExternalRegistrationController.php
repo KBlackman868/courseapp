@@ -30,13 +30,18 @@ class ExternalRegistrationController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'organization' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
+            'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
+        ], [
+            'password.min' => 'Password must be at least 12 characters for standard accounts.',
+            'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);
 
         try {
             $user = User::create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
+                'date_of_birth' => $validated['date_of_birth'],
                 'email' => $validated['email'],
                 'organization' => $validated['organization'],
                 'password' => Hash::make($validated['password']),

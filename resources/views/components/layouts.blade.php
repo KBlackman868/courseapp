@@ -457,10 +457,108 @@
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-4 text-center text-sm text-gray-600 dark:text-gray-400">
-    <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.</p>
-  </footer>
+      <!-- Footer -->
+      <footer class="footer footer-center p-6 bg-base-300 text-base-content">
+        <div>
+          <div class="flex flex-wrap justify-center gap-4 mb-2 text-sm">
+            <a href="{{ route('terms') }}" class="link link-hover">Terms and Conditions</a>
+            <a href="{{ route('privacy-policy') }}" class="link link-hover">Privacy Policy</a>
+          </div>
+          <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Mobile Drawer Sidebar -->
+    <div class="drawer-side z-50">
+      <label for="main-drawer" class="drawer-overlay" aria-label="close sidebar"></label>
+      <ul class="menu p-4 w-80 min-h-full bg-base-100" onclick="document.getElementById('main-drawer').checked = false;">
+        <!-- Close button -->
+        <li class="flex justify-end mb-2">
+          <label for="main-drawer" class="btn btn-sm btn-circle btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </label>
+        </li>
+        <!-- Logo in sidebar -->
+        <li class="menu-title">
+          <div class="flex items-center gap-2">
+            <div class="avatar">
+              <div class="w-8 rounded-full">
+                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
+              </div>
+            </div>
+            <span class="font-bold">MOH Learning</span>
+          </div>
+        </li>
+
+        @auth
+          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
+            <!-- Admin Role Badge -->
+            <li class="my-2">
+              <div class="badge badge-primary">
+                @if(auth()->user()->hasRole('superadmin'))
+                  Super Admin
+                @elseif(auth()->user()->hasRole('course_admin'))
+                  Course Admin
+                @else
+                  Admin
+                @endif
+              </div>
+            </li>
+
+            @if(auth()->user()->hasRole('superadmin'))
+              <li><a href="{{ route('dashboard.superadmin') }}">Dashboard</a></li>
+              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+              <li><a href="{{ route('admin.roles.index') }}">Roles</a></li>
+            @elseif(auth()->user()->hasRole('admin'))
+              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+            @endif
+
+            <li><a href="{{ route('courses.index') }}">Courses</a></li>
+            <li><a href="{{ route('courses.create') }}">Create Course</a></li>
+
+            <div class="divider">Pending</div>
+            <li><a href="{{ route('admin.account-requests.index') }}">
+              Account Requests
+              @php $ap = \App\Models\AccountRequest::pending()->count(); @endphp
+              @if($ap > 0)<span class="badge badge-warning badge-sm">{{ $ap }}</span>@endif
+            </a></li>
+            <li><a href="{{ route('admin.course-access-requests.index') }}">
+              Course Access
+              @php $cp = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+              @if($cp > 0)<span class="badge badge-warning badge-sm">{{ $cp }}</span>@endif
+            </a></li>
+
+            @if(auth()->user()->hasRole('superadmin'))
+              <div class="divider">Moodle</div>
+              <li><a href="{{ route('admin.moodle.status') }}">Moodle Status</a></li>
+              <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">Open Moodle</a></li>
+              <li><a href="{{ route('admin.activity-logs.index') }}">Activity Logs</a></li>
+            @endif
+          @else
+            <li><a href="{{ route('home') }}">Home</a></li>
+            <li><a href="{{ route('mycourses') }}">My Courses</a></li>
+          @endif
+
+          <div class="divider">Account</div>
+          <li><a href="{{ route('profile.show') }}">Profile</a></li>
+          <li><a href="{{ route('profile.settings') }}">Settings</a></li>
+          <li>
+            <form method="POST" action="{{ route('logout') }}">
+              @csrf
+              <button type="submit" class="text-error">Sign Out</button>
+            </form>
+          </li>
+        @else
+          <li><a href="{{ route('home') }}">Home</a></li>
+          <li><a href="{{ route('login') }}">Login</a></li>
+          <li><a href="{{ route('register') }}">Register</a></li>
+        @endauth
+      </ul>
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
