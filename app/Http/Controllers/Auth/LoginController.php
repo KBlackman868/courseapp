@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 class LoginController extends Controller
 {
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/dashboard';
     
     private LdapService $ldapService;
     private OtpService $otpService;
@@ -146,9 +146,11 @@ class LoginController extends Controller
             ])->withInput($request->only('email'));
         }
 
-        // Mark as external user if not already set
-        if (!$user->user_type || $user->user_type !== 'external') {
-            $user->update(['user_type' => 'external']);
+        // Set user_type if not already set (preserve existing user_type for MOH staff)
+        if (!$user->user_type) {
+            // Determine user_type based on email domain
+            $userType = User::isMohEmail($user->email) ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL;
+            $user->update(['user_type' => $userType]);
         }
 
         // Check if user needs OTP verification

@@ -168,7 +168,7 @@ class EnhancedAuthController extends Controller
             }
         } elseif ($user->user_type !== 'external') {
             $user->update([
-                'user_type' => 'external',
+                'user_type' => $userType,
                 'auth_method' => 'local',
             ]);
         }
@@ -256,8 +256,8 @@ class EnhancedAuthController extends Controller
             'ldap_synced_at' => now(),
         ]);
 
-        // Assign default role
-        $user->assignRole('user');
+        // Assign MOH staff role for internal LDAP users
+        $user->assignRole(User::ROLE_MOH_STAFF);
 
         // Check if user should be a course creator
         if (isset($ldapUser['dn'])) {

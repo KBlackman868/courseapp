@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Models\Enrollment;
+use Inertia\Inertia;
 
 class CourseController extends Controller
 {
@@ -23,37 +24,16 @@ class CourseController extends Controller
         $this->moodleClient = $moodleClient;
     }
 
-    // Display a list of all courses
+    /**
+     * Display a list of all courses
+     * Returns ALL courses for client-side filtering (no server pagination)
+     */
     public function index(Request $request)
     {
-        $query = Course::with('enrollments');
-
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('moodle_course_shortname', 'like', "%{$search}%");
-            });
-        }
-
-        // Filter by status
-        if ($request->has('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by sync status
-        if ($request->has('sync_status')) {
-            if ($request->sync_status === 'synced') {
-                $query->whereNotNull('moodle_course_id');
-            } elseif ($request->sync_status === 'not_synced') {
-                $query->whereNull('moodle_course_id');
-            }
-        }
-
-        $query->orderBy('created_at', 'desc');
-        $courses = $query->paginate(12)->withQueryString();
+        // Load all courses with enrollment count for client-side filtering
+        $courses = Course::withCount('enrollments')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         // Statistics
         $statsRaw = DB::table('courses')
@@ -75,10 +55,13 @@ class CourseController extends Controller
         // Log viewing courses
         ActivityLogger::logSystem('courses_viewed',
             "User viewed course listing",
-            ['page' => $request->get('page', 1)]
+            []
         );
 
-        return view('courses.index', compact('courses', 'stats'));
+        return Inertia::render('Admin/CoursesIndex', [
+            'courses' => $courses,
+            'stats' => $stats,
+        ]);
     }
     
     // Display details for a single course

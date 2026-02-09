@@ -13,7 +13,8 @@ const adminNavigation = [
     { name: 'Dashboard', href: '/admin/dashboard', routeName: 'dashboard.superadmin' },
     { name: 'Users', href: '/admin/users', routeName: 'admin.users.*' },
     { name: 'Courses', href: '/courses', routeName: 'courses.index' },
-    { name: 'Requests', href: '/admin/course-access-requests', routeName: 'admin.course-access-requests.*' },
+    { name: 'Access Requests', href: '/admin/course-access-requests', routeName: 'admin.course-access-requests.*' },
+    { name: 'Enrollment Requests', href: '/admin/enrollment-requests', routeName: 'admin.enrollment-requests.*' },
     { name: 'Activity Logs', href: '/admin/activity-logs', routeName: 'admin.activity-logs.*' },
 ];
 
