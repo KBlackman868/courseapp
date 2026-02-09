@@ -272,6 +272,26 @@
           </div>
         </div>
 
+        <!-- Date of Birth Field -->
+        <div class="relative">
+          <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <input type="date" name="date_of_birth" id="date_of_birth" required
+              value="{{ old('date_of_birth') }}"
+              max="{{ date('Y-m-d', strtotime('-18 years')) }}"
+              class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-300" />
+          </div>
+          @error('date_of_birth')
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+          @enderror
+          <p class="mt-1 text-xs text-gray-500">You must be at least 18 years old to register.</p>
+        </div>
+
         <!-- Password Field -->
         <div>
           <div class="relative">
@@ -281,7 +301,7 @@
               </svg>
             </div>
             <input type="password" name="password" id="password" required
-              placeholder="Password"
+              placeholder="Password (minimum 12 characters)"
               onkeyup="checkPasswordStrength()"
               class="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-300" />
             <button type="button" onclick="togglePassword('password')" class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -331,10 +351,10 @@
           <input id="terms" name="terms" type="checkbox" required
             class="custom-checkbox mt-1" />
           <label for="terms" class="ml-2 block text-sm text-gray-700">
-            I agree to the 
-            <a href="#" class="text-blue-600 hover:text-blue-500">Terms and Conditions</a> 
-            and 
-            <a href="#" class="text-blue-600 hover:text-blue-500">Privacy Policy</a>
+            I agree to the
+            <a href="{{ route('terms') }}" target="_blank" class="text-blue-600 hover:text-blue-500">Terms and Conditions</a>
+            and
+            <a href="{{ route('privacy-policy') }}" target="_blank" class="text-blue-600 hover:text-blue-500">Privacy Policy</a>
           </label>
         </div>
 
@@ -361,14 +381,14 @@
     <!-- Footer Links -->
     <div class="mt-8 text-center">
       <div class="flex justify-center space-x-4 text-sm">
-        <a href="#" class="text-white/80 hover:text-white transition-colors">Help</a>
+        <a href="{{ route('terms') }}" class="text-white/80 hover:text-white transition-colors">Terms and Conditions</a>
         <span class="text-white/60">•</span>
-        <a href="#" class="text-white/80 hover:text-white transition-colors">Contact Support</a>
+        <a href="{{ route('privacy-policy') }}" class="text-white/80 hover:text-white transition-colors">Privacy Policy</a>
         <span class="text-white/60">•</span>
-        <a href="#" class="text-white/80 hover:text-white transition-colors">Documentation</a>
+        <a href="mailto:support@health.gov.tt" class="text-white/80 hover:text-white transition-colors">Contact Support</a>
       </div>
       <p class="mt-4 text-xs text-white/60">
-        © 2024 Ministry of Health, Trinidad and Tobago. All rights reserved.
+        &copy; {{ date('Y') }} Ministry of Health, Trinidad and Tobago. All rights reserved.
       </p>
     </div>
   </div>
@@ -402,9 +422,9 @@
       
       let strength = 0;
       
-      // Length check
-      if (password.length >= 8) strength += 25;
+      // Length check (minimum 12 for standard, 14 for high-risk)
       if (password.length >= 12) strength += 25;
+      if (password.length >= 14) strength += 25;
       
       // Character variety
       if (password.match(/[a-z]/)) strength += 12.5;

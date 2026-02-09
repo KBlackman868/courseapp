@@ -250,6 +250,10 @@
       <!-- Footer -->
       <footer class="footer footer-center p-6 bg-base-300 text-base-content">
         <div>
+          <div class="flex flex-wrap justify-center gap-4 mb-2 text-sm">
+            <a href="{{ route('terms') }}" class="link link-hover">Terms and Conditions</a>
+            <a href="{{ route('privacy-policy') }}" class="link link-hover">Privacy Policy</a>
+          </div>
           <p>&copy; {{ date('Y') }} Ministry of Health Trinidad and Tobago. All rights reserved.</p>
         </div>
       </footer>
