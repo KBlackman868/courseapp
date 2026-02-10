@@ -9,7 +9,7 @@
   @vite(['resources/css/app.css', 'resources/js/app.jsx'])
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
-  <!-- Inline toast styles (lighter than toastr CDN) -->
+  <!-- Inline styles - critical CSS that must load before DaisyUI -->
   <style>
     /* Prevent horizontal scroll */
     html, body { overflow-x: hidden; max-width: 100vw; }
@@ -18,6 +18,36 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+    }
+
+    /* Drawer sidebar fallback - ensures mobile nav is hidden by default */
+    .drawer > .drawer-side {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      pointer-events: none;
+      visibility: hidden;
+      opacity: 0;
+      overflow: hidden;
+      transition: visibility 0.2s ease, opacity 0.2s ease;
+    }
+    .drawer > .drawer-toggle:checked ~ .drawer-side {
+      pointer-events: auto;
+      visibility: visible;
+      opacity: 1;
+      overflow-y: auto;
+    }
+    .drawer > .drawer-side > .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+    /* Ensure main content takes full viewport height so footer stays at bottom */
+    .drawer > .drawer-content {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
   </style>
 </head>
