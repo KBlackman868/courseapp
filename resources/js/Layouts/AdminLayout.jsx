@@ -16,7 +16,7 @@ import {
     DocumentTextIcon,
     ChevronDownIcon,
 } from '@heroicons/react/24/outline';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon, routeName: 'dashboard.superadmin' },
@@ -35,6 +35,11 @@ const secondaryNavigation = [
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ');
+}
+
+function getCsrfToken() {
+    const el = document.querySelector('meta[name="csrf-token"]');
+    return el ? el.getAttribute('content') : '';
 }
 
 export default function AdminLayout({ children, header, title }) {
@@ -62,10 +67,11 @@ export default function AdminLayout({ children, header, title }) {
             : 'group flex items-center gap-x-3 rounded-md p-2 text-sm font-medium leading-6';
 
         return (
-            <Link
+            <a
                 href={item.href}
                 onClick={mobile ? () => setSidebarOpen(false) : undefined}
                 target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noopener noreferrer' : undefined}
                 className={classNames(
                     current
                         ? 'bg-indigo-700 text-white'
@@ -86,8 +92,22 @@ export default function AdminLayout({ children, header, title }) {
                         {pendingCounts[item.routeName]}
                     </span>
                 )}
-            </Link>
+            </a>
         );
+    };
+
+    const handleLogout = (e) => {
+        e.preventDefault();
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = route('logout');
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = getCsrfToken();
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
     };
 
     return (
@@ -142,12 +162,12 @@ export default function AdminLayout({ children, header, title }) {
                                 {/* Mobile Sidebar content */}
                                 <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 px-6 pb-4">
                                     <div className="flex h-16 shrink-0 items-center">
-                                        <Link href="/" className="flex items-center gap-2">
+                                        <a href="/" className="flex items-center gap-2">
                                             <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center">
                                                 <span className="text-white font-bold text-sm">MOH</span>
                                             </div>
                                             <span className="text-white font-semibold">Admin Panel</span>
-                                        </Link>
+                                        </a>
                                     </div>
                                     <nav className="flex flex-1 flex-col">
                                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -185,12 +205,12 @@ export default function AdminLayout({ children, header, title }) {
             <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
                 <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 px-6 pb-4">
                     <div className="flex h-16 shrink-0 items-center">
-                        <Link href="/" className="flex items-center gap-2">
+                        <a href="/" className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">MOH</span>
                             </div>
                             <span className="text-white font-semibold">Admin Panel</span>
-                        </Link>
+                        </a>
                     </div>
                     <nav className="flex flex-1 flex-col">
                         <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -216,13 +236,13 @@ export default function AdminLayout({ children, header, title }) {
                                 </ul>
                             </li>
                             <li className="mt-auto">
-                                <Link
+                                <a
                                     href={route('profile.show')}
                                     className="group -mx-2 flex items-center gap-x-3 rounded-md p-2 text-sm font-medium leading-6 text-indigo-100 hover:bg-indigo-700 hover:text-white"
                                 >
                                     <Cog6ToothIcon className="h-5 w-5 shrink-0 text-indigo-200 group-hover:text-white" />
                                     Settings
-                                </Link>
+                                </a>
                             </li>
                         </ul>
                     </nav>
@@ -256,14 +276,14 @@ export default function AdminLayout({ children, header, title }) {
                         {/* Right side actions */}
                         <div className="flex items-center gap-x-4 lg:gap-x-6">
                             {/* Notifications */}
-                            <button
-                                type="button"
+                            <a
+                                href="/notifications"
                                 className="relative -m-2.5 p-2.5 text-gray-400 hover:text-gray-500"
                             >
                                 <span className="sr-only">View notifications</span>
                                 <BellIcon className="h-6 w-6" aria-hidden="true" />
                                 <span className="absolute top-2 right-2 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-                            </button>
+                            </a>
 
                             {/* Separator */}
                             <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" aria-hidden="true" />
@@ -296,7 +316,7 @@ export default function AdminLayout({ children, header, title }) {
                                     <MenuItems className="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
                                         <MenuItem>
                                             {({ active }) => (
-                                                <Link
+                                                <a
                                                     href={route('profile.show')}
                                                     className={classNames(
                                                         active ? 'bg-gray-50' : '',
@@ -304,12 +324,12 @@ export default function AdminLayout({ children, header, title }) {
                                                     )}
                                                 >
                                                     Your profile
-                                                </Link>
+                                                </a>
                                             )}
                                         </MenuItem>
                                         <MenuItem>
                                             {({ active }) => (
-                                                <Link
+                                                <a
                                                     href="/"
                                                     className={classNames(
                                                         active ? 'bg-gray-50' : '',
@@ -317,22 +337,20 @@ export default function AdminLayout({ children, header, title }) {
                                                     )}
                                                 >
                                                     Back to site
-                                                </Link>
+                                                </a>
                                             )}
                                         </MenuItem>
                                         <MenuItem>
                                             {({ active }) => (
-                                                <Link
-                                                    href={route('logout')}
-                                                    method="post"
-                                                    as="button"
+                                                <button
+                                                    onClick={handleLogout}
                                                     className={classNames(
                                                         active ? 'bg-gray-50' : '',
                                                         'block w-full text-left px-3 py-1 text-sm leading-6 text-red-600'
                                                     )}
                                                 >
                                                     Sign out
-                                                </Link>
+                                                </button>
                                             )}
                                         </MenuItem>
                                     </MenuItems>
