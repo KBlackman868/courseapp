@@ -9,6 +9,10 @@ class MoodleService
 {
     protected $baseUrl;
     protected $token;
+    protected int $timeout;
+    protected int $connectTimeout;
+    protected int $retryTimes;
+    protected int $retrySleep;
 
     public function __construct()
     {
@@ -18,6 +22,11 @@ class MoodleService
 
         // Remove trailing slash from base URL if present
         $this->baseUrl = rtrim($this->baseUrl, '/');
+
+        $this->timeout = (int) config('moodle.timeout', 30);
+        $this->connectTimeout = (int) config('moodle.connect_timeout', 15);
+        $this->retryTimes = (int) config('moodle.retry_times', 3);
+        $this->retrySleep = (int) config('moodle.retry_sleep', 1000);
     }
 
     /**
@@ -40,14 +49,23 @@ class MoodleService
         ]);
 
         try {
-            // Create HTTP client with SSL verification setting
-            $client = Http::asForm();
-            
+            // Create HTTP client with timeout, retry, and SSL verification settings
+            $client = Http::asForm()
+                ->timeout($this->timeout)
+                ->connectTimeout($this->connectTimeout)
+                ->retry($this->retryTimes, $this->retrySleep, function (\Exception $exception) {
+                    $message = $exception->getMessage();
+                    return str_contains($message, 'cURL error 28')
+                        || str_contains($message, 'timed out')
+                        || str_contains($message, 'cURL error 7')
+                        || str_contains($message, 'cURL error 35');
+                }, throw: false);
+
             // Check if SSL verification should be disabled
-            if (env('MOODLE_VERIFY_SSL', true) === false || env('MOODLE_VERIFY_SSL', true) === 'false') {
+            if (config('moodle.verify_ssl', true) === false) {
                 $client = $client->withoutVerifying();
             }
-            
+
             $response = $client->post($url, $requestParams);
             
             if ($response->successful()) {

@@ -10,8 +10,9 @@ return [
     'token' => env('MOODLE_TOKEN', ''), // No default token
     'format' => env('MOODLE_FORMAT', 'json'),
     'timeout' => env('MOODLE_TIMEOUT', 30),
-    'retry_times' => env('MOODLE_RETRY_TIMES', 2),
-    'retry_sleep' => env('MOODLE_RETRY_SLEEP', 200),
+    'connect_timeout' => env('MOODLE_CONNECT_TIMEOUT', 15),
+    'retry_times' => env('MOODLE_RETRY_TIMES', 3),
+    'retry_sleep' => env('MOODLE_RETRY_SLEEP', 1000),
     'verify_ssl' => env('MOODLE_VERIFY_SSL', true),
 
     /*
