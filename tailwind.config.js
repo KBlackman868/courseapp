@@ -19,7 +19,7 @@ export default {
         },
     },
 
-    plugins: [forms, daisyui],
+    plugins: [forms({ strategy: 'class' }), daisyui],
 
     daisyui: {
         themes: ["light", "dark"],
@@ -27,5 +27,6 @@ export default {
         base: true,
         styled: true,
         utils: true,
+        logs: false,
     },
 };
