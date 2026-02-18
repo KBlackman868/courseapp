@@ -24,6 +24,6 @@
     },
     "dependencies": {
         "@heroicons/react": "^2.2.0",
-        "daisyui": "^5.5.18"
+        "daisyui": "^4.12.24"
     }
 }
