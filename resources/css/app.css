@@ -3,41 +3,35 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Add these custom animations */
-@layer utilities {
-    /* Page loading animation */
-    body:not(.loaded) {
-        opacity: 0;
-    }
-    
-    body.loaded {
-        animation: fadeIn 0.3s ease-in;
-        opacity: 1;
-    }
-    
-    /* Page exit animation */
-    body.page-exit {
-        animation: fadeOut 0.3s ease-out;
-        opacity: 0;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-    }
-    
+/* Custom component styles */
+@layer components {
     /* Button hover animations */
     .btn-hover {
         @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl;
     }
-    
+
     /* Card animations */
     .card-hover {
         @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl;
     }
+}
+
+/* Page transition animations - outside @layer so they always apply */
+body.loaded {
+    animation: fadeIn 0.3s ease-in;
+}
+
+body.page-exit {
+    animation: fadeOut 0.2s ease-out;
+    opacity: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
