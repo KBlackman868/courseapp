@@ -22,21 +22,10 @@ class MoodleClient
 
     public function __construct()
     {
-        $baseUrl = config('moodle.base_url');
-        if (!$baseUrl) {
-            throw new \RuntimeException('Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.');
-        }
-
-        $this->baseUrl = rtrim($baseUrl, '/');
+        $this->baseUrl = rtrim(config('moodle.base_url', ''), '/');
         $this->token = config('moodle.token', '');
-
-        if (!$this->token) {
-            throw new \RuntimeException('Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.');
-        }
-
         $this->format = config('moodle.format', 'json');
 
-        // Cast to integers to ensure type compatibility
         $this->timeout = (int) config('moodle.timeout', 30);
         $this->connectTimeout = (int) config('moodle.connect_timeout', 15);
         $this->retryTimes = (int) config('moodle.retry_times', 3);
@@ -44,18 +33,22 @@ class MoodleClient
     }
 
     /**
-     * Ensure Moodle is configured before making API calls.
-     *
-     * @throws \RuntimeException
+     * Validate that required configuration is present before making an API call
      */
-    private function ensureConfigured(): void
+    private function validateConfig(): void
     {
-        if (!$this->baseUrl) {
-            throw new \RuntimeException('Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.');
+        if (empty($this->baseUrl)) {
+            throw new MoodleException(
+                'Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.',
+                'config_error'
+            );
         }
 
-        if (!$this->token) {
-            throw new \RuntimeException('Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.');
+        if (empty($this->token)) {
+            throw new MoodleException(
+                'Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.',
+                'config_error'
+            );
         }
     }
 
@@ -69,10 +62,10 @@ class MoodleClient
      */
     public function call(string $function, array $params = []): ?array
     {
-        $this->ensureConfigured();
+        $this->validateConfig();
 
         $correlationId = Str::uuid()->toString();
-        
+
         // Ensure we're using HTTPS
         if (!str_starts_with($this->baseUrl, 'https://')) {
             Log::warning('Moodle URL should use HTTPS', ['url' => $this->baseUrl]);
@@ -214,10 +207,21 @@ class MoodleClient
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Check if it's a timeout issue
+            // Check if it's a timeout issue - log network diagnostics
             if (str_contains($e->getMessage(), 'cURL error 28') || str_contains($e->getMessage(), 'timed out')) {
+                $host = parse_url($this->baseUrl, PHP_URL_HOST);
+                $resolvedIp = @gethostbyname($host);
+                Log::error('Moodle timeout - network diagnostics', [
+                    'correlation_id' => $correlationId,
+                    'host' => $host,
+                    'dns_resolves' => $resolvedIp !== $host,
+                    'resolved_ip' => $resolvedIp !== $host ? $resolvedIp : null,
+                    'connect_timeout' => $this->connectTimeout,
+                    'transfer_timeout' => $this->timeout,
+                ]);
+
                 throw new MoodleException(
-                    'Connection timeout to Moodle. Please check network connectivity and SSL configuration.',
+                    "Connection timeout to Moodle ({$this->connectTimeout}s connect, {$this->timeout}s transfer). Host: {$host}, resolved IP: " . ($resolvedIp !== $host ? $resolvedIp : 'FAILED') . '. Check network connectivity and firewall rules.',
                     'timeout_error'
                 );
             }
@@ -250,6 +254,14 @@ class MoodleClient
                 'unexpected_error'
             );
         }
+    }
+
+    /**
+     * Check if Moodle integration is configured
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->baseUrl) && !empty($this->token);
     }
 
     /**

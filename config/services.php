@@ -55,7 +55,7 @@ return [
 
     'moodle' => [
         'base_url' => env('MOODLE_BASE_URL', 'https://learnabouthealth.hin.gov.tt'),
-        'token' => env('MOODLE_TOKEN', 'd6fc4e6a36c21396998527f094048936'),
+        'token' => env('MOODLE_TOKEN', ''),
         'verify_ssl' => env('MOODLE_VERIFY_SSL', true),
         'sso_enabled' => env('MOODLE_SSO_ENABLED', false),
         'sso_secret' => env('MOODLE_SSO_SECRET'),
