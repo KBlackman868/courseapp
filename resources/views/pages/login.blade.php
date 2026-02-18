@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In - Ministry of Health LMS</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  @vite(['resources/css/app.css'])
   <style>
     * {
       margin: 0;
@@ -159,7 +159,7 @@
     }
 
     /* Button styles */
-    .btn-primary {
+    .login-btn {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       padding: 0.875rem 2rem;
@@ -174,17 +174,17 @@
       overflow: hidden;
     }
 
-    .btn-primary:hover {
+    .login-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.5);
     }
 
-    .btn-primary:active {
+    .login-btn:active {
       transform: translateY(0);
     }
 
     /* Google button */
-    .btn-google {
+    .login-btn-google {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -200,7 +200,7 @@
       text-decoration: none;
     }
 
-    .btn-google:hover {
+    .login-btn-google:hover {
       background: #f9fafb;
       border-color: #d1d5db;
       transform: translateY(-2px);
@@ -453,7 +453,7 @@
           </div>
 
           <!-- Login Button -->
-          <button type="submit" class="btn-primary" id="loginBtn">
+          <button type="submit" class="login-btn" id="loginBtn">
             <span class="btn-text">Sign In</span>
             <div class="spinner"></div>
           </button>

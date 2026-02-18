@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="layoutData()" :class="{ 'dark': darkMode }" class="scroll-smooth">
+<html lang="en" data-theme="light" x-data="layoutData()" :class="{ 'dark': darkMode }" :data-theme="darkMode ? 'dark' : 'light'" class="scroll-smooth">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -356,11 +356,16 @@
     function layoutData() {
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
+        scrolled: false,
         mobileMenuOpen: false,
 
         init() {
           if (this.darkMode) {
             document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
           }
           toastr.options = {
             closeButton: true, progressBar: true,
