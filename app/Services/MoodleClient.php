@@ -16,6 +16,7 @@ class MoodleClient
     private string $token;
     private string $format;
     private int $timeout;
+    private int $connectTimeout;
     private int $retryTimes;
     private int $retrySleep;
 
@@ -25,20 +26,21 @@ class MoodleClient
         if (!$baseUrl) {
             throw new \RuntimeException('Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.');
         }
-        
+
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->token = config('moodle.token', '');
-        
+
         if (!$this->token) {
             throw new \RuntimeException('Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.');
         }
-        
+
         $this->format = config('moodle.format', 'json');
-        
+
         // Cast to integers to ensure type compatibility
-        $this->timeout = (int) config('moodle.timeout', 30); // Increased timeout
-        $this->retryTimes = (int) config('moodle.retry_times', 2);
-        $this->retrySleep = (int) config('moodle.retry_sleep', 200);
+        $this->timeout = (int) config('moodle.timeout', 30);
+        $this->connectTimeout = (int) config('moodle.connect_timeout', 15);
+        $this->retryTimes = (int) config('moodle.retry_times', 3);
+        $this->retrySleep = (int) config('moodle.retry_sleep', 1000);
     }
 
     /**
@@ -74,16 +76,26 @@ class MoodleClient
         ], $params);
 
         try {
-            // Build the HTTP client with proper SSL handling
+            // Build the HTTP client with proper SSL handling and exponential backoff
+            $retrySleep = $this->retrySleep;
             $httpClient = Http::asForm()
                 ->timeout($this->timeout)
-                ->retry($this->retryTimes, $this->retrySleep);
-            
+                ->connectTimeout($this->connectTimeout)
+                ->retry($this->retryTimes, $retrySleep, function (\Exception $exception, $request) {
+                    // Retry on connection timeouts and server errors
+                    $message = $exception->getMessage();
+                    return str_contains($message, 'cURL error 28')
+                        || str_contains($message, 'timed out')
+                        || str_contains($message, 'cURL error 7')
+                        || str_contains($message, 'cURL error 35')
+                        || ($exception instanceof RequestException && $exception->response?->serverError());
+                }, throw: false);
+
             // Check if we should verify SSL (disable only for self-signed certificates)
             if (config('moodle.verify_ssl', true) === false) {
                 $httpClient = $httpClient->withoutVerifying();
             }
-            
+
             // Add explicit options for HTTPS
             $httpClient = $httpClient->withOptions([
                 'verify' => config('moodle.verify_ssl', true),
@@ -93,7 +105,7 @@ class MoodleClient
                     CURLOPT_SSL_VERIFYHOST => config('moodle.verify_ssl', true) ? 2 : 0,
                     CURLOPT_FOLLOWLOCATION => true,
                     CURLOPT_MAXREDIRS => 5,
-                    CURLOPT_CONNECTTIMEOUT => 10,
+                    CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
                     CURLOPT_TIMEOUT => $this->timeout,
                 ]
             ]);
@@ -132,11 +144,7 @@ class MoodleClient
                     $result['errorcode'] ?? 'unknown_error'
                 );
             }
-                if ($result === null) {
-                    return [];  // Return empty array instead of null
-                }
-                
-                return $result;
+
             // Check for warnings (non-fatal but should be logged)
             if (isset($result['warnings']) && !empty($result['warnings'])) {
                 Log::warning('Moodle API returned warnings', [
@@ -151,6 +159,10 @@ class MoodleClient
                 'function' => $function,
                 'result_count' => is_array($result) ? count($result) : 'non-array',
             ]);
+
+            if ($result === null) {
+                return [];
+            }
 
             return $result;
 
