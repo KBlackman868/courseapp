@@ -49,25 +49,68 @@ class MoodleIntegrationController extends Controller
      */
     public function testConnection()
     {
+        $url = config('moodle.base_url');
+        $diagnostics = $this->runNetworkDiagnostics($url);
+
         try {
             $result = $this->moodleClient->call('core_webservice_get_site_info');
-            
+
             return response()->json([
                 'status' => 'success',
                 'site' => $result['sitename'] ?? 'Unknown',
                 'version' => $result['release'] ?? 'Unknown',
                 'username' => $result['username'] ?? 'Unknown',
                 'userid' => $result['userid'] ?? 'Unknown',
-                'functions_available' => count($result['functions'] ?? [])
+                'functions_available' => count($result['functions'] ?? []),
+                'diagnostics' => $diagnostics,
             ]);
         } catch (\Exception $e) {
+            Log::error('Moodle integration connection test failed', [
+                'error' => $e->getMessage(),
+                'diagnostics' => $diagnostics,
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-                'moodle_url' => config('moodle.base_url'),
-                'token_configured' => !empty(config('moodle.token'))
+                'moodle_url' => $url,
+                'token_configured' => !empty(config('moodle.token')),
+                'diagnostics' => $diagnostics,
             ], 500);
         }
+    }
+
+    /**
+     * Run network-level diagnostics against the Moodle host
+     */
+    private function runNetworkDiagnostics(string $url): array
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        $diagnostics = [
+            'host' => $host,
+            'dns_resolves' => false,
+            'resolved_ip' => null,
+            'port_443_open' => false,
+        ];
+
+        $ip = @gethostbyname($host);
+        if ($ip !== $host) {
+            $diagnostics['dns_resolves'] = true;
+            $diagnostics['resolved_ip'] = $ip;
+        } else {
+            $diagnostics['dns_error'] = 'Could not resolve hostname';
+            return $diagnostics;
+        }
+
+        $socket = @fsockopen($host, 443, $errno, $errstr, 5);
+        if ($socket) {
+            $diagnostics['port_443_open'] = true;
+            fclose($socket);
+        } else {
+            $diagnostics['port_443_error'] = "[$errno] $errstr";
+        }
+
+        return $diagnostics;
     }
     
     /**

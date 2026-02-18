@@ -32,9 +32,9 @@ class MoodleTestController extends Controller
      */
     public function testConnection()
     {
-        $url = config('services.moodle.url', env('MOODLE_URL'));
-        $token = config('services.moodle.token', env('MOODLE_TOKEN'));
-        
+        $url = config('moodle.base_url');
+        $token = config('moodle.token');
+
         if (empty($url) || empty($token)) {
             return response()->json([
                 'status' => 'error',
@@ -44,38 +44,107 @@ class MoodleTestController extends Controller
                 'moodle_url' => $url
             ]);
         }
-        
+
+        // Run network diagnostics before attempting API call
+        $diagnostics = $this->runDiagnostics($url);
+
         try {
             if ($this->moodleService->testConnection()) {
-                // Try to get site info for more details
                 $siteInfo = $this->moodleService->call('core_webservice_get_site_info');
-                
+
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Connected to Moodle successfully!',
                     'moodle_url' => $url,
                     'site_name' => $siteInfo['sitename'] ?? 'Unknown',
-                    'moodle_version' => $siteInfo['release'] ?? 'Unknown'
+                    'moodle_version' => $siteInfo['release'] ?? 'Unknown',
+                    'diagnostics' => $diagnostics,
                 ]);
             } else {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Could not connect to Moodle',
-                    'moodle_url' => $url
+                    'moodle_url' => $url,
+                    'diagnostics' => $diagnostics,
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Moodle connection test failed', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'diagnostics' => $diagnostics,
             ]);
-            
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Connection failed',
-                'error' => $e->getMessage(),
-                'moodle_url' => $url
+                'message' => 'Connection failed: ' . $e->getMessage(),
+                'moodle_url' => $url,
+                'diagnostics' => $diagnostics,
             ]);
         }
+    }
+
+    /**
+     * Run network-level diagnostics against the Moodle host
+     */
+    private function runDiagnostics(string $url): array
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        $diagnostics = [
+            'host' => $host,
+            'dns_resolves' => false,
+            'resolved_ip' => null,
+            'port_443_open' => false,
+            'ssl_valid' => false,
+            'timeout_settings' => [
+                'connect_timeout' => config('moodle.connect_timeout', 15) . 's',
+                'transfer_timeout' => config('moodle.timeout', 30) . 's',
+                'retry_times' => config('moodle.retry_times', 3),
+                'retry_sleep' => config('moodle.retry_sleep', 1000) . 'ms',
+            ],
+        ];
+
+        // Step 1: DNS resolution
+        $ip = @gethostbyname($host);
+        if ($ip !== $host) {
+            $diagnostics['dns_resolves'] = true;
+            $diagnostics['resolved_ip'] = $ip;
+        } else {
+            $diagnostics['dns_error'] = 'Could not resolve hostname';
+            return $diagnostics;
+        }
+
+        // Step 2: TCP port 443 connectivity (5s timeout)
+        $socket = @fsockopen($host, 443, $errno, $errstr, 5);
+        if ($socket) {
+            $diagnostics['port_443_open'] = true;
+            fclose($socket);
+        } else {
+            $diagnostics['port_443_error'] = "Connection refused or timed out: [$errno] $errstr";
+            return $diagnostics;
+        }
+
+        // Step 3: SSL handshake check
+        $context = stream_context_create(['ssl' => [
+            'capture_peer_cert' => true,
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+        ]]);
+        $sslSocket = @stream_socket_client(
+            "ssl://{$host}:443",
+            $sslErrno,
+            $sslErrstr,
+            5,
+            STREAM_CLIENT_CONNECT,
+            $context
+        );
+        if ($sslSocket) {
+            $diagnostics['ssl_valid'] = true;
+            fclose($sslSocket);
+        } else {
+            $diagnostics['ssl_error'] = "SSL handshake failed: [$sslErrno] $sslErrstr";
+        }
+
+        return $diagnostics;
     }
 
     /**

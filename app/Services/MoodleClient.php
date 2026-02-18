@@ -178,10 +178,21 @@ class MoodleClient
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Check if it's a timeout issue
+            // Check if it's a timeout issue - log network diagnostics
             if (str_contains($e->getMessage(), 'cURL error 28') || str_contains($e->getMessage(), 'timed out')) {
+                $host = parse_url($this->baseUrl, PHP_URL_HOST);
+                $resolvedIp = @gethostbyname($host);
+                Log::error('Moodle timeout - network diagnostics', [
+                    'correlation_id' => $correlationId,
+                    'host' => $host,
+                    'dns_resolves' => $resolvedIp !== $host,
+                    'resolved_ip' => $resolvedIp !== $host ? $resolvedIp : null,
+                    'connect_timeout' => $this->connectTimeout,
+                    'transfer_timeout' => $this->timeout,
+                ]);
+
                 throw new MoodleException(
-                    'Connection timeout to Moodle. Please check network connectivity and SSL configuration.',
+                    "Connection timeout to Moodle ({$this->connectTimeout}s connect, {$this->timeout}s transfer). Host: {$host}, resolved IP: " . ($resolvedIp !== $host ? $resolvedIp : 'FAILED') . '. Check network connectivity and firewall rules.',
                     'timeout_error'
                 );
             }
