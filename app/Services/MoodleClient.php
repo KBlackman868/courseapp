@@ -21,24 +21,30 @@ class MoodleClient
 
     public function __construct()
     {
-        $baseUrl = config('moodle.base_url');
-        if (!$baseUrl) {
+        $this->baseUrl = rtrim(config('moodle.base_url', ''), '/');
+        $this->token = config('moodle.token', '');
+        $this->format = config('moodle.format', 'json');
+
+        // Cast to integers to ensure type compatibility
+        $this->timeout = (int) config('moodle.timeout', 30);
+        $this->retryTimes = (int) config('moodle.retry_times', 2);
+        $this->retrySleep = (int) config('moodle.retry_sleep', 200);
+    }
+
+    /**
+     * Ensure Moodle is configured before making API calls.
+     *
+     * @throws \RuntimeException
+     */
+    private function ensureConfigured(): void
+    {
+        if (!$this->baseUrl) {
             throw new \RuntimeException('Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.');
         }
-        
-        $this->baseUrl = rtrim($baseUrl, '/');
-        $this->token = config('moodle.token', '');
-        
+
         if (!$this->token) {
             throw new \RuntimeException('Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.');
         }
-        
-        $this->format = config('moodle.format', 'json');
-        
-        // Cast to integers to ensure type compatibility
-        $this->timeout = (int) config('moodle.timeout', 30); // Increased timeout
-        $this->retryTimes = (int) config('moodle.retry_times', 2);
-        $this->retrySleep = (int) config('moodle.retry_sleep', 200);
     }
 
     /**
@@ -51,6 +57,8 @@ class MoodleClient
      */
     public function call(string $function, array $params = []): ?array
     {
+        $this->ensureConfigured();
+
         $correlationId = Str::uuid()->toString();
         
         // Ensure we're using HTTPS
