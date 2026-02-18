@@ -54,7 +54,7 @@ export default function DashboardLayout({ children, header }) {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Disclosure as="nav" className="bg-white border-b border-gray-200">
+            <Disclosure as="nav" className="sticky top-0 z-40 bg-white border-b border-gray-200">
                 {({ open, close }) => (
                     <>
                         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
