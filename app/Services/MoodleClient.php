@@ -22,25 +22,34 @@ class MoodleClient
 
     public function __construct()
     {
-        $baseUrl = config('moodle.base_url');
-        if (!$baseUrl) {
-            throw new \RuntimeException('Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.');
-        }
-
-        $this->baseUrl = rtrim($baseUrl, '/');
+        $this->baseUrl = rtrim(config('moodle.base_url', ''), '/');
         $this->token = config('moodle.token', '');
-
-        if (!$this->token) {
-            throw new \RuntimeException('Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.');
-        }
-
         $this->format = config('moodle.format', 'json');
 
-        // Cast to integers to ensure type compatibility
         $this->timeout = (int) config('moodle.timeout', 30);
         $this->connectTimeout = (int) config('moodle.connect_timeout', 15);
         $this->retryTimes = (int) config('moodle.retry_times', 3);
         $this->retrySleep = (int) config('moodle.retry_sleep', 1000);
+    }
+
+    /**
+     * Validate that required configuration is present before making an API call
+     */
+    private function validateConfig(): void
+    {
+        if (empty($this->baseUrl)) {
+            throw new MoodleException(
+                'Moodle base URL is not configured. Please set MOODLE_BASE_URL in your .env file.',
+                'config_error'
+            );
+        }
+
+        if (empty($this->token)) {
+            throw new MoodleException(
+                'Moodle token is not configured. Please set MOODLE_TOKEN in your .env file.',
+                'config_error'
+            );
+        }
     }
 
     /**
@@ -53,8 +62,10 @@ class MoodleClient
      */
     public function call(string $function, array $params = []): ?array
     {
+        $this->validateConfig();
+
         $correlationId = Str::uuid()->toString();
-        
+
         // Ensure we're using HTTPS
         if (!str_starts_with($this->baseUrl, 'https://')) {
             Log::warning('Moodle URL should use HTTPS', ['url' => $this->baseUrl]);
@@ -214,6 +225,14 @@ class MoodleClient
                 'unexpected_error'
             );
         }
+    }
+
+    /**
+     * Check if Moodle integration is configured
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->baseUrl) && !empty($this->token);
     }
 
     /**
