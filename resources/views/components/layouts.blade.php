@@ -21,6 +21,7 @@
     .sidebar-nav { transition: transform 0.3s ease, width 0.3s ease; }
     .main-content-shift { transition: margin-left 0.3s ease; }
     .sidebar-overlay { transition: opacity 0.3s ease; }
+    [x-cloak] { display: none !important; }
   </style>
 </head>
 
@@ -65,9 +66,9 @@
     </div>
 
     {{-- Desktop sidebar --}}
-    <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col sidebar-nav"
+    <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col sidebar-nav"
          :class="collapsed ? 'lg:w-20' : 'lg:w-64'">
-      <div class="flex h-full flex-col bg-indigo-600 overflow-y-auto"
+      <div class="flex h-full flex-col bg-indigo-600 px-6 pb-4 overflow-y-auto"
            :class="collapsed ? 'px-3 pb-4' : 'px-6 pb-4'">
         {{-- Logo --}}
         <div class="flex h-16 shrink-0 items-center">
@@ -82,14 +83,14 @@
           @include('components.sidebar-nav')
         </div>
         {{-- Collapsed icon-only nav --}}
-        <div x-show="collapsed" class="mt-4 space-y-1">
+        <div x-show="collapsed" x-cloak class="mt-4 space-y-1">
           @include('components.sidebar-nav-icons')
         </div>
       </div>
     </div>
 
     {{-- Main content area --}}
-    <div class="main-content-shift" :class="collapsed ? 'lg:ml-20' : 'lg:ml-64'">
+    <div class="main-content-shift lg:ml-64" :class="collapsed ? 'lg:ml-20' : 'lg:ml-64'">
       {{-- Top bar --}}
       <div class="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
         {{-- Mobile hamburger --}}
