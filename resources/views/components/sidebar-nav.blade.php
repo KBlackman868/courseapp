@@ -62,6 +62,19 @@
             </a>
           </li>
           <li>
+            <a href="{{ route('admin.enrollments.index') }}"
+               class="group flex items-center gap-x-3 rounded-md p-2 text-sm font-medium leading-6 {{ request()->routeIs('admin.enrollments.*') ? 'bg-indigo-700 text-white' : 'text-indigo-100 hover:bg-indigo-700 hover:text-white' }}">
+              <svg class="h-5 w-5 shrink-0 {{ request()->routeIs('admin.enrollments.*') ? 'text-white' : 'text-indigo-200 group-hover:text-white' }}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+              </svg>
+              Enrollment Requests
+              @php $pendingEnrollments = \App\Models\Enrollment::where('status', 'pending')->count(); @endphp
+              @if($pendingEnrollments > 0)
+                <span class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium bg-indigo-500 text-white rounded-full">{{ $pendingEnrollments }}</span>
+              @endif
+            </a>
+          </li>
+          <li>
             <a href="{{ route('admin.account-requests.index') }}"
                class="group flex items-center gap-x-3 rounded-md p-2 text-sm font-medium leading-6 {{ request()->routeIs('admin.account-requests.*') ? 'bg-indigo-700 text-white' : 'text-indigo-100 hover:bg-indigo-700 hover:text-white' }}">
               <svg class="h-5 w-5 shrink-0 {{ request()->routeIs('admin.account-requests.*') ? 'text-white' : 'text-indigo-200 group-hover:text-white' }}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -128,12 +141,12 @@
             </a>
           </li>
           <li>
-            <a href="{{ route('admin.moodle.courses.import') }}"
-               class="group flex items-center gap-x-3 rounded-md p-2 text-sm font-medium leading-6 {{ request()->routeIs('admin.moodle.courses.*') ? 'bg-indigo-700 text-white' : 'text-indigo-100 hover:bg-indigo-700 hover:text-white' }}">
-              <svg class="h-5 w-5 shrink-0 {{ request()->routeIs('admin.moodle.courses.*') ? 'text-white' : 'text-indigo-200 group-hover:text-white' }}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            <a href="{{ route('moodle.sso') }}" target="_blank" rel="noopener noreferrer"
+               class="group flex items-center gap-x-3 rounded-md p-2 text-sm font-medium leading-6 text-indigo-100 hover:bg-indigo-700 hover:text-white">
+              <svg class="h-5 w-5 shrink-0 text-indigo-200 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
               </svg>
-              Course Import
+              Open Moodle
             </a>
           </li>
         </ul>
