@@ -41,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckSuspended::class,
             \App\Http\Middleware\CheckAccountStatus::class,
             \App\Http\Middleware\LogActivity::class,
+            \App\Http\Middleware\NoCacheHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -244,6 +244,15 @@
         }
       }
     }
+
+    // Detect browser back-forward cache (bfcache) restoration.
+    // When a user logs out and presses Back, the browser may restore
+    // the cached authenticated page. This forces a fresh server fetch.
+    window.addEventListener('pageshow', function(event) {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
   </script>
   @stack('scripts')
 </body>
