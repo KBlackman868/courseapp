@@ -614,13 +614,20 @@
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json'
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok && response.headers.get('content-type')?.indexOf('application/json') === -1) {
+                        throw new Error('Server returned HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('sync-progress').classList.add('hidden');
-                    
+
                     if (data.status === 'success') {
                         alert(`Sync completed! Created: ${data.stats.created}, Updated: ${data.stats.updated}, Failed: ${data.stats.failed}`);
                         location.reload();
@@ -630,7 +637,7 @@
                 })
                 .catch(error => {
                     document.getElementById('sync-progress').classList.add('hidden');
-                    alert('Error: ' + error);
+                    alert('Error: ' + error.message);
                 });
             }
         }
@@ -654,14 +661,21 @@
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({ category_id: categoryId })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok && response.headers.get('content-type')?.indexOf('application/json') === -1) {
+                    throw new Error('Server returned HTTP ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 document.getElementById('sync-progress').classList.add('hidden');
-                
+
                 if (data.status === 'success') {
                     alert(`Sync completed! Created: ${data.stats.created}, Updated: ${data.stats.updated}`);
                     location.reload();
@@ -671,7 +685,7 @@
             })
             .catch(error => {
                 document.getElementById('sync-progress').classList.add('hidden');
-                alert('Error: ' + error);
+                alert('Error: ' + error.message);
             });
         }
 
