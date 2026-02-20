@@ -452,7 +452,7 @@ Route::middleware('auth')->group(function () {
                         return $moodleService->testConnection()
                             ? response()->json(['status' => 'success', 'message' => 'Connection successful'])
                             : response()->json(['status' => 'error', 'message' => 'Connection failed']);
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
                     }
                 })->name('testConnection');

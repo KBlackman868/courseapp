@@ -210,9 +210,19 @@
         function testConnection() {
             const statusEl = document.getElementById('connection-status');
             statusEl.innerHTML = '<div class="w-3 h-3 bg-yellow-400 rounded-full mr-2 animate-pulse"></div><span class="text-gray-600">Testing...</span>';
-            
-            fetch('{{ route("admin.moodle.testConnection") }}')
-                .then(response => response.json())
+
+            fetch('{{ route("admin.moodle.testConnection") }}', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    if (!response.ok && response.headers.get('content-type')?.indexOf('application/json') === -1) {
+                        throw new Error('Server returned HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.status === 'success') {
                         statusEl.innerHTML = '<div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div><span class="text-green-600">Connected</span>';
@@ -221,13 +231,12 @@
                     }
                 })
                 .catch(error => {
-                    statusEl.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-red-600">Error: ' + error + '</span>';
+                    statusEl.innerHTML = '<div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div><span class="text-red-600">Error: ' + error.message + '</span>';
                 });
         }
 
         function processQueue() {
             if (confirm('This will process all pending sync jobs. Continue?')) {
-                // You can implement this to call artisan queue:work once
                 alert('Queue processing started. Check Laravel logs for details.');
             }
         }
