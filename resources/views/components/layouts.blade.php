@@ -18,9 +18,19 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    /* Sidebar transitions */
-    .sidebar-nav { transition: transform 0.3s ease, width 0.3s ease; }
-    .main-content-shift { transition: margin-left 0.3s ease; }
+    /* Sidebar layout - plain CSS so it works without Tailwind/Alpine */
+    @media (min-width: 1024px) {
+      .sidebar-fixed {
+        position: fixed; top: 0; bottom: 0; left: 0;
+        width: 16rem; z-index: 50;
+        display: flex; flex-direction: column;
+      }
+      .sidebar-fixed.collapsed { width: 5rem; }
+      .content-offset { padding-left: 16rem; }
+      .content-offset.content-collapsed { padding-left: 5rem; }
+    }
+    .sidebar-fixed { transition: width 0.3s ease; }
+    .content-offset { transition: padding-left 0.3s ease; }
     .sidebar-overlay { transition: opacity 0.3s ease; }
     [x-cloak] { display: none !important; }
   </style>
@@ -67,9 +77,9 @@
     </div>
 
     {{-- Desktop sidebar --}}
-    <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col sidebar-nav"
-         :class="collapsed ? 'lg:w-20' : 'lg:w-64'">
-      <div class="flex h-full flex-col bg-indigo-600 px-6 pb-4 overflow-y-auto"
+    <div class="sidebar-fixed hidden lg:flex bg-indigo-600"
+         :class="collapsed && 'collapsed'">
+      <div class="flex h-full w-full flex-col bg-indigo-600 px-6 pb-4 overflow-y-auto"
            :class="collapsed ? 'px-3 pb-4' : 'px-6 pb-4'">
         {{-- Logo --}}
         <div class="flex h-16 shrink-0 items-center">
@@ -91,7 +101,7 @@
     </div>
 
     {{-- Main content area --}}
-    <div class="main-content-shift lg:ml-64" :class="collapsed ? 'lg:ml-20' : 'lg:ml-64'">
+    <div class="content-offset" :class="collapsed && 'content-collapsed'">
       {{-- Top bar --}}
       <div class="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
         {{-- Mobile hamburger --}}
