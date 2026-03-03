@@ -13,6 +13,7 @@ use App\Jobs\EnrollUserIntoMoodleCourse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 /**
  * CourseAccessRequestController
@@ -78,9 +79,14 @@ class CourseAccessRequestController extends Controller
             'all' => CourseAccessRequest::count(),
         ];
 
-        return view('admin.course-access-requests.index', compact(
-            'requests', 'courses', 'counts', 'status', 'courseId', 'search'
-        ));
+        return Inertia::render('Admin/CourseAccessRequests/Index', [
+            'requests' => $requests,
+            'courses' => $courses,
+            'counts' => $counts,
+            'status' => $status,
+            'courseId' => $courseId,
+            'search' => $search,
+        ]);
     }
 
     /**
@@ -90,8 +96,8 @@ class CourseAccessRequestController extends Controller
     {
         $this->authorize('view', $courseAccessRequest);
 
-        return view('admin.course-access-requests.show', [
-            'request' => $courseAccessRequest->load(['user', 'course', 'approver']),
+        return Inertia::render('Admin/CourseAccessRequests/Show', [
+            'accessRequest' => $courseAccessRequest->load(['user', 'course', 'approver']),
         ]);
     }
 
@@ -392,7 +398,11 @@ class CourseAccessRequestController extends Controller
             'rejected' => CourseAccessRequest::where('user_id', $user->id)->where('status', 'rejected')->count(),
         ];
 
-        return view('my-requests.index', compact('requests', 'counts', 'status'));
+        return Inertia::render('MyRequests/Index', [
+            'requests' => $requests,
+            'counts' => $counts,
+            'status' => $status,
+        ]);
     }
 
     /**

@@ -29,6 +29,7 @@ use App\Http\Controllers\{
     ExternalRegistrationController,
     CourseCatalogController
 };
+use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,25 +43,30 @@ use App\Http\Controllers\{
 |==========================================================================
 */
 Route::get('/', function () {
+    $featuredCourses = \App\Models\Course::where('status', 'active')->take(3)->get();
     if (auth()->check()) {
-        return view('landing.welcome', [
+        return Inertia::render('Welcome', [
             'isAuthenticated' => true,
             'user' => auth()->user(),
-            'enrolledCourses' => auth()->user()->hasRole(['admin', 'superadmin']) 
-                ? \App\Models\Course::count() 
+            'enrolledCourses' => auth()->user()->hasRole(['admin', 'superadmin'])
+                ? \App\Models\Course::count()
                 : \App\Models\Enrollment::where('user_id', auth()->id())
                     ->where('status', 'approved')
-                    ->count()
+                    ->count(),
+            'featuredCourses' => $featuredCourses,
         ]);
     }
-    return view('landing.welcome', ['isAuthenticated' => false]);
+    return Inertia::render('Welcome', [
+        'isAuthenticated' => false,
+        'featuredCourses' => $featuredCourses,
+    ]);
 })->name('home');
 
 Route::get('/home', fn() => auth()->check() ? redirect('/dashboard') : redirect('/'));
 
 // Policy Pages (Public)
-Route::get('/terms-and-conditions', fn() => view('policies.terms'))->name('terms');
-Route::get('/privacy-policy', fn() => view('policies.privacy'))->name('privacy-policy');
+Route::get('/terms-and-conditions', fn() => Inertia::render('Policies/Terms'))->name('terms');
+Route::get('/privacy-policy', fn() => Inertia::render('Policies/Privacy'))->name('privacy-policy');
 
 // SSO to Moodle Dashboard (for navigation link)
 Route::get('/moodle/sso', function () {
@@ -444,10 +450,8 @@ Route::middleware('auth')->group(function () {
                         'moodle_synced_courses' => \App\Models\Course::whereNotNull('moodle_course_id')->count(),
                         'pending_enrollments' => \App\Models\Enrollment::where('status', 'pending')->count(),
                     ];
-                    
-                    return view()->exists('admin.moodle.status')
-                        ? view('admin.moodle.status', compact('stats'))
-                        : response()->json(['status' => 'success', 'data' => $stats]);
+
+                    return \Inertia\Inertia::render('Admin/Moodle/Status', ['stats' => $stats]);
                 })->name('status');
                 
                 Route::get('/test-connection', function() {
@@ -463,11 +467,7 @@ Route::middleware('auth')->group(function () {
                 
                 Route::get('/failed-jobs', function() {
                     $failedJobs = \DB::table('failed_jobs')->latest()->take(20)->get();
-                    return request()->wantsJson()
-                        ? response()->json($failedJobs)
-                        : (view()->exists('admin.moodle.failed-jobs')
-                            ? view('admin.moodle.failed-jobs', compact('failedJobs'))
-                            : response()->json($failedJobs));
+                    return response()->json($failedJobs);
                 })->name('failedJobs');
                 
                 Route::post('/retry-failed', function(\Illuminate\Http\Request $request) {
@@ -543,9 +543,7 @@ Route::middleware('auth')->group(function () {
                         return response()->stream($callback, 200, $headers);
                     })->name('template');
                     
-                    Route::get('/missing', fn() => view()->exists('admin.moodle.missing-courses')
-                        ? view('admin.moodle.missing-courses')
-                        : response()->json(['message' => 'View not found'])
+                    Route::get('/missing', fn() => response()->json(['message' => 'No missing courses view'])
                     )->name('missing');
                     
                     Route::post('/{course}/sync-enrollments', [EnrollmentController::class, 'bulkSyncCourseEnrollments'])->name('sync.enrollments');

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
@@ -16,7 +17,7 @@ class ExternalRegistrationController extends Controller
      */
     public function create()
     {
-        return view('auth.register-external');
+        return Inertia::render('Auth/RegisterExternal');
     }
 
     /**

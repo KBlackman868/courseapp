@@ -39,7 +39,7 @@ class RoleManagementController extends Controller
 
         $roles = Role::all();
 
-        return Inertia::render('Admin/RoleAssignmentsIndex', [
+        return Inertia::render('Admin/Roles/Index', [
             'users' => $users,
             'roles' => $roles,
         ]);

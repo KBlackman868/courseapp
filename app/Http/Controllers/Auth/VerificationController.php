@@ -9,6 +9,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 /**
  * Email Verification Controller
@@ -49,7 +50,7 @@ class VerificationController extends Controller
         }
 
         // Show verification notice with option to send OTP
-        return view('auth.verify-email-otp', [
+        return Inertia::render('Auth/VerifyEmailOtp', [
             'user' => $user,
             'canResend' => $user ? $user->canRequestVerification() : false,
             'secondsUntilResend' => $user ? $user->seconds_until_can_request : 0,

@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
 
 
 class UserManagementController extends Controller
@@ -24,17 +23,8 @@ class UserManagementController extends Controller
      */
     public function index()
     {
-        // Load all users with roles for client-side filtering
-        $users = User::with('roles')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $roles = Role::all();
-
-        return Inertia::render('Admin/UserManagementIndex', [
-            'users' => $users,
-            'roles' => $roles,
-        ]);
+        $users = User::with('roles')->paginate(20);
+        return Inertia::render('Admin/Users/Index', ['users' => $users]);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SystemNotification;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 /**
  * NotificationController
@@ -32,7 +33,11 @@ class NotificationController extends Controller
 
         $unreadCount = $user->unreadNotificationsCount();
 
-        return view('notifications.index', compact('notifications', 'filter', 'unreadCount'));
+        return Inertia::render('Notifications/Index', [
+            'notifications' => $notifications,
+            'filter' => $filter,
+            'unreadCount' => $unreadCount,
+        ]);
     }
 
     /**
@@ -70,7 +75,10 @@ class NotificationController extends Controller
             ]);
         }
 
-        return view('notifications.partials.dropdown', compact('notifications', 'unreadCount'));
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => $unreadCount,
+        ]);
     }
 
     /**

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Auth\Events\Registered;
+use Inertia\Inertia;
 
 /**
  * RegisterController
@@ -56,7 +57,7 @@ class RegisterController extends Controller
      */
     public function showRegistrationForm()
     {
-        return view('pages.home_register');
+        return Inertia::render('Auth/Register');
     }
 
     /**
@@ -227,7 +228,7 @@ class RegisterController extends Controller
      */
     public function showMohRequestForm()
     {
-        return view('auth.moh-request-account');
+        return Inertia::render('Auth/MohRequestAccount');
     }
 
     /**
@@ -310,6 +311,6 @@ class RegisterController extends Controller
      */
     public function mohRequestSubmitted()
     {
-        return view('auth.moh-request-submitted');
+        return Inertia::render('Auth/MohRequestSubmitted');
     }
 }

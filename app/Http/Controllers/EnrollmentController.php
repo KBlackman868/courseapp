@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 
 class EnrollmentController extends Controller
 {
@@ -247,7 +248,10 @@ class EnrollmentController extends Controller
             ]
         );
         
-        return view('admin.approval_lists', compact('enrollments', 'status', 'users'));
+        return Inertia::render('Admin/Enrollments/Index', [
+            'enrollments' => $enrollments,
+            'status' => $status,
+        ]);
     }
 
     /**
@@ -382,13 +386,13 @@ class EnrollmentController extends Controller
             ]
         );
 
-        return view('courses.mycourses', compact(
-            'enrollments',
-            'allCourses',
-            'enrolledCourses',
-            'pendingCourses',
-            'isInternal'
-        ));
+        return Inertia::render('Courses/MyCourses', [
+            'enrollments' => $enrollments,
+            'allCourses' => $allCourses,
+            'enrolledCourses' => $enrolledCourses,
+            'pendingCourses' => $pendingCourses,
+            'isInternal' => $isInternal,
+        ]);
     }
 
     /**
@@ -656,7 +660,12 @@ class EnrollmentController extends Controller
             ]
         );
 
-        return view('my-learning.index', compact('enrollments', 'counts', 'status', 'search'));
+        return Inertia::render('MyLearning/Index', [
+            'enrollments' => $enrollments,
+            'counts' => $counts,
+            'status' => $status,
+            'search' => $search,
+        ]);
     }
 
     /**

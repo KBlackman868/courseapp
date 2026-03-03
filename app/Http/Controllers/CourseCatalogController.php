@@ -8,6 +8,7 @@ use App\Models\Enrollment;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class CourseCatalogController extends Controller
 {
@@ -55,7 +56,7 @@ class CourseCatalogController extends Controller
             ]
         );
 
-        return view('courses.catalog', compact('courses'));
+        return Inertia::render('Courses/Catalog', ['courses' => $courses]);
     }
 
     /**
@@ -153,6 +154,10 @@ class CourseCatalogController extends Controller
             $enrollmentStatus = 'open';
         }
 
-        return view('courses.catalog-show', compact('course', 'enrollmentStatus', 'enrollmentRequest'));
+        return Inertia::render('Courses/CatalogShow', [
+            'course' => $course,
+            'enrollmentStatus' => $enrollmentStatus,
+            'enrollmentRequest' => $enrollmentRequest,
+        ]);
     }
 }

@@ -8,6 +8,7 @@ use App\Jobs\EnrollUserIntoMoodleCourse;
 use App\Notifications\EnrollmentApprovedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class AdminController extends Controller
 {
@@ -21,7 +22,9 @@ class AdminController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        return view('admin.enrollments.index', compact('enrollments'));
+        return Inertia::render('Admin/Enrollments/Index', [
+            'enrollments' => $enrollments,
+        ]);
     }
 
     // Approve an enrollment request

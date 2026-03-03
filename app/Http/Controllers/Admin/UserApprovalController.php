@@ -8,6 +8,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 
 class UserApprovalController extends Controller
 {
@@ -48,7 +49,11 @@ class UserApprovalController extends Controller
             ]
         );
 
-        return view('admin.users.pending', compact('users', 'status', 'counts'));
+        return Inertia::render('Admin/Users/Pending', [
+            'users' => $users,
+            'status' => $status,
+            'counts' => $counts,
+        ]);
     }
 
     /**

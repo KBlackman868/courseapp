@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
 
 class MoodleCourseImportController extends Controller
 {
@@ -30,7 +31,9 @@ class MoodleCourseImportController extends Controller
             'not_synced' => Course::whereNull('moodle_course_id')->count(),
         ];
         
-        return view('admin.moodle.course-import', compact('stats'));
+        return Inertia::render('Admin/Moodle/CourseImport', [
+            'stats' => $stats,
+        ]);
     }
     
     /**
@@ -182,7 +185,10 @@ public function missingCourses()
             'missing' => count($missingCourses),
         ];
         
-        return view('admin.moodle.missing-courses', compact('missingCourses', 'stats'));
+        return Inertia::render('Admin/Moodle/MissingCourses', [
+            'missingCourses' => $missingCourses,
+            'stats' => $stats,
+        ]);
         
     } catch (\Exception $e) {
         Log::error('Failed to fetch missing courses', [
@@ -276,7 +282,10 @@ public function missingCourses()
             'inactive' => Course::where('status', 'inactive')->count(),
         ];
         
-        return view('admin.moodle.course-status', compact('courses', 'stats'));
+        return Inertia::render('Admin/Moodle/CourseStatus', [
+            'courses' => $courses,
+            'stats' => $stats,
+        ]);
     }
 
     /**

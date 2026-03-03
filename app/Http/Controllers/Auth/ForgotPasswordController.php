@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Inertia\Inertia;
 use App\Mail\CustomResetPasswordEmail;
 use Illuminate\Support\Facades\Mail;
 
@@ -12,7 +13,9 @@ class ForgotPasswordController extends Controller
 {
     public function showLinkRequestForm()
     {
-        return view('pages.forgot_password');
+        return Inertia::render('Auth/ForgotPassword', [
+            'status' => session('status'),
+        ]);
     }
 
     public function sendResetLinkEmail(Request $request)

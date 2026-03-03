@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Artisan;
+use Inertia\Inertia;
 
 class MoodleIntegrationController extends Controller
 {
@@ -36,12 +37,9 @@ class MoodleIntegrationController extends Controller
             'failed_jobs' => DB::table('failed_jobs')->count(),
         ];
         
-        // Check if view exists, otherwise return JSON
-        if (view()->exists('admin.moodle.status')) {
-            return view('admin.moodle.status', compact('stats'));
-        }
-        
-        return response()->json($stats);
+        return Inertia::render('Admin/Moodle/Status', [
+            'stats' => $stats,
+        ]);
     }
     
     /**
@@ -121,10 +119,6 @@ class MoodleIntegrationController extends Controller
         $failedJobs = DB::table('failed_jobs')
             ->orderBy('failed_at', 'desc')
             ->paginate(20);
-        
-        if (view()->exists('admin.moodle.failed-jobs')) {
-            return view('admin.moodle.failed-jobs', compact('failedJobs'));
-        }
         
         return response()->json($failedJobs);
     }
