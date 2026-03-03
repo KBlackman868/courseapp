@@ -27,7 +27,10 @@ class ProfileController extends Controller
                          ->orderBy('status')
                          ->get();
 
-        return view('profile.show', compact('user', 'enrollments'));
+        return Inertia::render('Profile/Show', [
+            'user' => $user,
+            'enrollments' => $enrollments,
+        ]);
     }
 
     public function updatePhoto(Request $request)
@@ -82,7 +85,9 @@ class ProfileController extends Controller
 
     public function settings(Request $request)
     {
-        return view('profile.settings', ['user' => $request->user()]);
+        return Inertia::render('Profile/Settings', [
+            'user' => $request->user(),
+        ]);
     }
 
     public function edit(Request $request): Response

@@ -17,6 +17,7 @@ import {
     ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { usePage } from '@inertiajs/react';
+import Footer from '@/Components/Footer';
 
 const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon, routeName: 'dashboard.superadmin' },
@@ -251,7 +252,7 @@ export default function AdminLayout({ children, header, title }) {
             </div>
 
             {/* Main content area */}
-            <div className="lg:pl-64">
+            <div className="flex min-h-screen flex-col lg:pl-64">
                 {/* Top bar */}
                 <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
                     <button
@@ -371,11 +372,13 @@ export default function AdminLayout({ children, header, title }) {
                 )}
 
                 {/* Main content */}
-                <main className="py-6">
+                <main className="flex-1 py-6">
                     <div className="px-4 sm:px-6 lg:px-8">
                         {children}
                     </div>
                 </main>
+
+                <Footer />
             </div>
         </div>
     );
