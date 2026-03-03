@@ -53,15 +53,12 @@ class RegisteredUserController extends Controller
             'last_name' => $nameParts[1] ?? $nameParts[0],
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'department' => 'General',
-            'organization' => '',
+            'date_of_birth' => $request->date_of_birth,
         ]);
 
         // MOODLE INTEGRATION START
-        // Parse the name for Moodle
-        $nameParts = explode(' ', trim($request->name), 2);
         $firstName = $nameParts[0];
-        $lastName = isset($nameParts[1]) ? $nameParts[1] : $nameParts[0];
+        $lastName = $nameParts[1] ?? $nameParts[0];
         
         // Generate username from email
         $emailPart = strtolower(explode('@', $request->email)[0]);
