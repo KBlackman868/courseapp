@@ -30,27 +30,14 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
-        // Load all courses with enrollment count for client-side filtering
-        $courses = Course::withCount('enrollments')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = auth()->user();
 
-        // Statistics
-        $statsRaw = DB::table('courses')
-            ->selectRaw('COUNT(*) as total')
-            ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active")
-            ->selectRaw("SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive")
-            ->selectRaw('SUM(CASE WHEN moodle_course_id IS NOT NULL THEN 1 ELSE 0 END) as synced')
-            ->selectRaw('SUM(CASE WHEN moodle_course_id IS NULL THEN 1 ELSE 0 END) as not_synced')
-            ->first();
+        // Non-admin users should see the course catalog, not the admin management view
+        if (!$user->hasRole(['admin', 'superadmin', 'course_admin'])) {
+            return redirect()->route('catalog.index');
+        }
 
-        $stats = [
-            'total' => (int) $statsRaw->total,
-            'active' => (int) $statsRaw->active,
-            'inactive' => (int) $statsRaw->inactive,
-            'synced' => (int) $statsRaw->synced,
-            'not_synced' => (int) $statsRaw->not_synced,
-        ];
+        $courses = Course::with('enrollments')->paginate(12);
 
         // Log viewing courses
         ActivityLogger::logSystem('courses_viewed',
@@ -58,10 +45,7 @@ class CourseController extends Controller
             []
         );
 
-        return Inertia::render('Admin/CoursesIndex', [
-            'courses' => $courses,
-            'stats' => $stats,
-        ]);
+        return view('courses.index', compact('courses'));
     }
     
     // Display details for a single course
