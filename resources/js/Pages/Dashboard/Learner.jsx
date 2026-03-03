@@ -1,5 +1,4 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import DashboardLayout from '@/Layouts/DashboardLayout';
 import { AcademicCapIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
@@ -52,13 +51,7 @@ export default function Learner({
     const courseItems = courses?.data || [];
 
     return (
-        <DashboardLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    My Dashboard
-                </h2>
-            }
-        >
+        <>
             <Head title="Dashboard" />
 
             <div className="space-y-6">
@@ -210,6 +203,6 @@ export default function Learner({
                     </nav>
                 )}
             </div>
-        </DashboardLayout>
+        </>
     );
 }
