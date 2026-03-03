@@ -1,6 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import DashboardLayout from '@/Layouts/DashboardLayout';
+import { useState } from 'react';
 
 export default function Settings({ user }) {
     const { auth } = usePage().props;
@@ -9,12 +10,15 @@ export default function Settings({ user }) {
     );
     const Layout = isAdmin ? AdminLayout : DashboardLayout;
 
+    const [confirmingDeletion, setConfirmingDeletion] = useState(false);
+
     const photoForm = useForm({ profile_photo: null });
     const passwordForm = useForm({
         current_password: '',
         password: '',
         password_confirmation: '',
     });
+    const deleteForm = useForm({ password: '' });
 
     const handlePhotoSubmit = (e) => {
         e.preventDefault();
@@ -27,6 +31,14 @@ export default function Settings({ user }) {
         e.preventDefault();
         passwordForm.post(route('profile.password'), {
             onSuccess: () => passwordForm.reset(),
+        });
+    };
+
+    const handleDeleteAccount = (e) => {
+        e.preventDefault();
+        deleteForm.delete(route('profile.destroy'), {
+            onSuccess: () => setConfirmingDeletion(false),
+            onError: () => {},
         });
     };
 
@@ -132,6 +144,68 @@ export default function Settings({ user }) {
                             Update Password
                         </button>
                     </form>
+                </div>
+
+                {/* Delete Account */}
+                <div className="bg-white p-6 rounded-lg shadow border border-red-200">
+                    <h3 className="text-lg font-semibold text-red-600 mb-2">
+                        Delete Account
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Once your account is deleted, all of its resources and data will be
+                        permanently deleted. Please enter your password to confirm you would
+                        like to permanently delete your account.
+                    </p>
+
+                    {!confirmingDeletion ? (
+                        <button
+                            onClick={() => setConfirmingDeletion(true)}
+                            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                            Delete Account
+                        </button>
+                    ) : (
+                        <form onSubmit={handleDeleteAccount} className="space-y-4 max-w-md">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Confirm your password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={deleteForm.data.password}
+                                    onChange={(e) =>
+                                        deleteForm.setData('password', e.target.value)
+                                    }
+                                    placeholder="Enter your password to confirm"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                                />
+                                {deleteForm.errors.password && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {deleteForm.errors.password}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    type="submit"
+                                    disabled={deleteForm.processing}
+                                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                                >
+                                    Permanently Delete Account
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setConfirmingDeletion(false);
+                                        deleteForm.reset();
+                                    }}
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </div>
             </div>
         </Layout>

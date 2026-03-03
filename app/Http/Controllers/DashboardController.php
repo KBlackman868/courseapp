@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -109,22 +110,27 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Navigation config
-        $navConfig = NavConfig::get($user);
-        $badgeCounts = NavConfig::getBadgeCounts($user);
-
-        return view('dashboard.admin', compact(
-            'user',
-            'stats',
-            'pendingAccountRequests',
-            'pendingCourseRequests',
-            'recentAccountRequests',
-            'recentCourseRequests',
-            'failedMoodleSyncs',
-            'recentNotifications',
-            'navConfig',
-            'badgeCounts'
-        ));
+        return Inertia::render('Admin/Dashboard', [
+            'stats' => [
+                'totalUsers' => $stats['total_users'],
+                'totalCourses' => $stats['active_courses'],
+                'pendingRequests' => $stats['pending_total'],
+                'activeEnrollments' => Enrollment::where('status', 'approved')->count(),
+            ],
+            'recentActivity' => $recentAccountRequests->map(fn($r) => [
+                'id' => $r->id,
+                'user' => $r->first_name . ' ' . $r->last_name,
+                'action' => 'Requested account access',
+                'time' => $r->created_at->diffForHumans(),
+            ])->toArray(),
+            'pendingRequests' => $recentCourseRequests->map(fn($r) => [
+                'id' => $r->id,
+                'user' => $r->user?->first_name . ' ' . $r->user?->last_name,
+                'course' => $r->course?->title ?? 'Unknown',
+                'requestedAt' => $r->requested_at?->format('Y-m-d') ?? '',
+                'status' => 'pending',
+            ])->toArray(),
+        ]);
     }
 
     /**
@@ -210,25 +216,18 @@ class DashboardController extends Controller
         $canAccessMohTab = $user->isMohStaff() || $user->isSuperAdmin() || $user->isAdmin();
         $canAccessExternalTab = true; // Everyone can see external courses
 
-        // Navigation config
-        $navConfig = NavConfig::get($user);
-        $badgeCounts = NavConfig::getBadgeCounts($user);
-
-        return view('dashboard.learner', compact(
-            'user',
-            'courses',
-            'userCourseStatuses',
-            'activeTab',
-            'search',
-            'category',
-            'enrollmentType',
-            'categories',
-            'showOnboarding',
-            'canAccessMohTab',
-            'canAccessExternalTab',
-            'navConfig',
-            'badgeCounts'
-        ));
+        return Inertia::render('Dashboard/Learner', [
+            'courses' => $courses,
+            'userCourseStatuses' => $userCourseStatuses,
+            'activeTab' => $activeTab,
+            'search' => $search,
+            'category' => $category,
+            'enrollmentType' => $enrollmentType,
+            'categories' => $categories,
+            'showOnboarding' => $showOnboarding,
+            'canAccessMohTab' => $canAccessMohTab,
+            'canAccessExternalTab' => $canAccessExternalTab,
+        ]);
     }
 
     /**
@@ -425,22 +424,20 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Navigation config
-        $navConfig = NavConfig::get($user);
-        $badgeCounts = NavConfig::getBadgeCounts($user);
-
-        return view('dashboard.superadmin', compact(
-            'user',
-            'stats',
-            'pendingAccountRequests',
-            'pendingCourseRequests',
-            'failedSyncs',
-            'roleDistribution',
-            'recentActivity',
-            'moodleHealth',
-            'recentUsers',
-            'navConfig',
-            'badgeCounts'
-        ));
+        return Inertia::render('Admin/Dashboard', [
+            'stats' => [
+                'totalUsers' => $stats['total_users'],
+                'totalCourses' => $stats['total_courses'],
+                'pendingRequests' => $pendingAccountRequests + $pendingCourseRequests,
+                'activeEnrollments' => Enrollment::where('status', 'approved')->count(),
+            ],
+            'recentActivity' => $recentActivity->map(fn($a) => [
+                'id' => $a->id,
+                'user' => $a->user?->first_name . ' ' . $a->user?->last_name,
+                'action' => $a->description ?? $a->action ?? '',
+                'time' => $a->created_at->diffForHumans(),
+            ])->take(5)->toArray(),
+            'pendingRequests' => [],
+        ]);
     }
 }
