@@ -28,19 +28,23 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     initAjaxForms();
 });
-createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.jsx`,
-            import.meta.glob('./Pages/**/*.jsx'),
-        ),
-    setup({ el, App, props }) {
-        const root = createRoot(el);
+// Only bootstrap Inertia when the #app mount point exists (Inertia pages via app.blade.php).
+// Blade pages rendered via layouts.blade.php share the same Vite bundle but have no #app element.
+if (document.getElementById('app')) {
+    createInertiaApp({
+        title: (title) => `${title} - ${appName}`,
+        resolve: (name) =>
+            resolvePageComponent(
+                `./Pages/${name}.jsx`,
+                import.meta.glob('./Pages/**/*.jsx'),
+            ),
+        setup({ el, App, props }) {
+            const root = createRoot(el);
 
-        root.render(<App {...props} />);
-    },
-    progress: {
-        color: '#4B5563',
-    },
-});
+            root.render(<App {...props} />);
+        },
+        progress: {
+            color: '#4B5563',
+        },
+    });
+}

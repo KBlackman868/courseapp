@@ -1,3 +1,10 @@
+@php
+  $isAuthenticated = auth()->check();
+  $isAdmin = $isAuthenticated && auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']);
+  $isSuperAdmin = $isAuthenticated && auth()->user()->hasRole('superadmin');
+  $isCourseAdmin = $isAuthenticated && auth()->user()->hasRole('course_admin');
+  $isHome = request()->routeIs('home') || request()->routeIs('welcome');
+@endphp
 <!DOCTYPE html>
 <html lang="en" data-theme="light" x-data="layoutData()" :class="{ 'dark': darkMode }" :data-theme="darkMode ? 'dark' : 'light'" class="scroll-smooth">
 <head>
@@ -8,10 +15,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   @vite(['resources/css/app.css', 'resources/js/app.jsx'])
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
-
-  <!-- Inline toast styles (lighter than toastr CDN) -->
   <style>
-    /* Prevent horizontal scroll */
     html, body { overflow-x: hidden; max-width: 100vw; }
     .gradient-text {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -23,22 +27,25 @@
 </head>
 <body class="min-h-screen bg-base-200">
 
-  <div class="drawer">
+  {{-- Drawer: lg:drawer-open gives admins a persistent sidebar on desktop --}}
+  <div class="drawer {{ $isAdmin ? 'lg:drawer-open' : '' }}">
     <input id="main-drawer" type="checkbox" class="drawer-toggle" />
 
-    <div class="drawer-content flex flex-col">
-      <!-- Navbar -->
-      <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
-        <!-- Mobile menu button -->
+    {{-- ==================== MAIN CONTENT AREA ==================== --}}
+    <div class="drawer-content flex flex-col min-h-screen">
+
+      {{-- Top Navbar --}}
+      <div class="navbar bg-base-100 shadow-lg sticky top-0 z-40">
+        {{-- Hamburger: always visible on mobile; hidden on lg for admins (sidebar takes over) --}}
         <div class="flex-none lg:hidden">
-          <label for="main-drawer" class="btn btn-square btn-ghost">
+          <label for="main-drawer" class="btn btn-square btn-ghost" aria-label="Open menu">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
             </svg>
           </label>
         </div>
 
-        <!-- Logo -->
+        {{-- Logo --}}
         <div class="flex-1">
           <a href="{{ route('home') }}" class="btn btn-ghost normal-case text-xl gap-2">
             <div class="avatar">
@@ -50,104 +57,34 @@
           </a>
         </div>
 
-        <!-- Desktop Navigation -->
-        <div class="flex-none hidden lg:flex">
-          <ul class="menu menu-horizontal px-1 gap-1">
-            @auth
-              @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-                <!-- Admin Navigation with Dropdown -->
-                <li>
-                  <details>
-                    <summary class="font-medium">
-                      <div class="badge badge-primary badge-sm">
-                        @if(auth()->user()->hasRole('superadmin'))
-                          Super Admin
-                        @elseif(auth()->user()->hasRole('course_admin'))
-                          Course Admin
-                        @else
-                          Admin
-                        @endif
-                      </div>
-                      Menu
-                    </summary>
-                    <ul class="bg-base-100 rounded-box w-52 shadow-xl z-50">
-                      @if(auth()->user()->hasRole('superadmin'))
-                        <li><a href="{{ route('dashboard.superadmin') }}" class="{{ request()->routeIs('dashboard.superadmin') ? 'active' : '' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
-                          Dashboard
-                        </a></li>
-                        <li><a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                          Users
-                        </a></li>
-                        <li><a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                          Roles
-                        </a></li>
-                      @elseif(auth()->user()->hasRole('admin'))
-                        <li><a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                          Users
-                        </a></li>
-                      @endif
-                      <li><a href="{{ route('courses.index') }}" class="{{ request()->routeIs('courses.index') ? 'active' : '' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                        Courses
-                      </a></li>
-                      <li><a href="{{ route('courses.create') }}" class="{{ request()->routeIs('courses.create') ? 'active' : '' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Create Course
-                      </a></li>
-                      <div class="divider my-0"></div>
-                      <li><a href="{{ route('admin.account-requests.index') }}">
-                        Account Requests
-                        @php $accountPending = \App\Models\AccountRequest::pending()->count(); @endphp
-                        @if($accountPending > 0)<span class="badge badge-warning badge-sm">{{ $accountPending }}</span>@endif
-                      </a></li>
-                      <li><a href="{{ route('admin.course-access-requests.index') }}">
-                        Course Access
-                        @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
-                        @if($coursePending > 0)<span class="badge badge-warning badge-sm">{{ $coursePending }}</span>@endif
-                      </a></li>
-                      @if(auth()->user()->hasRole('superadmin'))
-                        <div class="divider my-0"></div>
-                        <li><a href="{{ route('admin.moodle.status') }}" class="{{ request()->routeIs('admin.moodle.*') ? 'active' : '' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                          Moodle Status
-                        </a></li>
-                        <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                          Open Moodle
-                        </a></li>
-                        <li><a href="{{ route('admin.activity-logs.index') }}" class="{{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                          Activity Logs
-                        </a></li>
-                      @endif
-                    </ul>
-                  </details>
-                </li>
-              @else
-                <!-- Regular User Navigation -->
-                <li><a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a></li>
-                <li><a href="{{ route('dashboard.learner') }}" class="{{ request()->routeIs('dashboard.learner') ? 'active' : '' }}">Courses</a></li>
-                <li><a href="{{ route('catalog.index') }}" class="{{ request()->routeIs('catalog.*') ? 'active' : '' }}">Course Catalog</a></li>
-                <li><a href="{{ route('my-learning.index') }}" class="{{ request()->routeIs('my-learning.*') ? 'active' : '' }}">My Learning</a></li>
-                <li><a href="{{ route('mycourses') }}" class="{{ request()->routeIs('mycourses') ? 'active' : '' }}">My Courses</a></li>
-              @endif
-            @else
-              <!-- Guest Navigation -->
+        {{-- Desktop inline nav for LEARNERS (non-admin authenticated users) --}}
+        @if($isAuthenticated && !$isAdmin)
+          <div class="flex-none hidden lg:flex">
+            <ul class="menu menu-horizontal px-1 gap-1">
+              <li><a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a></li>
+              <li><a href="{{ route('dashboard.learner') }}" class="{{ request()->routeIs('dashboard.learner') ? 'active' : '' }}">Courses</a></li>
+              <li><a href="{{ route('catalog.index') }}" class="{{ request()->routeIs('catalog.*') ? 'active' : '' }}">Course Catalog</a></li>
+              <li><a href="{{ route('my-learning.index') }}" class="{{ request()->routeIs('my-learning.*') ? 'active' : '' }}">My Learning</a></li>
+              <li><a href="{{ route('mycourses') }}" class="{{ request()->routeIs('mycourses') ? 'active' : '' }}">My Courses</a></li>
+            </ul>
+          </div>
+        @endif
+
+        {{-- Desktop inline nav for GUESTS --}}
+        @guest
+          <div class="flex-none hidden lg:flex">
+            <ul class="menu menu-horizontal px-1 gap-1">
               <li><a href="{{ route('home') }}">Home</a></li>
               <li><a href="{{ route('login') }}">Login</a></li>
               <li><a href="{{ route('register') }}" class="btn btn-primary btn-sm">Register</a></li>
-            @endauth
-          </ul>
-        </div>
+            </ul>
+          </div>
+        @endguest
 
-        <!-- Right side - Notifications, Theme, Profile -->
+        {{-- Right side: Notifications, Theme, Profile --}}
         @auth
         <div class="flex-none gap-2">
-          <!-- Notifications -->
+          {{-- Notifications --}}
           <a href="{{ route('notifications.index') }}" class="btn btn-ghost btn-circle">
             <div class="indicator">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,7 +97,7 @@
             </div>
           </a>
 
-          <!-- Theme Toggle -->
+          {{-- Theme Toggle --}}
           <button @click="toggleDarkMode()" class="btn btn-ghost btn-circle">
             <svg x-show="!darkMode" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
@@ -170,7 +107,7 @@
             </svg>
           </button>
 
-          <!-- Profile Dropdown -->
+          {{-- Profile Dropdown --}}
           <div class="dropdown dropdown-end">
             <label tabindex="0" class="btn btn-ghost btn-circle avatar">
               <div class="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
@@ -181,7 +118,6 @@
               </div>
             </label>
             <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box w-64 shadow-xl z-50">
-              <!-- User Info -->
               <li class="menu-title bg-primary text-primary-content rounded-t-box px-4 py-3">
                 <div>
                   <p class="font-semibold">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</p>
@@ -216,10 +152,10 @@
         @endauth
       </div>
 
-      <!-- Page Content -->
+      {{-- Page Content --}}
       <main class="flex-1">
-        @if(!request()->routeIs('home') && !request()->routeIs('welcome'))
-          <!-- Page Header -->
+        @if(!$isHome)
+          {{-- Page Header --}}
           <div class="bg-gradient-to-r from-primary/10 to-secondary/10 py-6">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               @if(isset($heading))
@@ -231,9 +167,9 @@
           </div>
         @endif
 
-        <!-- Main Content -->
-        <div class="{{ request()->routeIs('home') || request()->routeIs('welcome') ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6' }}">
-          @if(request()->routeIs('home') || request()->routeIs('welcome'))
+        {{-- Main Content --}}
+        <div class="{{ $isHome ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6' }}">
+          @if($isHome)
             {{ $slot ?? '' }}
             @yield('content')
           @else
@@ -250,7 +186,7 @@
         </div>
       </main>
 
-      <!-- Footer -->
+      {{-- Footer --}}
       <footer class="footer footer-center p-6 bg-base-300 text-base-content">
         <div>
           <div class="flex flex-wrap justify-center gap-4 mb-2 text-sm">
@@ -262,97 +198,159 @@
       </footer>
     </div>
 
-    <!-- Mobile Drawer Sidebar -->
+    {{-- ==================== SIDEBAR ==================== --}}
     <div class="drawer-side z-50">
-      <label for="main-drawer" class="drawer-overlay" aria-label="close sidebar"></label>
-      <ul class="menu p-4 w-80 min-h-full bg-base-100" onclick="document.getElementById('main-drawer').checked = false;">
-        <!-- Close button -->
-        <li class="flex justify-end mb-2">
-          <label for="main-drawer" class="btn btn-sm btn-circle btn-ghost">
+      <label for="main-drawer" class="drawer-overlay" aria-label="Close sidebar"></label>
+      <aside class="menu p-4 w-72 min-h-full bg-base-100 border-r border-base-300 flex flex-col" onclick="if(event.target.tagName==='A'||event.target.closest('button[type=submit]'))document.getElementById('main-drawer').checked=false;">
+
+        {{-- Sidebar Header --}}
+        <div class="flex items-center gap-3 px-2 py-4 mb-2">
+          <div class="avatar">
+            <div class="w-8 rounded-full">
+              <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
+            </div>
+          </div>
+          <span class="font-bold text-lg gradient-text">MOH Learning</span>
+          {{-- Close button (mobile only) --}}
+          <label for="main-drawer" class="btn btn-sm btn-circle btn-ghost ml-auto lg:hidden" aria-label="Close sidebar">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </label>
-        </li>
-        <!-- Logo in sidebar -->
-        <li class="menu-title">
-          <div class="flex items-center gap-2">
-            <div class="avatar">
-              <div class="w-8 rounded-full">
-                <img src="{{ asset('images/moh_logo.jpg') }}" alt="MOH" onerror="this.src='https://ui-avatars.com/api/?name=MOH&background=6366f1&color=fff'" />
-              </div>
-            </div>
-            <span class="font-bold">MOH Learning</span>
-          </div>
-        </li>
+        </div>
 
         @auth
-          @if(auth()->user()->hasRole(['admin', 'superadmin', 'course_admin']))
-            <!-- Admin Role Badge -->
-            <li class="my-2">
-              <div class="badge badge-primary">
-                @if(auth()->user()->hasRole('superadmin'))
-                  Super Admin
-                @elseif(auth()->user()->hasRole('course_admin'))
-                  Course Admin
-                @else
-                  Admin
-                @endif
+          @if($isAdmin)
+            {{-- ===== ADMIN SIDEBAR NAV ===== --}}
+            <li class="menu-title text-xs uppercase tracking-wider mt-2">
+              <div class="flex items-center gap-2">
+                <div class="badge badge-primary badge-sm">
+                  @if($isSuperAdmin) Super Admin @elseif($isCourseAdmin) Course Admin @else Admin @endif
+                </div>
               </div>
             </li>
 
-            @if(auth()->user()->hasRole('superadmin'))
-              <li><a href="{{ route('dashboard.superadmin') }}">Dashboard</a></li>
-              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
-              <li><a href="{{ route('admin.roles.index') }}">Roles</a></li>
-            @elseif(auth()->user()->hasRole('admin'))
-              <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+            {{-- Dashboard --}}
+            @if($isSuperAdmin)
+              <li><a href="{{ route('dashboard.superadmin') }}" class="{{ request()->routeIs('dashboard.superadmin') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                Dashboard
+              </a></li>
+            @else
+              <li><a href="{{ route('dashboard.admin') }}" class="{{ request()->routeIs('dashboard.admin') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                Dashboard
+              </a></li>
             @endif
 
-            <li><a href="{{ route('courses.index') }}">Courses</a></li>
-            <li><a href="{{ route('courses.create') }}">Create Course</a></li>
+            {{-- User Management --}}
+            @if($isSuperAdmin || auth()->user()->hasRole('admin'))
+              <li><a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                Users
+              </a></li>
+            @endif
 
-            <div class="divider">Pending</div>
-            <li><a href="{{ route('admin.account-requests.index') }}">
+            @if($isSuperAdmin)
+              <li><a href="{{ route('admin.roles.index') }}" class="{{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Roles
+              </a></li>
+            @endif
+
+            {{-- Course Management --}}
+            <li><a href="{{ route('courses.index') }}" class="{{ request()->routeIs('courses.index') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+              Courses
+            </a></li>
+            <li><a href="{{ route('courses.create') }}" class="{{ request()->routeIs('courses.create') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              Create Course
+            </a></li>
+
+            {{-- Pending Requests --}}
+            <li class="menu-title text-xs uppercase tracking-wider mt-4">Pending</li>
+            <li><a href="{{ route('admin.account-requests.index') }}" class="{{ request()->routeIs('admin.account-requests.*') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
               Account Requests
-              @php $ap = \App\Models\AccountRequest::pending()->count(); @endphp
-              @if($ap > 0)<span class="badge badge-warning badge-sm">{{ $ap }}</span>@endif
+              @php $accountPending = \App\Models\AccountRequest::pending()->count(); @endphp
+              @if($accountPending > 0)<span class="badge badge-warning badge-sm">{{ $accountPending }}</span>@endif
             </a></li>
-            <li><a href="{{ route('admin.course-access-requests.index') }}">
+            <li><a href="{{ route('admin.course-access-requests.index') }}" class="{{ request()->routeIs('admin.course-access-requests.*') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
               Course Access
-              @php $cp = \App\Models\CourseAccessRequest::pending()->count(); @endphp
-              @if($cp > 0)<span class="badge badge-warning badge-sm">{{ $cp }}</span>@endif
+              @php $coursePending = \App\Models\CourseAccessRequest::pending()->count(); @endphp
+              @if($coursePending > 0)<span class="badge badge-warning badge-sm">{{ $coursePending }}</span>@endif
             </a></li>
 
-            @if(auth()->user()->hasRole('superadmin'))
-              <div class="divider">Moodle</div>
-              <li><a href="{{ route('admin.moodle.status') }}">Moodle Status</a></li>
-              <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">Open Moodle</a></li>
-              <li><a href="{{ route('admin.activity-logs.index') }}">Activity Logs</a></li>
+            {{-- Moodle (SuperAdmin only) --}}
+            @if($isSuperAdmin)
+              <li class="menu-title text-xs uppercase tracking-wider mt-4">Moodle</li>
+              <li><a href="{{ route('admin.moodle.status') }}" class="{{ request()->routeIs('admin.moodle.*') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Moodle Status
+              </a></li>
+              <li><a href="{{ route('moodle.sso') }}" target="_blank" class="text-secondary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                Open Moodle
+              </a></li>
+              <li><a href="{{ route('admin.activity-logs.index') }}" class="{{ request()->routeIs('admin.activity-logs.*') ? 'active' : '' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                Activity Logs
+              </a></li>
             @endif
+
           @else
-            <li><a href="{{ route('home') }}">Home</a></li>
-            <li><a href="{{ route('dashboard.learner') }}">Courses</a></li>
-            <li><a href="{{ route('catalog.index') }}">Course Catalog</a></li>
-            <li><a href="{{ route('my-learning.index') }}">My Learning</a></li>
-            <li><a href="{{ route('mycourses') }}">My Courses</a></li>
+            {{-- ===== LEARNER SIDEBAR NAV (mobile only, desktop uses top navbar) ===== --}}
+            <li><a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+              Home
+            </a></li>
+            <li><a href="{{ route('dashboard.learner') }}" class="{{ request()->routeIs('dashboard.learner') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              Courses
+            </a></li>
+            <li><a href="{{ route('catalog.index') }}" class="{{ request()->routeIs('catalog.*') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+              Course Catalog
+            </a></li>
+            <li><a href="{{ route('my-learning.index') }}" class="{{ request()->routeIs('my-learning.*') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              My Learning
+            </a></li>
+            <li><a href="{{ route('mycourses') }}" class="{{ request()->routeIs('mycourses') ? 'active' : '' }}">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+              My Courses
+            </a></li>
           @endif
 
-          <div class="divider">Account</div>
-          <li><a href="{{ route('profile.show') }}">Profile</a></li>
-          <li><a href="{{ route('profile.settings') }}">Settings</a></li>
+          {{-- Account Section (all authenticated users) --}}
+          <li class="menu-title text-xs uppercase tracking-wider mt-4">Account</li>
+          <li><a href="{{ route('profile.show') }}" class="{{ request()->routeIs('profile.show') ? 'active' : '' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            Profile
+          </a></li>
+          <li><a href="{{ route('profile.settings') }}" class="{{ request()->routeIs('profile.settings') ? 'active' : '' }}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Settings
+          </a></li>
           <li>
             <form method="POST" action="{{ route('logout') }}">
               @csrf
-              <button type="submit" class="text-error">Sign Out</button>
+              <button type="submit" class="text-error w-full text-left">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Sign Out
+              </button>
             </form>
           </li>
+
         @else
+          {{-- Guest sidebar (mobile only) --}}
           <li><a href="{{ route('home') }}">Home</a></li>
           <li><a href="{{ route('login') }}">Login</a></li>
           <li><a href="{{ route('register') }}">Register</a></li>
         @endauth
-      </ul>
+      </aside>
     </div>
   </div>
 
@@ -362,8 +360,6 @@
     function layoutData() {
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
-        scrolled: false,
-        mobileMenuOpen: false,
 
         init() {
           if (this.darkMode) {
