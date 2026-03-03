@@ -300,6 +300,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/settings', 'settings')->name('settings');
             Route::post('/photo', 'updatePhoto')->name('photo');
             Route::post('/password', 'updatePassword')->name('password');
+            Route::delete('/', 'destroy')->name('destroy');
         });
 
         // =========================================================================
@@ -325,15 +326,17 @@ Route::middleware('auth')->group(function () {
             // Admin Dashboard
             Route::get('/dashboard', function() {
                 $stats = [
-                    'total_users' => \App\Models\User::count(),
-                    'total_courses' => \App\Models\Course::count(),
-                    'pending_enrollments' => \App\Models\Enrollment::where('status', 'pending')->count(),
-                    'active_enrollments' => \App\Models\Enrollment::where('status', 'approved')->count(),
+                    'totalUsers' => \App\Models\User::count(),
+                    'totalCourses' => \App\Models\Course::count(),
+                    'pendingRequests' => \App\Models\Enrollment::where('status', 'pending')->count(),
+                    'activeEnrollments' => \App\Models\Enrollment::where('status', 'approved')->count(),
                 ];
-                
-                return view()->exists('admin.dashboard') 
-                    ? view('admin.dashboard', compact('stats'))
-                    : redirect()->route('dashboard');
+
+                return \Inertia\Inertia::render('Admin/Dashboard', [
+                    'stats' => $stats,
+                    'recentActivity' => [],
+                    'pendingRequests' => [],
+                ]);
             })->name('dashboard');
             
             // Course Management (Admin View)
