@@ -4,6 +4,7 @@ import { initAjaxForms } from './forms';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
+import LearnerLayout from './Layouts/LearnerLayout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Learn About Health';
 
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.add('page-exit');
         });
     });
-    
+
     // Remove loading class after navigation
     document.body.classList.remove('page-exit');
 });
@@ -30,11 +31,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) =>
-        resolvePageComponent(
+    resolve: async (name) => {
+        const page = await resolvePageComponent(
             `./Pages/${name}.jsx`,
             import.meta.glob('./Pages/**/*.jsx'),
-        ),
+        );
+        // Use the page's own layout if defined, otherwise default to LearnerLayout
+        if (!page.default.layout) {
+            page.default.layout = (page) => <LearnerLayout>{page}</LearnerLayout>;
+        }
+        return page;
+    },
     setup({ el, App, props }) {
         const root = createRoot(el);
 

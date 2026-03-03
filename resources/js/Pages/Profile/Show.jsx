@@ -1,27 +1,12 @@
-import { Head, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
-import DashboardLayout from '@/Layouts/DashboardLayout';
+import { Head } from '@inertiajs/react';
 
 export default function Show({ user, enrollments }) {
-    const { auth } = usePage().props;
-    const isAdmin = auth.user?.roles?.some(r =>
-        ['admin', 'superadmin', 'course_admin'].includes(r.name)
-    );
-    const Layout = isAdmin ? AdminLayout : DashboardLayout;
-
     const avatarSrc = user.profile_photo
         ? `/storage/${user.profile_photo}`
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name + ' ' + user.last_name)}&background=6366f1&color=fff`;
 
     return (
-        <Layout
-            title="Your Profile"
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Your Profile
-                </h2>
-            }
-        >
+        <>
             <Head title="Profile" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -62,6 +47,6 @@ export default function Show({ user, enrollments }) {
                     )}
                 </div>
             </div>
-        </Layout>
+        </>
     );
 }

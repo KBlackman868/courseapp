@@ -10,31 +10,30 @@ const navigation = [
     { name: 'Course Catalog', href: '/catalog', routeName: 'catalog' },
 ];
 
-const adminNavigation = [
-    { name: 'Dashboard', href: '/admin/dashboard', routeName: 'dashboard.superadmin' },
-    { name: 'Users', href: '/admin/users', routeName: 'admin.users.*' },
-    { name: 'Courses', href: '/courses', routeName: 'courses.index' },
-    { name: 'Access Requests', href: '/admin/course-access-requests', routeName: 'admin.course-access-requests.*' },
-    { name: 'Enrollment Requests', href: '/admin/enrollment-requests', routeName: 'admin.enrollment-requests.*' },
-    { name: 'Activity Logs', href: '/admin/activity-logs', routeName: 'admin.activity-logs.*' },
+const managementLinks = [
+    { name: 'Users', href: '/admin/users' },
+    { name: 'Roles', href: '/admin/roles' },
+    { name: 'Course Management', href: '/courses' },
+    { name: 'Create Course', href: '/courses/create' },
+    { name: 'Account Requests', href: '/admin/account-requests' },
+    { name: 'Course Access', href: '/admin/course-access-requests' },
+    { name: 'Moodle Status', href: '/admin/moodle/status' },
+    { name: 'Open Moodle', href: '/moodle/sso', external: true },
+    { name: 'Activity Logs', href: '/admin/activity-logs' },
 ];
 
 function classNames(...classes) {
     return classes.filter(Boolean).join(' ');
 }
 
-export default function DashboardLayout({ children, header }) {
-    const { auth, url } = usePage().props;
+export default function LearnerLayout({ children }) {
+    const { auth } = usePage().props;
     const user = auth?.user;
 
-    // Determine if user is admin
     const isAdmin = user?.roles?.some(role =>
         ['admin', 'superadmin', 'course_admin'].includes(role.name)
     );
 
-    const navItems = isAdmin ? adminNavigation : navigation;
-
-    // Check if current route matches
     const isCurrentRoute = (routeName) => {
         if (!routeName) return false;
         try {
@@ -47,11 +46,6 @@ export default function DashboardLayout({ children, header }) {
             return false;
         }
     };
-
-    const userNavigation = [
-        { name: 'Your Profile', href: route('profile.show') },
-        { name: 'Settings', href: route('profile.settings') },
-    ];
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50">
@@ -74,8 +68,8 @@ export default function DashboardLayout({ children, header }) {
                                     </div>
 
                                     {/* Desktop Navigation */}
-                                    <div className="hidden sm:ml-8 sm:flex sm:space-x-1">
-                                        {navItems.map((item) => (
+                                    <div className="hidden sm:ml-8 sm:flex sm:items-center sm:space-x-1">
+                                        {navigation.map((item) => (
                                             <Link
                                                 key={item.name}
                                                 href={item.href}
@@ -90,6 +84,57 @@ export default function DashboardLayout({ children, header }) {
                                                 {item.name}
                                             </Link>
                                         ))}
+
+                                        {/* Management Dropdown (Admin only) */}
+                                        {isAdmin && (
+                                            <Menu as="div" className="relative">
+                                                <MenuButton className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-b-2 border-transparent transition-colors duration-150">
+                                                    Management
+                                                    <ChevronDownIcon className="h-4 w-4" aria-hidden="true" />
+                                                </MenuButton>
+                                                <Transition
+                                                    as={Fragment}
+                                                    enter="transition ease-out duration-100"
+                                                    enterFrom="transform opacity-0 scale-95"
+                                                    enterTo="transform opacity-100 scale-100"
+                                                    leave="transition ease-in duration-75"
+                                                    leaveFrom="transform opacity-100 scale-100"
+                                                    leaveTo="transform opacity-0 scale-95"
+                                                >
+                                                    <MenuItems className="absolute left-0 z-50 mt-2 w-56 origin-top-left rounded-lg bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                                        {managementLinks.map((item) => (
+                                                            <MenuItem key={item.name}>
+                                                                {({ active }) =>
+                                                                    item.external ? (
+                                                                        <a
+                                                                            href={item.href}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={classNames(
+                                                                                active ? 'bg-gray-50' : '',
+                                                                                'block px-4 py-2 text-sm text-gray-700'
+                                                                            )}
+                                                                        >
+                                                                            {item.name}
+                                                                        </a>
+                                                                    ) : (
+                                                                        <Link
+                                                                            href={item.href}
+                                                                            className={classNames(
+                                                                                active ? 'bg-gray-50' : '',
+                                                                                'block px-4 py-2 text-sm text-gray-700'
+                                                                            )}
+                                                                        >
+                                                                            {item.name}
+                                                                        </Link>
+                                                                    )
+                                                                }
+                                                            </MenuItem>
+                                                        ))}
+                                                    </MenuItems>
+                                                </Transition>
+                                            </Menu>
+                                        )}
                                     </div>
                                 </div>
 
@@ -102,7 +147,6 @@ export default function DashboardLayout({ children, header }) {
                                     >
                                         <span className="sr-only">View notifications</span>
                                         <BellIcon className="h-5 w-5" aria-hidden="true" />
-                                        {/* Notification badge */}
                                         <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
                                     </button>
 
@@ -135,7 +179,6 @@ export default function DashboardLayout({ children, header }) {
                                             leaveTo="transform opacity-0 scale-95"
                                         >
                                             <MenuItems className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                                {/* User info header */}
                                                 <div className="px-4 py-3 border-b border-gray-100">
                                                     <p className="text-sm font-medium text-gray-900">
                                                         {user?.first_name} {user?.last_name}
@@ -150,21 +193,26 @@ export default function DashboardLayout({ children, header }) {
                                                     )}
                                                 </div>
 
-                                                {userNavigation.map((item) => (
-                                                    <MenuItem key={item.name}>
-                                                        {({ active }) => (
-                                                            <Link
-                                                                href={item.href}
-                                                                className={classNames(
-                                                                    active ? 'bg-gray-50' : '',
-                                                                    'block px-4 py-2 text-sm text-gray-700'
-                                                                )}
-                                                            >
-                                                                {item.name}
-                                                            </Link>
-                                                        )}
-                                                    </MenuItem>
-                                                ))}
+                                                <MenuItem>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            href="/profile"
+                                                            className={classNames(active ? 'bg-gray-50' : '', 'block px-4 py-2 text-sm text-gray-700')}
+                                                        >
+                                                            Your Profile
+                                                        </Link>
+                                                    )}
+                                                </MenuItem>
+                                                <MenuItem>
+                                                    {({ active }) => (
+                                                        <Link
+                                                            href="/profile/settings"
+                                                            className={classNames(active ? 'bg-gray-50' : '', 'block px-4 py-2 text-sm text-gray-700')}
+                                                        >
+                                                            Change Password
+                                                        </Link>
+                                                    )}
+                                                </MenuItem>
 
                                                 <div className="border-t border-gray-100 mt-1 pt-1">
                                                     <MenuItem>
@@ -173,10 +221,7 @@ export default function DashboardLayout({ children, header }) {
                                                                 href={route('logout')}
                                                                 method="post"
                                                                 as="button"
-                                                                className={classNames(
-                                                                    active ? 'bg-gray-50' : '',
-                                                                    'block w-full text-left px-4 py-2 text-sm text-red-600'
-                                                                )}
+                                                                className={classNames(active ? 'bg-gray-50' : '', 'block w-full text-left px-4 py-2 text-sm text-red-600')}
                                                             >
                                                                 Sign out
                                                             </Link>
@@ -205,7 +250,7 @@ export default function DashboardLayout({ children, header }) {
                         {/* Mobile menu panel */}
                         <DisclosurePanel className="sm:hidden">
                             <div className="space-y-1 pb-3 pt-2 px-2">
-                                {navItems.map((item) => (
+                                {navigation.map((item) => (
                                     <Link
                                         key={item.name}
                                         href={item.href}
@@ -216,11 +261,42 @@ export default function DashboardLayout({ children, header }) {
                                                 : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800',
                                             'block border-l-4 py-2 pl-3 pr-4 text-base font-medium transition-colors'
                                         )}
-                                        aria-current={isCurrentRoute(item.routeName) ? 'page' : undefined}
                                     >
                                         {item.name}
                                     </Link>
                                 ))}
+
+                                {/* Mobile Management links (Admin only) */}
+                                {isAdmin && (
+                                    <>
+                                        <div className="border-t border-gray-200 mt-2 pt-2 px-3">
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Management</p>
+                                        </div>
+                                        {managementLinks.map((item) =>
+                                            item.external ? (
+                                                <a
+                                                    key={item.name}
+                                                    href={item.href}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={() => close()}
+                                                    className="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 transition-colors"
+                                                >
+                                                    {item.name}
+                                                </a>
+                                            ) : (
+                                                <Link
+                                                    key={item.name}
+                                                    href={item.href}
+                                                    onClick={() => close()}
+                                                    className="block border-l-4 border-transparent py-2 pl-3 pr-4 text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 transition-colors"
+                                                >
+                                                    {item.name}
+                                                </Link>
+                                            )
+                                        )}
+                                    </>
+                                )}
                             </div>
 
                             {/* Mobile user info */}
@@ -250,16 +326,20 @@ export default function DashboardLayout({ children, header }) {
                                     </button>
                                 </div>
                                 <div className="mt-3 space-y-1 px-2">
-                                    {userNavigation.map((item) => (
-                                        <Link
-                                            key={item.name}
-                                            href={item.href}
-                                            onClick={() => close()}
-                                            className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors"
-                                        >
-                                            {item.name}
-                                        </Link>
-                                    ))}
+                                    <Link
+                                        href="/profile"
+                                        onClick={() => close()}
+                                        className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors"
+                                    >
+                                        Your Profile
+                                    </Link>
+                                    <Link
+                                        href="/profile/settings"
+                                        onClick={() => close()}
+                                        className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors"
+                                    >
+                                        Change Password
+                                    </Link>
                                     <Link
                                         href={route('logout')}
                                         method="post"
@@ -275,15 +355,6 @@ export default function DashboardLayout({ children, header }) {
                     </>
                 )}
             </Disclosure>
-
-            {/* Page Header */}
-            {header && (
-                <header className="bg-white shadow-sm">
-                    <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                        {header}
-                    </div>
-                </header>
-            )}
 
             {/* Main Content */}
             <main className="flex-1 mx-auto max-w-7xl w-full px-4 py-6 sm:px-6 lg:px-8">

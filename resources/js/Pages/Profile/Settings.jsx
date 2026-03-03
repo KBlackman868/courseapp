@@ -1,15 +1,7 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
-import DashboardLayout from '@/Layouts/DashboardLayout';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Settings({ user }) {
-    const { auth } = usePage().props;
-    const isAdmin = auth.user?.roles?.some(r =>
-        ['admin', 'superadmin', 'course_admin'].includes(r.name)
-    );
-    const Layout = isAdmin ? AdminLayout : DashboardLayout;
-
     const [confirmingDeletion, setConfirmingDeletion] = useState(false);
 
     const photoForm = useForm({ profile_photo: null });
@@ -43,14 +35,7 @@ export default function Settings({ user }) {
     };
 
     return (
-        <Layout
-            title="Settings"
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Settings
-                </h2>
-            }
-        >
+        <>
             <Head title="Settings" />
 
             <div className="space-y-8">
@@ -208,6 +193,6 @@ export default function Settings({ user }) {
                     )}
                 </div>
             </div>
-        </Layout>
+        </>
     );
 }

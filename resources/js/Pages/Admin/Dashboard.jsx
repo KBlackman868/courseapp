@@ -1,5 +1,4 @@
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
 import {
     UsersIcon,
     AcademicCapIcon,
@@ -205,7 +204,7 @@ export default function AdminDashboard({
     ];
 
     return (
-        <AdminLayout title="Dashboard">
+        <>
             <Head title="Admin Dashboard" />
 
             <div className="space-y-6">
@@ -314,6 +313,6 @@ export default function AdminDashboard({
                     </div>
                 </div>
             </div>
-        </AdminLayout>
+        </>
     );
 }
