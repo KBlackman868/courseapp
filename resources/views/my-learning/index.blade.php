@@ -159,8 +159,8 @@
                         <!-- Action Button -->
                         <div class="card-actions justify-end mt-4">
                             @if($enrollment->status === 'approved')
-                                @if($enrollment->course->hasMoodleIntegration())
-                                    <a href="{{ route('courses.access', $enrollment->course) }}"
+                                @if($enrollment->course->moodle_course_id)
+                                    <a href="{{ route('courses.access-moodle', $enrollment->course) }}"
                                        class="btn btn-primary btn-sm">
                                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>

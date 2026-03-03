@@ -20,10 +20,11 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // Eager-load approved enrollments + their courses
+        // Eager-load all enrollments (approved, pending, etc.) with their courses
         $enrollments = Enrollment::with('course')
                          ->where('user_id', $user->id)
-                         ->where('status', 'approved')
+                         ->whereIn('status', ['approved', 'pending'])
+                         ->orderBy('status')
                          ->get();
 
         return view('profile.show', compact('user', 'enrollments'));

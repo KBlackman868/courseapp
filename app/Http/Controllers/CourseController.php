@@ -21,16 +21,24 @@ class CourseController extends Controller
     }
 
     // Display a list of all courses
+    // Admins see the management view; learners are redirected to the catalog
     public function index()
     {
+        $user = auth()->user();
+
+        // Redirect non-admin users to the course catalog
+        if (!$user->hasRole(['admin', 'superadmin', 'course_admin'])) {
+            return redirect()->route('catalog.index');
+        }
+
         $courses = Course::with('enrollments')->paginate(12);
-        
+
         // Log viewing courses
         ActivityLogger::logSystem('courses_viewed',
             "User viewed course listing",
             ['page' => request()->get('page', 1)]
         );
-        
+
         return view('courses.index', compact('courses'));
     }
     
@@ -860,7 +868,7 @@ class CourseController extends Controller
             ]
         );
         
-        return view('admin.courses.index', compact('courses', 'stats'));
+        return view('courses.index', compact('courses', 'stats'));
     }
 
     /**
