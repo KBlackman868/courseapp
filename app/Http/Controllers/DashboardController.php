@@ -350,7 +350,11 @@ class DashboardController extends Controller
         $status = $accountRequest ? $accountRequest->status : 'pending';
         $requestedAt = $accountRequest ? $accountRequest->created_at : $user->created_at;
 
-        return view('dashboard.account-pending', compact('user', 'status', 'requestedAt'));
+        return Inertia::render('Dashboard/AccountPending', [
+            'user' => $user,
+            'status' => $status,
+            'requestedAt' => $requestedAt,
+        ]);
     }
 
     /**

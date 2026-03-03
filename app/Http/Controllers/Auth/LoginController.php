@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class LoginController extends Controller
 {
@@ -30,7 +31,9 @@ class LoginController extends Controller
      */
     public function showLoginForm()
     {
-        return view('pages.login');
+        return Inertia::render('Auth/Login', [
+            'status' => session('status'),
+        ]);
     }
 
     /**
@@ -208,7 +211,10 @@ class LoginController extends Controller
 
         $remainingResends = $this->otpService->getRemainingResends($user);
 
-        return view('auth.otp-verify', compact('user', 'remainingResends'));
+        return Inertia::render('Auth/OtpVerify', [
+            'user' => $user,
+            'remainingResends' => $remainingResends,
+        ]);
     }
 
     /**

@@ -10,6 +10,7 @@ use Spatie\Permission\Models\Permission;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class RolePermissionController extends Controller
 {
@@ -24,13 +25,19 @@ class RolePermissionController extends Controller
         $permissions = Permission::all()->groupBy('category');
         $users = User::with('roles')->paginate(20);
         
-        return view('admin.roles.index', compact('roles', 'permissions', 'users'));
+        return Inertia::render('Admin/Roles/Index', [
+            'roles' => $roles,
+            'permissions' => $permissions,
+            'users' => $users,
+        ]);
     }
 
     public function create()
     {
         $permissions = Permission::all()->groupBy('category');
-        return view('admin.roles.create', compact('permissions'));
+        return Inertia::render('Admin/Roles/Create', [
+            'permissions' => $permissions,
+        ]);
     }
 
     public function store(Request $request)
@@ -76,7 +83,11 @@ class RolePermissionController extends Controller
         $permissions = Permission::all()->groupBy('category');
         $rolePermissions = $role->permissions->pluck('id')->toArray();
         
-        return view('admin.roles.edit', compact('role', 'permissions', 'rolePermissions'));
+        return Inertia::render('Admin/Roles/Edit', [
+            'role' => $role,
+            'permissions' => $permissions,
+            'rolePermissions' => $rolePermissions,
+        ]);
     }
 
     public function update(Request $request, Role $role)
@@ -156,6 +167,9 @@ class RolePermissionController extends Controller
     public function showPermissions(Role $role)
     {
         $permissions = $role->permissions()->get()->groupBy('category');
-        return view('admin.roles.permissions', compact('role', 'permissions'));
+        return Inertia::render('Admin/Roles/Permissions', [
+            'role' => $role,
+            'permissions' => $permissions,
+        ]);
     }
 }

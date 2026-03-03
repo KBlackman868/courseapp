@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Models\Enrollment;
+use Inertia\Inertia;
 
 class CourseController extends Controller
 {
@@ -31,7 +32,7 @@ class CourseController extends Controller
             ['page' => request()->get('page', 1)]
         );
         
-        return view('courses.index', compact('courses'));
+        return Inertia::render('Courses/Index', ['courses' => $courses]);
     }
     
     // Display details for a single course
@@ -58,7 +59,11 @@ class CourseController extends Controller
             ]
         );
 
-        return view('courses.show', compact('course', 'enrollment', 'accessLevel'));
+        return Inertia::render('Courses/Show', [
+            'course' => $course,
+            'enrollment' => $enrollment,
+            'accessLevel' => $accessLevel,
+        ]);
     }
 
     /**
@@ -255,7 +260,7 @@ class CourseController extends Controller
             ['user_id' => auth()->id()]
         );
 
-        return view('courses.register', compact('course'));
+        return Inertia::render('Courses/Register', ['course' => $course]);
     }
 
     // Display the form to create a new course
@@ -267,7 +272,7 @@ class CourseController extends Controller
             ['admin' => auth()->user()->email]
         );
         
-        return view('courses.create');
+        return Inertia::render('Courses/Create');
     }
 
     // Store the new course data in the database
@@ -366,7 +371,7 @@ class CourseController extends Controller
             ['admin' => auth()->user()->email]
         );
         
-        return view('courses.edit', compact('course'));
+        return Inertia::render('Courses/Edit', ['course' => $course]);
     }
 
     // Update the specified course in the database
@@ -860,7 +865,10 @@ class CourseController extends Controller
             ]
         );
         
-        return view('admin.courses.index', compact('courses', 'stats'));
+        return Inertia::render('Admin/Courses/Index', [
+            'courses' => $courses,
+            'stats' => $stats,
+        ]);
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Jobs\CreateOrLinkMoodleUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 /**
  * AccountRequestController
@@ -74,9 +75,14 @@ class AccountRequestController extends Controller
             'all' => AccountRequest::count(),
         ];
 
-        return view('admin.account-requests.index', compact(
-            'requests', 'departments', 'counts', 'status', 'department', 'search'
-        ));
+        return Inertia::render('Admin/AccountRequests/Index', [
+            'requests' => $requests,
+            'departments' => $departments,
+            'counts' => $counts,
+            'status' => $status,
+            'department' => $department,
+            'search' => $search,
+        ]);
     }
 
     /**
@@ -86,8 +92,8 @@ class AccountRequestController extends Controller
     {
         $this->authorize('view', $accountRequest);
 
-        return view('admin.account-requests.show', [
-            'request' => $accountRequest->load('reviewer', 'user'),
+        return Inertia::render('Admin/AccountRequests/Show', [
+            'accountRequest' => $accountRequest->load('reviewer', 'user'),
         ]);
     }
 

@@ -8,6 +8,7 @@ use App\Services\ActivityLogger;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class RoleManagementController extends Controller
 {
@@ -30,7 +31,10 @@ class RoleManagementController extends Controller
         $users = User::with('roles')->paginate(20);
         $roles = Role::all();
 
-        return view('admin.role-management', compact('users', 'roles'));
+        return Inertia::render('Admin/Roles/Index', [
+            'users' => $users,
+            'roles' => $roles,
+        ]);
     }
 
     public function assignRole(Request $request, User $user)

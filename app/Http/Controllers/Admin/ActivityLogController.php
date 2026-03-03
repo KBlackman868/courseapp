@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Carbon\Carbon;
 
 class ActivityLogController extends Controller
@@ -97,7 +98,11 @@ class ActivityLogController extends Controller
             'critical_events' => (int) $statsRaw->critical_events,
         ];
         
-        return view('admin.activity-logs.index', compact('logs', 'users', 'stats'));
+        return Inertia::render('Admin/ActivityLogs/Index', [
+            'logs' => $logs,
+            'users' => $users,
+            'stats' => $stats,
+        ]);
     }
 
     /**
@@ -138,7 +143,7 @@ class ActivityLogController extends Controller
      */
     public function show(ActivityLog $log)
     {
-        return view('admin.activity-logs.show', compact('log'));
+        return Inertia::render('Admin/ActivityLogs/Show', ['log' => $log]);
     }
 
     /**

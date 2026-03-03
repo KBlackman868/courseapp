@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
+use Inertia\Inertia;
 
 class MoodleTestController extends Controller
 {
@@ -24,7 +25,7 @@ class MoodleTestController extends Controller
      */
     public function index()
     {
-        return view('admin.moodle-test');
+        return Inertia::render('Admin/Moodle/Test');
     }
 
     /**

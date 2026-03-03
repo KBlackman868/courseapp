@@ -1,50 +1,39 @@
 import '../css/app.css';
 import './bootstrap';
-import { initAjaxForms } from './forms';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
-import LearnerLayout from './Layouts/LearnerLayout';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import GuestLayout from '@/Layouts/GuestLayout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Learn About Health';
 
-// Add loading states
-window.addEventListener('load', () => {
-    document.body.classList.add('loaded');
-});
+const guestPages = ['Auth/Login', 'Auth/Register', 'Auth/ForgotPassword', 'Auth/ResetPassword', 'Auth/VerifyEmail', 'Auth/ConfirmPassword', 'Auth/RegisterExternal', 'Auth/OtpVerify', 'Auth/MohRequestAccount', 'Auth/MohRequestSubmitted', 'Auth/VerifyEmailOtp'];
+const noLayoutPages = ['Welcome', 'Dashboard/AccountPending', 'Policies/Terms', 'Policies/Privacy'];
 
-// Add page transition effects
-document.addEventListener('DOMContentLoaded', () => {
-    // Smooth page transitions for internal links
-    const links = document.querySelectorAll('a[href^="/"]');
-    links.forEach(link => {
-        link.addEventListener('click', (e) => {
-            document.body.classList.add('page-exit');
-        });
-    });
-
-    // Remove loading class after navigation
-    document.body.classList.remove('page-exit');
-});
-document.addEventListener('DOMContentLoaded', () => {
-    initAjaxForms();
-});
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: async (name) => {
-        const page = await resolvePageComponent(
+    resolve: (name) => {
+        const page = resolvePageComponent(
             `./Pages/${name}.jsx`,
             import.meta.glob('./Pages/**/*.jsx'),
         );
-        // Use the page's own layout if defined, otherwise default to LearnerLayout
-        if (!page.default.layout) {
-            page.default.layout = (page) => <LearnerLayout>{page}</LearnerLayout>;
-        }
-        return page;
+        return page.then((module) => {
+            const component = module.default;
+            if (!component.layout) {
+                if (noLayoutPages.includes(name)) {
+                    // No layout
+                } else if (guestPages.includes(name)) {
+                    component.layout = (page) => <GuestLayout>{page}</GuestLayout>;
+                } else {
+                    component.layout = (page) => <DashboardLayout>{page}</DashboardLayout>;
+                }
+            }
+            return module;
+        });
     },
     setup({ el, App, props }) {
         const root = createRoot(el);
-
         root.render(<App {...props} />);
     },
     progress: {

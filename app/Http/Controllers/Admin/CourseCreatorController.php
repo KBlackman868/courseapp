@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class CourseCreatorController extends Controller
 {
@@ -54,7 +55,11 @@ class CourseCreatorController extends Controller
             ->orderBy('first_name')
             ->get();
 
-        return view('admin.course-creators.index', compact('courseCreators', 'stats', 'potentialCreators'));
+        return Inertia::render('Admin/CourseCreators/Index', [
+            'courseCreators' => $courseCreators,
+            'stats' => $stats,
+            'potentialCreators' => $potentialCreators,
+        ]);
     }
 
     /**
@@ -239,6 +244,8 @@ class CourseCreatorController extends Controller
                 ->get(),
         ];
 
-        return view('admin.course-creators.statistics', compact('stats'));
+        return Inertia::render('Admin/CourseCreators/Statistics', [
+            'stats' => $stats,
+        ]);
     }
 }

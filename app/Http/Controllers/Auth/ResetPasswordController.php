@@ -10,13 +10,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 use Illuminate\Support\Str;
 
 class ResetPasswordController extends Controller
 {
     public function showResetForm(Request $request, $token = null)
     {
-        return view('pages.reset_password', ['token' => $token, 'email' => $request->email]);
+        return Inertia::render('Auth/ResetPassword', [
+            'token' => $token,
+            'email' => $request->email,
+        ]);
     }
 
     public function reset(Request $request)

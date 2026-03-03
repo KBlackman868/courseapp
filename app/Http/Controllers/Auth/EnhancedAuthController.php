@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Inertia\Inertia;
 
 class EnhancedAuthController extends Controller
 {
@@ -29,7 +30,7 @@ class EnhancedAuthController extends Controller
      */
     public function showLoginForm()
     {
-        return view('auth.enhanced-login');
+        return Inertia::render('Auth/Login');
     }
 
     /**
@@ -308,7 +309,7 @@ class EnhancedAuthController extends Controller
                 ->with('error', 'Session expired. Please login again.');
         }
 
-        return view('auth.otp-verify', [
+        return Inertia::render('Auth/OtpVerify', [
             'email' => $user->email,
             'maskedEmail' => $this->maskEmail($user->email),
         ]);

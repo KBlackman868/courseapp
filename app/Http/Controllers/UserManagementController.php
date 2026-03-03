@@ -9,6 +9,7 @@ use App\Jobs\DeleteMoodleUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 
 class UserManagementController extends Controller
@@ -17,7 +18,7 @@ class UserManagementController extends Controller
     public function index()
     {
         $users = User::with('roles')->paginate(20);
-        return view('admin.users_lists', compact('users'));
+        return Inertia::render('Admin/Users/Index', ['users' => $users]);
     }
 
     /**
