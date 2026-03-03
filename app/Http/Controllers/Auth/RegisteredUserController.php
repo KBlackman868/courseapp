@@ -47,17 +47,18 @@ class RegisteredUserController extends Controller
         ]);
 
         // Create the user in Laravel
+        $nameParts = explode(' ', trim($request->name), 2);
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $nameParts[0],
+            'last_name' => $nameParts[1] ?? $nameParts[0],
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'date_of_birth' => $request->date_of_birth,
         ]);
 
         // MOODLE INTEGRATION START
-        // Parse the name for Moodle
-        $nameParts = explode(' ', trim($request->name), 2);
         $firstName = $nameParts[0];
-        $lastName = isset($nameParts[1]) ? $nameParts[1] : $nameParts[0];
+        $lastName = $nameParts[1] ?? $nameParts[0];
         
         // Generate username from email
         $emailPart = strtolower(explode('@', $request->email)[0]);
