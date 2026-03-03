@@ -23,14 +23,21 @@ class CourseController extends Controller
     // Display a list of all courses
     public function index()
     {
+        $user = auth()->user();
+
+        // Non-admin users should see the course catalog, not the admin management view
+        if (!$user->hasRole(['admin', 'superadmin', 'course_admin'])) {
+            return redirect()->route('catalog.index');
+        }
+
         $courses = Course::with('enrollments')->paginate(12);
-        
+
         // Log viewing courses
         ActivityLogger::logSystem('courses_viewed',
             "User viewed course listing",
             ['page' => request()->get('page', 1)]
         );
-        
+
         return view('courses.index', compact('courses'));
     }
     

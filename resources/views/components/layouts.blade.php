@@ -130,6 +130,8 @@
               @else
                 <!-- Regular User Navigation -->
                 <li><a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a></li>
+                <li><a href="{{ route('dashboard.learner') }}" class="{{ request()->routeIs('dashboard.learner') ? 'active' : '' }}">Courses</a></li>
+                <li><a href="{{ route('catalog.index') }}" class="{{ request()->routeIs('catalog.*') ? 'active' : '' }}">Course Catalog</a></li>
                 <li><a href="{{ route('mycourses') }}" class="{{ request()->routeIs('mycourses') ? 'active' : '' }}">My Courses</a></li>
               @endif
             @else
@@ -329,6 +331,8 @@
             @endif
           @else
             <li><a href="{{ route('home') }}">Home</a></li>
+            <li><a href="{{ route('dashboard.learner') }}">Courses</a></li>
+            <li><a href="{{ route('catalog.index') }}">Course Catalog</a></li>
             <li><a href="{{ route('mycourses') }}">My Courses</a></li>
           @endif
 
