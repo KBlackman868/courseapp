@@ -24,15 +24,13 @@ class CourseController extends Controller
         $this->moodleClient = $moodleClient;
     }
 
-    /**
-     * Display a list of all courses
-     * Returns ALL courses for client-side filtering (no server pagination)
-     */
-    public function index(Request $request)
+    // Display a list of all courses
+    // Admins see the management view; learners are redirected to the catalog
+    public function index()
     {
         $user = auth()->user();
 
-        // Non-admin users should see the course catalog, not the admin management view
+        // Redirect non-admin users to the course catalog
         if (!$user->hasRole(['admin', 'superadmin', 'course_admin'])) {
             return redirect()->route('catalog.index');
         }

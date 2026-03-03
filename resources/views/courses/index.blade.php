@@ -111,7 +111,7 @@
         <!-- Filters -->
         <div class="card bg-base-100 shadow mb-6">
             <div class="card-body p-4">
-                <form id="courseFilterForm" method="GET" action="{{ url()->current() }}" class="flex flex-col lg:flex-row gap-4">
+                <form method="GET" action="{{ route('courses.index') }}" class="flex flex-col lg:flex-row gap-4">
                     <div class="form-control flex-1">
                         <input type="text"
                                id="courseSearchInput"
@@ -139,7 +139,7 @@
 
                     <div class="flex gap-2">
                         <button type="submit" class="btn btn-primary">Filter</button>
-                        <a href="{{ url()->current() }}" class="btn btn-ghost">Clear</a>
+                        <a href="{{ route('courses.index') }}" class="btn btn-ghost">Clear</a>
                     </div>
                 </form>
             </div>
