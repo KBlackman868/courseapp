@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react';
 import { Bars3Icon, BellIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Link, usePage } from '@inertiajs/react';
+import Footer from '@/Components/Footer';
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', routeName: 'dashboard' },
@@ -52,7 +53,7 @@ export default function DashboardLayout({ children, header }) {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="flex min-h-screen flex-col bg-gray-50">
             <Disclosure as="nav" className="bg-white border-b border-gray-200">
                 {({ open, close }) => (
                     <>
@@ -284,9 +285,11 @@ export default function DashboardLayout({ children, header }) {
             )}
 
             {/* Main Content */}
-            <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <main className="flex-1 mx-auto max-w-7xl w-full px-4 py-6 sm:px-6 lg:px-8">
                 {children}
             </main>
+
+            <Footer />
         </div>
     );
 }
