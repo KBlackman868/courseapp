@@ -42,7 +42,7 @@ class NotificationController extends Controller
 
     /**
      * Get recent notifications for the navbar dropdown
-     * Returns JSON for AJAX requests
+     * Returns JSON for AJAX/fetch requests (not Inertia)
      */
     public function recent()
     {
@@ -55,28 +55,21 @@ class NotificationController extends Controller
 
         $unreadCount = $user->unreadNotificationsCount();
 
-        if (request()->expectsJson()) {
-            return response()->json([
-                'notifications' => $notifications->map(function ($n) {
-                    return [
-                        'id' => $n->id,
-                        'type' => $n->type,
-                        'title' => $n->title,
-                        'message' => $n->message,
-                        'action_url' => $n->action_url,
-                        'action_text' => $n->action_text,
-                        'is_read' => $n->is_read,
-                        'created_at' => $n->created_at->diffForHumans(),
-                        'icon' => $n->icon,
-                        'color' => $n->color,
-                    ];
-                }),
-                'unread_count' => $unreadCount,
-            ]);
-        }
-
         return response()->json([
-            'notifications' => $notifications,
+            'notifications' => $notifications->map(function ($n) {
+                return [
+                    'id' => $n->id,
+                    'type' => $n->type,
+                    'title' => $n->title,
+                    'message' => $n->message,
+                    'action_url' => $n->action_url,
+                    'action_text' => $n->action_text,
+                    'is_read' => $n->is_read,
+                    'created_at' => $n->created_at->diffForHumans(),
+                    'icon' => $n->icon,
+                    'color' => $n->color,
+                ];
+            }),
             'unread_count' => $unreadCount,
         ]);
     }
@@ -92,10 +85,6 @@ class NotificationController extends Controller
         }
 
         $notification->markAsRead();
-
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
-        }
 
         // If there's an action URL, redirect to it
         if ($notification->action_url) {
@@ -117,10 +106,6 @@ class NotificationController extends Controller
                 'read_at' => now(),
             ]);
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
-        }
-
         return back()->with('success', 'All notifications marked as read.');
     }
 
@@ -136,10 +121,6 @@ class NotificationController extends Controller
 
         $notification->delete();
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
-        }
-
         return back()->with('success', 'Notification deleted.');
     }
 
@@ -151,10 +132,6 @@ class NotificationController extends Controller
         auth()->user()->systemNotifications()
             ->read()
             ->delete();
-
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
-        }
 
         return back()->with('success', 'Read notifications cleared.');
     }

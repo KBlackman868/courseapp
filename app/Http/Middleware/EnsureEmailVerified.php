@@ -121,7 +121,7 @@ class EnsureEmailVerified
      */
     protected function redirectToOtpVerification(Request $request, string $message): Response
     {
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'message' => $message,
                 'verification_required' => true,
@@ -138,7 +138,7 @@ class EnsureEmailVerified
      */
     protected function redirectToVerificationNotice(Request $request): Response
     {
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'message' => 'Email verification required.',
                 'verification_required' => true,

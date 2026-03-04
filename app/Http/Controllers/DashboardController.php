@@ -344,7 +344,7 @@ class DashboardController extends Controller
             Log::warning('Cannot dismiss onboarding banner: onboarding_completed_at column missing. Run: php artisan migrate');
         }
 
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() && !$request->header('X-Inertia')) {
             return response()->json(['success' => true]);
         }
 

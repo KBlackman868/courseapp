@@ -39,7 +39,7 @@ class CheckCourseAdmin
 
         // Check if user is authenticated
         if (!$user) {
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() && !$request->header('X-Inertia')) {
                 return response()->json([
                     'message' => 'Unauthenticated.',
                     'error' => 'You must be logged in to access this resource.'
@@ -65,8 +65,8 @@ class CheckCourseAdmin
             return $next($request);
         }
 
-        // User doesn't have sufficient permission
-        if ($request->expectsJson()) {
+        // User doesn't have Course Admin permission
+        if ($request->expectsJson() && !$request->header('X-Inertia')) {
             return response()->json([
                 'message' => 'Forbidden.',
                 'error' => 'You do not have permission to manage course access requests.'
