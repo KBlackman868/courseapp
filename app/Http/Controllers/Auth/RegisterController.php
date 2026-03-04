@@ -82,12 +82,14 @@ class RegisterController extends Controller
         // MOH staff (high-risk): 14 chars; External (standard): 12 chars
         $isMoh = User::isMohEmail($validatedData['email']);
         $minLength = $isMoh ? 14 : 12;
-        $request->validate([
+        $passwordData = $request->validate([
             'password' => "required|string|min:{$minLength}|confirmed",
         ], [
             'password.min' => "Password must be at least {$minLength} characters for " . ($isMoh ? 'MOH staff (high-risk) accounts' : 'standard accounts') . '.',
             'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);
+
+        $validatedData = array_merge($validatedData, $passwordData);
 
         // Check if this is an MOH Staff registration
         if ($isMoh) {
