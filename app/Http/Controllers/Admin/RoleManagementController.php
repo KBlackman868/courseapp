@@ -32,12 +32,8 @@ class RoleManagementController extends Controller
      */
     public function index()
     {
-        // Load all users with roles for client-side filtering
-        $users = User::with('roles')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $roles = Role::all();
+        $users = User::with('roles')->orderBy('created_at', 'desc')->get();
+        $roles = Role::pluck('name');
 
         return Inertia::render('Admin/Roles/Index', [
             'users' => $users,

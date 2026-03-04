@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
 
 function RoleBadge({ role }) {
@@ -24,31 +24,6 @@ function StatusBadge({ status, suspended }) {
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
             {isActive ? 'Active' : 'Suspended'}
         </span>
-    );
-}
-
-function Pagination({ links }) {
-    if (!links || links.length <= 3) return null;
-    return (
-        <nav className="flex justify-center mt-6">
-            <div className="flex gap-1">
-                {links.map((link, i) => (
-                    <Link
-                        key={i}
-                        href={link.url || '#'}
-                        className={`rounded-md px-3 py-2 text-sm ${
-                            link.active
-                                ? 'bg-indigo-600 text-white'
-                                : link.url
-                                  ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`}
-                        dangerouslySetInnerHTML={{ __html: link.label }}
-                        preserveState
-                    />
-                ))}
-            </div>
-        </nav>
     );
 }
 
@@ -148,7 +123,8 @@ function AddUserModal({ isOpen, onClose, roles = [] }) {
     );
 }
 
-export default function UsersIndex({ users, roles = [], flash }) {
+export default function UsersIndex({ users, roles = [] }) {
+    const { flash } = usePage().props;
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [processing, setProcessing] = useState(null);
@@ -162,7 +138,7 @@ export default function UsersIndex({ users, roles = [], flash }) {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const allUsers = users?.data || [];
+    const allUsers = Array.isArray(users) ? users : (users?.data || []);
 
     const filteredUsers = useMemo(() => {
         let list = allUsers;
@@ -506,8 +482,12 @@ export default function UsersIndex({ users, roles = [], flash }) {
                     </div>
                 </div>
 
-                {/* Pagination — hide when searching */}
-                {!debouncedSearch.trim() && !roleFilter && !statusFilter && <Pagination links={users?.links} />}
+                {/* Show total count at bottom */}
+                {filteredUsers.length > 0 && (
+                    <p className="text-center text-xs text-gray-400">
+                        Showing {filteredUsers.length} of {allUsers.length} total users
+                    </p>
+                )}
             </div>
         </>
     );
