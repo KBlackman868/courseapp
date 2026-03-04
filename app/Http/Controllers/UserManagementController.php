@@ -243,6 +243,59 @@ class UserManagementController extends Controller
     }
 
     /**
+     * Bulk suspend multiple users
+     */
+    public function bulkSuspend(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'exists:users,id'
+        ]);
+
+        $currentUserId = auth()->id();
+        $suspendedCount = 0;
+        $failedCount = 0;
+        $isSuperadmin = auth()->user()->hasRole('superadmin');
+
+        $users = User::whereIn('id', $request->user_ids)->with('roles')->get();
+
+        foreach ($users as $user) {
+            if ($user->id == $currentUserId) {
+                $failedCount++;
+                continue;
+            }
+
+            if ($user->hasRole('superadmin') && !$isSuperadmin) {
+                $failedCount++;
+                continue;
+            }
+
+            try {
+                if ($user->moodle_user_id) {
+                    $moodleService = new MoodleService();
+                    $moodleService->suspendUser($user);
+                }
+
+                $user->update(['is_suspended' => true]);
+                $suspendedCount++;
+            } catch (\Exception $e) {
+                $failedCount++;
+                Log::error('Failed to suspend user in bulk operation', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        $message = "Suspended {$suspendedCount} users successfully.";
+        if ($failedCount > 0) {
+            $message .= " Failed to suspend {$failedCount} users.";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Bulk delete multiple users
      */
     public function bulkDelete(Request $request)
