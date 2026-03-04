@@ -1,10 +1,13 @@
-<!-- resources/views/errors/500.blade.php -->
-<x-layouts>
-    <x-slot:heading>
-        Server Error
-    </x-slot:heading>
-
-    <div class="min-h-[60vh] flex items-center justify-center px-4 sm:px-6 lg:px-8">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Server Error</title>
+    @vite(['resources/css/app.css'])
+</head>
+<body class="bg-gray-50 antialiased">
+    <div class="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div class="max-w-2xl w-full text-center">
             <!-- Error Icon/Illustration -->
             <div class="mb-8">
@@ -73,4 +76,5 @@
             animation: pulse 2s ease-in-out infinite;
         }
     </style>
-</x-layouts>
+</body>
+</html>
