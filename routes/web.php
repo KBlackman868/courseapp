@@ -64,9 +64,12 @@ Route::get('/', function () {
 
 Route::get('/home', fn() => redirect('/'));
 
-// Policy Pages (Public)
-Route::get('/terms-and-conditions', fn() => Inertia::render('Policies/Terms'))->name('terms');
-Route::get('/privacy-policy', fn() => Inertia::render('Policies/Privacy'))->name('privacy-policy');
+// Legal Pages (Public — accessible to all users including guests)
+Route::get('/terms', fn() => Inertia::render('Legal/Terms'))->name('terms');
+Route::get('/privacy', fn() => Inertia::render('Legal/Privacy'))->name('privacy');
+// Legacy redirects
+Route::get('/terms-and-conditions', fn() => redirect('/terms'));
+Route::get('/privacy-policy', fn() => redirect('/privacy'));
 
 // SSO to Moodle Dashboard (for navigation link)
 Route::get('/moodle/sso', function () {
