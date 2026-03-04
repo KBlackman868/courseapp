@@ -74,8 +74,10 @@ function calculateAge(dateString) {
 
 export default function Register() {
     const { data, setData, post, processing, errors, setError, clearErrors, reset } = useForm({
-        name: '',
+        first_name: '',
+        last_name: '',
         email: '',
+        department: '',
         date_of_birth: '',
         password: '',
         password_confirmation: '',
@@ -205,25 +207,45 @@ export default function Register() {
                             </div>
 
                             <form onSubmit={submit} className="space-y-5">
-                                {/* Full Name */}
-                                <div className="animate-fade-in-up-delay-1">
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Full Name
-                                    </label>
-                                    <input
-                                        id="name"
-                                        type="text"
-                                        name="name"
-                                        value={data.name}
-                                        autoComplete="name"
-                                        autoFocus
-                                        required
-                                        minLength={2}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                        placeholder="John Doe"
-                                    />
-                                    {errors.name && <p className="mt-1.5 text-sm text-red-600">{errors.name}</p>}
+                                {/* First Name & Last Name */}
+                                <div className="animate-fade-in-up-delay-1 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            First Name
+                                        </label>
+                                        <input
+                                            id="first_name"
+                                            type="text"
+                                            name="first_name"
+                                            value={data.first_name}
+                                            autoComplete="given-name"
+                                            autoFocus
+                                            required
+                                            minLength={2}
+                                            onChange={(e) => setData('first_name', e.target.value)}
+                                            className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
+                                            placeholder="John"
+                                        />
+                                        {errors.first_name && <p className="mt-1.5 text-sm text-red-600">{errors.first_name}</p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            Last Name
+                                        </label>
+                                        <input
+                                            id="last_name"
+                                            type="text"
+                                            name="last_name"
+                                            value={data.last_name}
+                                            autoComplete="family-name"
+                                            required
+                                            minLength={2}
+                                            onChange={(e) => setData('last_name', e.target.value)}
+                                            className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
+                                            placeholder="Doe"
+                                        />
+                                        {errors.last_name && <p className="mt-1.5 text-sm text-red-600">{errors.last_name}</p>}
+                                    </div>
                                 </div>
 
                                 {/* Email */}
@@ -243,6 +265,23 @@ export default function Register() {
                                         placeholder="you@example.com"
                                     />
                                     {errors.email && <p className="mt-1.5 text-sm text-red-600">{errors.email}</p>}
+                                </div>
+
+                                {/* Department */}
+                                <div className="animate-fade-in-up-delay-1">
+                                    <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Department <span className="text-gray-400 font-normal">(optional)</span>
+                                    </label>
+                                    <input
+                                        id="department"
+                                        type="text"
+                                        name="department"
+                                        value={data.department}
+                                        onChange={(e) => setData('department', e.target.value)}
+                                        className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
+                                        placeholder="e.g. Public Health, Nursing"
+                                    />
+                                    {errors.department && <p className="mt-1.5 text-sm text-red-600">{errors.department}</p>}
                                 </div>
 
                                 {/* Date of Birth */}

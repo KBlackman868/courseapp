@@ -37,8 +37,10 @@ class RegisteredUserController extends Controller
         $minLength = $isMoh ? 14 : 12;
 
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'department' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Password::min($minLength)->mixedCase()->numbers()],
             'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
         ], [
@@ -47,18 +49,18 @@ class RegisteredUserController extends Controller
         ]);
 
         // Create the user in Laravel
-        $nameParts = explode(' ', trim($request->name), 2);
         $user = User::create([
-            'first_name' => $nameParts[0],
-            'last_name' => $nameParts[1] ?? $nameParts[0],
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
+            'department' => $request->department,
             'password' => Hash::make($request->password),
             'date_of_birth' => $request->date_of_birth,
         ]);
 
         // MOODLE INTEGRATION START
-        $firstName = $nameParts[0];
-        $lastName = $nameParts[1] ?? $nameParts[0];
+        $firstName = $request->first_name;
+        $lastName = $request->last_name;
         
         // Generate username from email
         $emailPart = strtolower(explode('@', $request->email)[0]);

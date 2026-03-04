@@ -673,12 +673,16 @@ class CourseController extends Controller
                 }
             }
             
+            if (request()->header('X-Inertia')) {
+                return back()->with('success', "Course is now {$newStatus}");
+            }
+
             return response()->json([
                 'success' => true,
                 'status' => $newStatus,
                 'message' => "Course is now {$newStatus}"
             ]);
-            
+
         } catch (\Exception $e) {
             // Log error
             ActivityLogger::logCourse('status_toggle_failed', $course,
@@ -687,7 +691,11 @@ class CourseController extends Controller
                 'failed',
                 'error'
             );
-            
+
+            if (request()->header('X-Inertia')) {
+                return back()->with('error', 'Failed to update course status');
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update course status'

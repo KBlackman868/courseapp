@@ -327,7 +327,7 @@ class DashboardController extends Controller
         $user = auth()->user();
         $user->update(['onboarding_completed_at' => now()]);
 
-        if ($request->expectsJson()) {
+        if ($request->expectsJson() && !$request->header('X-Inertia')) {
             return response()->json(['success' => true]);
         }
 
