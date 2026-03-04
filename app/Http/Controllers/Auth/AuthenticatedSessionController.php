@@ -18,9 +18,13 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
+        $successMessage = session('success') ?? session('status') ?? '';
+        $isPendingRequest = str_contains($successMessage, 'account request');
+
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            'pendingRequest' => $isPendingRequest ? $successMessage : null,
         ]);
     }
 

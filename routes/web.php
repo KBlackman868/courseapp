@@ -158,18 +158,7 @@ Route::middleware('guest')->group(function () {
         Route::get('/moh/request-submitted', 'mohRequestSubmitted')->name('moh.request-submitted');
     });
 
-    // Password Reset Routes
-    Route::prefix('password')->name('password.')->group(function () {
-        Route::controller(ForgotPasswordController::class)->group(function () {
-            Route::get('/reset', 'showLinkRequestForm')->name('request');
-            Route::post('/email', 'sendResetLinkEmail')->name('email');
-        });
-
-        Route::controller(ResetPasswordController::class)->group(function () {
-            Route::get('/reset/{token}', 'showResetForm')->name('reset');
-            Route::post('/reset', 'reset')->name('update');
-        });
-    });
+    // Password Reset Routes are handled by auth.php (Breeze controllers)
 });
 
 /*

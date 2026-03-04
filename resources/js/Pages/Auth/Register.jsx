@@ -321,10 +321,10 @@ export default function Register() {
                                             value={data.password}
                                             autoComplete="new-password"
                                             required
-                                            minLength={8}
+                                            minLength={12}
                                             onChange={(e) => setData('password', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                            placeholder="Min. 8 characters"
+                                            placeholder="Min. 14 characters"
                                         />
                                         <button
                                             type="button"

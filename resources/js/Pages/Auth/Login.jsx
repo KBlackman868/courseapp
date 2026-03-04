@@ -44,7 +44,7 @@ const css = `
 .btn-hover:active { transform: translateY(0); }
 `;
 
-export default function Login({ status, canResetPassword }) {
+export default function Login({ status, canResetPassword, pendingRequest }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -105,20 +105,24 @@ export default function Login({ status, canResetPassword }) {
                             </p>
                         </div>
 
-                        <div className="animate-fade-in-up-delay-3">
-                            <div className="flex gap-8">
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-white">500+</div>
-                                    <div className="text-indigo-200 text-sm mt-1">Active Learners</div>
+                        <div className="animate-fade-in-up-delay-3 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+                                    <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-white">50+</div>
-                                    <div className="text-indigo-200 text-sm mt-1">Courses</div>
+                                <span className="text-indigo-100">24/7 Online Access</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+                                    <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-3xl font-bold text-white">95%</div>
-                                    <div className="text-indigo-200 text-sm mt-1">Satisfaction</div>
+                                <span className="text-indigo-100">Self-Generated Certificates</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+                                    <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                 </div>
+                                <span className="text-indigo-100">Secure MOH Managed Platform</span>
                             </div>
                         </div>
                     </div>
@@ -145,6 +149,22 @@ export default function Login({ status, canResetPassword }) {
                                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to MOH Learning</h1>
                                 <p className="text-gray-500 mb-8">Sign in to access your courses and training</p>
                             </div>
+
+                            {pendingRequest && (
+                                <div className="animate-fade-in-up mb-6 rounded-lg bg-amber-50 border border-amber-200 p-4">
+                                    <div className="flex gap-3">
+                                        <svg className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-sm font-medium text-amber-800">Account Request Pending</p>
+                                            <p className="text-xs text-amber-700 mt-1">
+                                                Your MOH staff account request is awaiting approval from a Course Administrator. You will receive an email once your account has been approved.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {status && (
                                 <div className="animate-fade-in-up mb-6 rounded-lg bg-green-50 border border-green-200 p-4">
