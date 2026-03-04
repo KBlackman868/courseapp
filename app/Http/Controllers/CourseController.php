@@ -480,9 +480,8 @@ class CourseController extends Controller
             'description' => 'required|string',
             'status'      => 'required|string|max:255',
             'image'       => 'nullable|image|max:2048',
-            // Access control
-            'audience_type' => 'nullable|string|in:moh,external,all,MOH_ONLY,EXTERNAL_ONLY,BOTH',
-            'is_free'       => 'nullable|boolean',
+            'audience_type' => 'nullable|string|in:all,moh_staff,external',
+            'enrollment_type' => 'nullable|string|in:open,approval_required',
             // Optional Moodle fields
             'sync_to_moodle' => 'nullable|boolean',
             'moodle_course_shortname' => 'nullable|required_if:sync_to_moodle,true|string|max:255|unique:courses,moodle_course_shortname',

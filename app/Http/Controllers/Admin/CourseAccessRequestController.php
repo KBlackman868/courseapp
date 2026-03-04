@@ -67,8 +67,8 @@ class CourseAccessRequestController extends Controller
 
         $requests = $query->paginate(20);
 
-        // Get courses for filter dropdown
-        $courses = Course::orderBy('title')->pluck('title', 'id');
+        // Get courses for filter dropdown (must be array of objects for JSX .map())
+        $courses = Course::orderBy('title')->get(['id', 'title']);
 
         // Get counts for tabs
         $counts = [
