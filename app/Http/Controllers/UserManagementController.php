@@ -17,7 +17,7 @@ class UserManagementController extends Controller
     // Display a list of all users with role management
     public function index()
     {
-        $users = User::with('roles')->paginate(20);
+        $users = User::with('roles')->orderBy('created_at', 'desc')->get();
         $roles = \Spatie\Permission\Models\Role::pluck('name');
         return Inertia::render('Admin/Users/Index', ['users' => $users, 'roles' => $roles]);
     }

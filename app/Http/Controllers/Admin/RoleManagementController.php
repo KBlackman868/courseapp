@@ -28,8 +28,8 @@ class RoleManagementController extends Controller
 
     public function index()
     {
-        $users = User::with('roles')->paginate(20);
-        $roles = Role::all();
+        $users = User::with('roles')->orderBy('created_at', 'desc')->get();
+        $roles = Role::pluck('name');
 
         return Inertia::render('Admin/Roles/Index', [
             'users' => $users,
