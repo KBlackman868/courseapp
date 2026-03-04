@@ -36,7 +36,6 @@ function StatusBadge({ status }) {
 
 function Pagination({ links }) {
     if (!links || links.length <= 3) return null;
-
     return (
         <nav className="flex justify-center mt-6">
             <div className="flex gap-1">
@@ -60,9 +59,188 @@ function Pagination({ links }) {
     );
 }
 
-export default function UsersIndex({ users, flash }) {
+function AddUserModal({ isOpen, onClose, roles = [], processing }) {
+    const [form, setForm] = useState({
+        first_name: '',
+        last_name: '',
+        email: '',
+        role: 'moh_staff',
+        date_of_birth: '',
+    });
+    const [errors, setErrors] = useState({});
+
+    if (!isOpen) return null;
+
+    const handleChange = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+            setErrors((prev) => ({ ...prev, [field]: '' }));
+        }
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.first_name.trim() || form.first_name.trim().length < 2) errs.first_name = 'First name is required (min 2 characters).';
+        if (!form.last_name.trim() || form.last_name.trim().length < 2) errs.last_name = 'Last name is required (min 2 characters).';
+        if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'A valid email address is required.';
+        if (!form.role) errs.role = 'Please select a role.';
+        return errs;
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const errs = validate();
+        if (Object.keys(errs).length > 0) {
+            setErrors(errs);
+            return;
+        }
+
+        router.post('/admin/users', {
+            first_name: form.first_name.trim(),
+            last_name: form.last_name.trim(),
+            email: form.email.trim(),
+            role: form.role,
+            date_of_birth: form.date_of_birth || null,
+        }, {
+            preserveState: true,
+            onSuccess: () => {
+                setForm({ first_name: '', last_name: '', email: '', role: 'moh_staff', date_of_birth: '' });
+                setErrors({});
+                onClose();
+            },
+            onError: (serverErrors) => {
+                setErrors(serverErrors);
+            },
+        });
+    };
+
+    const handleClose = () => {
+        setForm({ first_name: '', last_name: '', email: '', role: 'moh_staff', date_of_birth: '' });
+        setErrors({});
+        onClose();
+    };
+
+    const roleList = Array.isArray(roles) ? roles : [];
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={handleClose} />
+                <div className="relative w-full max-w-lg transform rounded-xl bg-white p-6 shadow-xl transition-all">
+                    <div className="mb-5">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
+                                <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Add New User</h3>
+                                <p className="text-sm text-gray-500">Create a new user account with a temporary password.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                <input
+                                    id="first_name"
+                                    type="text"
+                                    value={form.first_name}
+                                    onChange={(e) => handleChange('first_name', e.target.value)}
+                                    className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="John"
+                                />
+                                {errors.first_name && <p className="mt-1 text-xs text-red-600">{errors.first_name}</p>}
+                            </div>
+                            <div>
+                                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                <input
+                                    id="last_name"
+                                    type="text"
+                                    value={form.last_name}
+                                    onChange={(e) => handleChange('last_name', e.target.value)}
+                                    className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="Doe"
+                                />
+                                {errors.last_name && <p className="mt-1 text-xs text-red-600">{errors.last_name}</p>}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="user_email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input
+                                id="user_email"
+                                type="email"
+                                value={form.email}
+                                onChange={(e) => handleChange('email', e.target.value)}
+                                className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="john.doe@example.com"
+                            />
+                            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                        </div>
+
+                        <div>
+                            <label htmlFor="user_role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                            <select
+                                id="user_role"
+                                value={form.role}
+                                onChange={(e) => handleChange('role', e.target.value)}
+                                className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            >
+                                {roleList.map((role) => (
+                                    <option key={role} value={role}>
+                                        {role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.role && <p className="mt-1 text-xs text-red-600">{errors.role}</p>}
+                        </div>
+
+                        <div>
+                            <label htmlFor="user_dob" className="block text-sm font-medium text-gray-700 mb-1">
+                                Date of Birth <span className="text-gray-400">(Optional)</span>
+                            </label>
+                            <input
+                                id="user_dob"
+                                type="date"
+                                value={form.date_of_birth}
+                                onChange={(e) => handleChange('date_of_birth', e.target.value)}
+                                className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            />
+                            {errors.date_of_birth && <p className="mt-1 text-xs text-red-600">{errors.date_of_birth}</p>}
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-2">
+                            <button
+                                type="button"
+                                onClick={handleClose}
+                                disabled={processing}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-50"
+                            >
+                                {processing ? 'Creating...' : 'Create User'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function UsersIndex({ users, roles = [], flash }) {
     const [search, setSearch] = useState('');
     const [processing, setProcessing] = useState(null);
+    const [showAddModal, setShowAddModal] = useState(false);
 
     const debouncedSearch = useCallback(
         debounce((value) => {
@@ -109,6 +287,13 @@ export default function UsersIndex({ users, flash }) {
         <>
             <Head title="User Management" />
 
+            <AddUserModal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                roles={roles}
+                processing={processing === 'creating'}
+            />
+
             <div className="space-y-6">
                 {/* Page Header */}
                 <div className="sm:flex sm:items-center sm:justify-between">
@@ -117,6 +302,17 @@ export default function UsersIndex({ users, flash }) {
                         <p className="mt-1 text-sm text-gray-500">
                             Manage user accounts, roles, and access permissions.
                         </p>
+                    </div>
+                    <div className="mt-4 sm:mt-0">
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
+                        >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            Add User
+                        </button>
                     </div>
                 </div>
 
@@ -172,24 +368,12 @@ export default function UsersIndex({ users, flash }) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        User
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Department
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Role
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Moodle Sync
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moodle Sync</th>
+                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -209,30 +393,16 @@ export default function UsersIndex({ users, flash }) {
                                             <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
-                                                        <img
-                                                            className="h-10 w-10 rounded-full object-cover"
-                                                            src={avatarUrl}
-                                                            alt=""
-                                                        />
+                                                        <img className="h-10 w-10 rounded-full object-cover" src={avatarUrl} alt="" />
                                                         <div className="ml-4">
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {user.first_name} {user.last_name}
-                                                            </div>
-                                                            <div className="text-sm text-gray-500">
-                                                                {user.email}
-                                                            </div>
+                                                            <div className="text-sm font-medium text-gray-900">{user.first_name} {user.last_name}</div>
+                                                            <div className="text-sm text-gray-500">{user.email}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {user.department || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <RoleBadge role={primaryRole} />
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <StatusBadge status={user.status} />
-                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.department || '-'}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap"><RoleBadge role={primaryRole} /></td>
+                                                <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={user.status} /></td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {user.moodle_user_id ? (
                                                         <span className="inline-flex items-center gap-1 text-green-700">

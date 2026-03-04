@@ -370,6 +370,7 @@ Route::middleware('auth')->group(function () {
             // User Management
             Route::prefix('users')->name('users.')->controller(UserManagementController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
                 // IMPORTANT: Static routes MUST come before dynamic {user} routes
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
                 // Dynamic routes with {user} parameter

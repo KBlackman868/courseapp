@@ -15,13 +15,11 @@ function StatusBadge({ status }) {
         approved: 'bg-green-100 text-green-800',
         rejected: 'bg-red-100 text-red-800',
     };
-
     const labels = {
         pending: 'Pending',
         approved: 'Approved',
         rejected: 'Rejected',
     };
-
     return (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
             {labels[status] || status}
@@ -31,7 +29,6 @@ function StatusBadge({ status }) {
 
 function Pagination({ links }) {
     if (!links || links.length <= 3) return null;
-
     return (
         <nav className="flex justify-center mt-6">
             <div className="flex gap-1">
@@ -55,6 +52,86 @@ function Pagination({ links }) {
     );
 }
 
+function RejectModal({ isOpen, onClose, onConfirm, processing, requestName }) {
+    const [reason, setReason] = useState('');
+    const [error, setError] = useState('');
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!reason.trim()) {
+            setError('Please provide a rejection reason.');
+            return;
+        }
+        setError('');
+        onConfirm(reason.trim());
+    };
+
+    const handleClose = () => {
+        setReason('');
+        setError('');
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={handleClose} />
+                <div className="relative w-full max-w-md transform rounded-xl bg-white p-6 shadow-xl transition-all">
+                    <div className="mb-4">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                            </svg>
+                        </div>
+                        <h3 className="mt-3 text-center text-lg font-semibold text-gray-900">
+                            Reject Account Request
+                        </h3>
+                        <p className="mt-1 text-center text-sm text-gray-500">
+                            {requestName ? `Rejecting request from ${requestName}` : 'Please provide a reason for rejection.'}
+                        </p>
+                    </div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="mb-4">
+                            <label htmlFor="rejection_reason" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Rejection Reason <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                id="rejection_reason"
+                                rows={4}
+                                value={reason}
+                                onChange={(e) => { setReason(e.target.value); setError(''); }}
+                                placeholder="Explain why this request is being rejected..."
+                                className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none"
+                                autoFocus
+                            />
+                            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={handleClose}
+                                disabled={processing}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                            >
+                                {processing ? 'Rejecting...' : 'Confirm Rejection'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function AccountRequestsIndex({
     requests,
     departments = [],
@@ -67,11 +144,12 @@ export default function AccountRequestsIndex({
     const [search, setSearch] = useState(initialSearch);
     const [selectedRequests, setSelectedRequests] = useState([]);
     const [processing, setProcessing] = useState(null);
+    const [rejectModal, setRejectModal] = useState({ open: false, requestId: null, requestName: '' });
 
     const tabs = [
         { key: 'pending', label: 'Pending', count: counts.pending || 0 },
         { key: 'approved', label: 'Approved', count: counts.approved || 0 },
-        { key: 'rejected', label: 'Rejected', count: counts.rejected || 0 },
+        { key: 'rejected', label: 'Denied', count: counts.rejected || 0 },
         { key: '', label: 'All', count: counts.all || 0 },
     ];
 
@@ -118,12 +196,22 @@ export default function AccountRequestsIndex({
         });
     };
 
-    const handleReject = (requestId) => {
+    const handleRejectClick = (requestId, requestName) => {
+        setRejectModal({ open: true, requestId, requestName });
+    };
+
+    const handleRejectConfirm = (reason) => {
+        const { requestId } = rejectModal;
         setProcessing(requestId);
-        router.post(`/admin/account-requests/${requestId}/reject`, {}, {
+        router.post(`/admin/account-requests/${requestId}/reject`, {
+            rejection_reason: reason,
+        }, {
             preserveState: true,
             preserveScroll: true,
-            onFinish: () => setProcessing(null),
+            onFinish: () => {
+                setProcessing(null);
+                setRejectModal({ open: false, requestId: null, requestName: '' });
+            },
         });
     };
 
@@ -181,6 +269,14 @@ export default function AccountRequestsIndex({
     return (
         <>
             <Head title="Account Requests" />
+
+            <RejectModal
+                isOpen={rejectModal.open}
+                onClose={() => setRejectModal({ open: false, requestId: null, requestName: '' })}
+                onConfirm={handleRejectConfirm}
+                processing={processing === rejectModal.requestId}
+                requestName={rejectModal.requestName}
+            />
 
             <div className="space-y-6">
                 {/* Page Header */}
@@ -306,24 +402,12 @@ export default function AccountRequestsIndex({
                                             />
                                         </th>
                                     )}
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Name
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Email
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Department
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Request Date
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -334,9 +418,7 @@ export default function AccountRequestsIndex({
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                                             </svg>
                                             <h3 className="mt-2 text-sm font-medium text-gray-900">No account requests found</h3>
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                No requests match your current filters.
-                                            </p>
+                                            <p className="mt-1 text-sm text-gray-500">No requests match your current filters.</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -359,17 +441,16 @@ export default function AccountRequestsIndex({
                                                     {request.first_name} {request.last_name}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {request.email}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {request.department || '-'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {formatDate(request.created_at)}
-                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.email}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.department || '-'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(request.created_at)}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <StatusBadge status={request.status} />
+                                                {request.status === 'rejected' && request.rejection_reason && (
+                                                    <p className="mt-1 text-xs text-red-500 max-w-[200px] truncate" title={request.rejection_reason}>
+                                                        {request.rejection_reason}
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
@@ -383,11 +464,11 @@ export default function AccountRequestsIndex({
                                                                 {processing === request.id ? 'Processing...' : 'Approve'}
                                                             </button>
                                                             <button
-                                                                onClick={() => handleReject(request.id)}
+                                                                onClick={() => handleRejectClick(request.id, `${request.first_name} ${request.last_name}`)}
                                                                 disabled={processing === request.id}
                                                                 className="inline-flex items-center rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                             >
-                                                                {processing === request.id ? 'Processing...' : 'Reject'}
+                                                                Reject
                                                             </button>
                                                         </>
                                                     )}

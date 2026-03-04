@@ -16,14 +16,12 @@ function StatusBadge({ status }) {
         rejected: 'bg-red-100 text-red-800',
         failed: 'bg-orange-100 text-orange-800',
     };
-
     const labels = {
         pending: 'Pending',
         approved: 'Approved',
         rejected: 'Rejected',
         failed: 'Failed',
     };
-
     return (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
             {labels[status] || status}
@@ -64,7 +62,6 @@ function SyncStatusBadge({ synced, syncError }) {
 
 function Pagination({ links }) {
     if (!links || links.length <= 3) return null;
-
     return (
         <nav className="flex justify-center mt-6">
             <div className="flex gap-1">
@@ -88,6 +85,82 @@ function Pagination({ links }) {
     );
 }
 
+function ReasonModal({ isOpen, onClose, onConfirm, processing, title, description, label, confirmLabel, confirmColor = 'bg-red-600 hover:bg-red-700' }) {
+    const [reason, setReason] = useState('');
+    const [error, setError] = useState('');
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!reason.trim()) {
+            setError(`Please provide a ${label.toLowerCase()}.`);
+            return;
+        }
+        setError('');
+        onConfirm(reason.trim());
+    };
+
+    const handleClose = () => {
+        setReason('');
+        setError('');
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+                <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={handleClose} />
+                <div className="relative w-full max-w-md transform rounded-xl bg-white p-6 shadow-xl transition-all">
+                    <div className="mb-4">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                            </svg>
+                        </div>
+                        <h3 className="mt-3 text-center text-lg font-semibold text-gray-900">{title}</h3>
+                        {description && <p className="mt-1 text-center text-sm text-gray-500">{description}</p>}
+                    </div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="mb-4">
+                            <label htmlFor="modal_reason" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                {label} <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                id="modal_reason"
+                                rows={4}
+                                value={reason}
+                                onChange={(e) => { setReason(e.target.value); setError(''); }}
+                                placeholder={`Enter ${label.toLowerCase()}...`}
+                                className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500 resize-none"
+                                autoFocus
+                            />
+                            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={handleClose}
+                                disabled={processing}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${confirmColor}`}
+                            >
+                                {processing ? 'Processing...' : confirmLabel}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function CourseAccessRequestsIndex({
     requests,
     courses = [],
@@ -100,6 +173,10 @@ export default function CourseAccessRequestsIndex({
     const [search, setSearch] = useState(initialSearch);
     const [selectedRequests, setSelectedRequests] = useState([]);
     const [processing, setProcessing] = useState(null);
+    const [modal, setModal] = useState({ open: false, type: null, requestId: null, userName: '', courseName: '' });
+
+    // Normalize courses - handle both array and object formats
+    const courseList = Array.isArray(courses) ? courses : Object.entries(courses).map(([id, title]) => ({ id, title }));
 
     const tabs = [
         { key: 'pending', label: 'Pending', count: counts.pending || 0 },
@@ -152,22 +229,33 @@ export default function CourseAccessRequestsIndex({
         });
     };
 
-    const handleReject = (requestId) => {
-        setProcessing(requestId);
-        router.post(`/admin/course-access-requests/${requestId}/reject`, {}, {
-            preserveState: true,
-            preserveScroll: true,
-            onFinish: () => setProcessing(null),
-        });
+    const handleRejectClick = (requestId, userName, courseName) => {
+        setModal({ open: true, type: 'reject', requestId, userName, courseName });
     };
 
-    const handleRevoke = (requestId) => {
-        if (!confirm('Are you sure you want to revoke this course access?')) return;
+    const handleRevokeClick = (requestId, userName, courseName) => {
+        setModal({ open: true, type: 'revoke', requestId, userName, courseName });
+    };
+
+    const handleModalConfirm = (reason) => {
+        const { requestId, type } = modal;
         setProcessing(requestId);
-        router.post(`/admin/course-access-requests/${requestId}/revoke`, {}, {
+
+        const url = type === 'reject'
+            ? `/admin/course-access-requests/${requestId}/reject`
+            : `/admin/course-access-requests/${requestId}/revoke`;
+
+        const data = type === 'reject'
+            ? { rejection_reason: reason }
+            : { reason };
+
+        router.post(url, data, {
             preserveState: true,
             preserveScroll: true,
-            onFinish: () => setProcessing(null),
+            onFinish: () => {
+                setProcessing(null);
+                setModal({ open: false, type: null, requestId: null, userName: '', courseName: '' });
+            },
         });
     };
 
@@ -231,9 +319,23 @@ export default function CourseAccessRequestsIndex({
     const pendingList = requestList.filter((r) => r.status === 'pending');
     const isAllPendingSelected = pendingList.length > 0 && selectedRequests.length === pendingList.length;
 
+    const isRejectModal = modal.type === 'reject';
+
     return (
         <>
             <Head title="Course Access Requests" />
+
+            <ReasonModal
+                isOpen={modal.open}
+                onClose={() => setModal({ open: false, type: null, requestId: null, userName: '', courseName: '' })}
+                onConfirm={handleModalConfirm}
+                processing={processing === modal.requestId}
+                title={isRejectModal ? 'Reject Course Access' : 'Revoke Course Access'}
+                description={modal.userName ? `${isRejectModal ? 'Rejecting' : 'Revoking'} access for ${modal.userName}${modal.courseName ? ` to "${modal.courseName}"` : ''}` : ''}
+                label={isRejectModal ? 'Rejection Reason' : 'Revocation Reason'}
+                confirmLabel={isRejectModal ? 'Confirm Rejection' : 'Confirm Revocation'}
+                confirmColor={isRejectModal ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-600 hover:bg-yellow-700'}
+            />
 
             <div className="space-y-6">
                 {/* Page Header */}
@@ -301,13 +403,9 @@ export default function CourseAccessRequestsIndex({
                                 }`}
                             >
                                 {tab.label}
-                                <span
-                                    className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
-                                        currentStatus === tab.key
-                                            ? 'bg-indigo-100 text-indigo-600'
-                                            : 'bg-gray-100 text-gray-600'
-                                    }`}
-                                >
+                                <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                                    currentStatus === tab.key ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-600'
+                                }`}>
                                     {tab.count}
                                 </span>
                             </button>
@@ -335,10 +433,8 @@ export default function CourseAccessRequestsIndex({
                         className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     >
                         <option value="">All Courses</option>
-                        {courses.map((course) => (
-                            <option key={course.id} value={course.id}>
-                                {course.title}
-                            </option>
+                        {courseList.map((course) => (
+                            <option key={course.id} value={course.id}>{course.title}</option>
                         ))}
                     </select>
                 </div>
@@ -359,24 +455,12 @@ export default function CourseAccessRequestsIndex({
                                             />
                                         </th>
                                     )}
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        User
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Course
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Request Date
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Moodle Sync
-                                    </th>
-                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moodle Sync</th>
+                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -387,9 +471,7 @@ export default function CourseAccessRequestsIndex({
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                             </svg>
                                             <h3 className="mt-2 text-sm font-medium text-gray-900">No course access requests found</h3>
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                No requests match your current filters.
-                                            </p>
+                                            <p className="mt-1 text-sm text-gray-500">No requests match your current filters.</p>
                                         </td>
                                     </tr>
                                 ) : (
@@ -418,26 +500,22 @@ export default function CourseAccessRequestsIndex({
                                                         <div className="text-sm font-medium text-gray-900">
                                                             {request.user?.first_name} {request.user?.last_name}
                                                         </div>
-                                                        <div className="text-sm text-gray-500">
-                                                            {request.user?.email}
-                                                        </div>
+                                                        <div className="text-sm text-gray-500">{request.user?.email}</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {request.course?.title || '-'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {formatDate(request.created_at)}
-                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.course?.title || '-'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(request.requested_at || request.created_at)}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <StatusBadge status={request.status} />
+                                                {request.status === 'rejected' && request.rejection_reason && (
+                                                    <p className="mt-1 text-xs text-red-500 max-w-[200px] truncate" title={request.rejection_reason}>
+                                                        {request.rejection_reason}
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <SyncStatusBadge
-                                                    synced={request.moodle_synced}
-                                                    syncError={request.moodle_sync_error}
-                                                />
+                                                <SyncStatusBadge synced={request.moodle_synced} syncError={request.moodle_sync_error} />
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
@@ -451,21 +529,21 @@ export default function CourseAccessRequestsIndex({
                                                                 {processing === request.id ? 'Processing...' : 'Approve'}
                                                             </button>
                                                             <button
-                                                                onClick={() => handleReject(request.id)}
+                                                                onClick={() => handleRejectClick(request.id, `${request.user?.first_name} ${request.user?.last_name}`, request.course?.title)}
                                                                 disabled={processing === request.id}
                                                                 className="inline-flex items-center rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                             >
-                                                                {processing === request.id ? 'Processing...' : 'Reject'}
+                                                                Reject
                                                             </button>
                                                         </>
                                                     )}
                                                     {request.status === 'approved' && (
                                                         <button
-                                                            onClick={() => handleRevoke(request.id)}
+                                                            onClick={() => handleRevokeClick(request.id, `${request.user?.first_name} ${request.user?.last_name}`, request.course?.title)}
                                                             disabled={processing === request.id}
                                                             className="inline-flex items-center rounded-md bg-yellow-50 px-2.5 py-1.5 text-xs font-medium text-yellow-800 hover:bg-yellow-100 disabled:opacity-50 transition-colors"
                                                         >
-                                                            {processing === request.id ? 'Processing...' : 'Revoke'}
+                                                            Revoke
                                                         </button>
                                                     )}
                                                     {(request.status === 'failed' || request.moodle_sync_error) && (

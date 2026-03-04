@@ -18,7 +18,44 @@ class UserManagementController extends Controller
     public function index()
     {
         $users = User::with('roles')->paginate(20);
-        return Inertia::render('Admin/Users/Index', ['users' => $users]);
+        $roles = \Spatie\Permission\Models\Role::pluck('name');
+        return Inertia::render('Admin/Users/Index', ['users' => $users, 'roles' => $roles]);
+    }
+
+    /**
+     * Create a new user from admin panel
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255|min:2',
+            'last_name' => 'required|string|max:255|min:2',
+            'email' => 'required|string|email|max:255|unique:users',
+            'role' => 'required|exists:roles,name',
+            'date_of_birth' => 'nullable|date|before_or_equal:' . now()->subYears(18)->toDateString(),
+        ]);
+
+        $tempPassword = \Illuminate\Support\Str::random(12);
+
+        $user = User::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'password' => \Illuminate\Support\Facades\Hash::make($tempPassword),
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'email_verified_at' => now(),
+        ]);
+
+        $user->assignRole($validated['role']);
+
+        Log::info('User created by admin', [
+            'created_by' => auth()->user()->email,
+            'new_user' => $user->email,
+            'role' => $validated['role'],
+        ]);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', "User {$user->first_name} {$user->last_name} created successfully. Temporary password: {$tempPassword}");
     }
 
     /**
