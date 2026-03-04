@@ -79,10 +79,12 @@ export default function Register() {
         date_of_birth: '',
         password: '',
         password_confirmation: '',
+        terms_accepted: false,
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [ageError, setAgeError] = useState('');
+    const [termsError, setTermsError] = useState('');
 
     const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
 
@@ -95,10 +97,16 @@ export default function Register() {
     const submit = (e) => {
         e.preventDefault();
         setAgeError('');
+        setTermsError('');
 
         const age = calculateAge(data.date_of_birth);
         if (age === null || age < 18) {
             setAgeError('You must be 18 or older to register.');
+            return;
+        }
+
+        if (!data.terms_accepted) {
+            setTermsError('You must accept the Terms and Conditions to register.');
             return;
         }
 
@@ -359,6 +367,43 @@ export default function Register() {
                                         </button>
                                     </div>
                                     {errors.password_confirmation && <p className="mt-1.5 text-sm text-red-600">{errors.password_confirmation}</p>}
+                                </div>
+
+                                {/* Terms & Conditions */}
+                                <div className="animate-fade-in-up-delay-3">
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            id="terms_accepted"
+                                            type="checkbox"
+                                            checked={data.terms_accepted}
+                                            onChange={(e) => {
+                                                setData('terms_accepted', e.target.checked);
+                                                setTermsError('');
+                                            }}
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <label htmlFor="terms_accepted" className="text-sm text-gray-600">
+                                            I have read and agree to the{' '}
+                                            <a
+                                                href="/terms"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="font-medium text-indigo-600 hover:text-indigo-500 underline"
+                                            >
+                                                Terms and Conditions
+                                            </a>{' '}
+                                            and{' '}
+                                            <a
+                                                href="/privacy"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="font-medium text-indigo-600 hover:text-indigo-500 underline"
+                                            >
+                                                Privacy Policy
+                                            </a>
+                                        </label>
+                                    </div>
+                                    {termsError && <p className="mt-1.5 text-sm text-red-600">{termsError}</p>}
                                 </div>
 
                                 {/* Submit */}

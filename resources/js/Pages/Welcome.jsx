@@ -17,7 +17,7 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
 
     const getDashboardRoute = () => {
         if (isAdmin || isCourseAdmin) return '/dashboard';
-        return '/my-courses';
+        return '/dashboard/learner';
     };
 
     const getDashboardLabel = () => {
@@ -171,10 +171,10 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                             {/* Stats */}
                             <div className="mt-16 grid grid-cols-2 gap-4 sm:gap-8 lg:grid-cols-4">
                                 {[
-                                    { value: '5,000+', label: 'Healthcare Workers' },
-                                    { value: '150+', label: 'Training Modules' },
                                     { value: '24/7', label: 'Online Access' },
                                     { value: '100%', label: 'Digital Learning' },
+                                    { value: 'Free', label: 'Self-Generated Certificates' },
+                                    { value: 'Secure', label: 'MOH Managed Platform' },
                                 ].map((stat) => (
                                     <div
                                         key={stat.label}
@@ -519,13 +519,13 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
 
                             <div className="flex items-center space-x-6">
                                 <Link
-                                    href="/terms-and-conditions"
+                                    href="/terms"
                                     className="text-sm text-gray-500 transition hover:text-gray-700"
                                 >
                                     Terms of Service
                                 </Link>
                                 <Link
-                                    href="/privacy-policy"
+                                    href="/privacy"
                                     className="text-sm text-gray-500 transition hover:text-gray-700"
                                 >
                                     Privacy Policy
