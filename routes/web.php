@@ -376,6 +376,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/', 'store')->name('store');
                 // IMPORTANT: Static routes MUST come before dynamic {user} routes
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
+                Route::post('/bulk-suspend', 'bulkSuspend')->name('bulkSuspend');
                 // Dynamic routes with {user} parameter
                 // SECURITY: Role update is SuperAdmin-only to prevent privilege escalation
                 Route::post('/{user}/role', 'updateRole')->middleware('role:superadmin')->name('updateRole');
