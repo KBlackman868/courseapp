@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\User;
+use App\Models\AccountRequest;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -10,28 +10,29 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class MoodleSyncSuccessEmail extends Mailable implements ShouldQueue
+class AccountRejected extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
     public function __construct(
-        public User $user
+        public AccountRequest $accountRequest,
+        public string $reason
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Moodle Account Created Successfully',
+            subject: 'MOH Learning Account Request Update',
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            view: 'emails.moodle-sync-success',
+            view: 'emails.account-rejected',
             with: [
-                'user' => $this->user,
-                'moodleUrl' => config('services.moodle.url', '#'),
+                'accountRequest' => $this->accountRequest,
+                'reason' => $this->reason,
             ]
         );
     }

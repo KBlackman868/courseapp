@@ -8,9 +8,12 @@ use App\Models\User;
 use App\Models\SystemNotification;
 use App\Services\ActivityLogger;
 use App\Jobs\CreateOrLinkMoodleUser;
+use App\Mail\AccountApproved;
+use App\Mail\AccountRejected;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 /**
@@ -126,6 +129,9 @@ class AccountRequestController extends Controller
             // Send notification to the new user
             SystemNotification::notifyAccountApproved($user);
 
+            // Send approval email
+            Mail::to($user->email)->send(new AccountApproved($user));
+
             // Log the action
             ActivityLogger::log(
                 'account_approved',
@@ -188,8 +194,8 @@ class AccountRequestController extends Controller
             'warning'
         );
 
-        // Note: We can't notify the user in-app since they don't have an account
-        // An email notification should be sent instead
+        // Send rejection email to the applicant
+        Mail::to($accountRequest->email)->send(new AccountRejected($accountRequest, $validated['rejection_reason']));
 
         return redirect()
             ->route('admin.account-requests.index')
@@ -232,6 +238,7 @@ class AccountRequestController extends Controller
                         }
 
                         SystemNotification::notifyAccountApproved($user);
+                        Mail::to($user->email)->send(new AccountApproved($user));
                         $approvedUsers[] = $user->id;
                         $successCount++;
                     } catch (\Exception $e) {

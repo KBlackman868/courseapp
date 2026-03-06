@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class MoodleSyncSuccessEmail extends Mailable implements ShouldQueue
+class AccountApproved extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -21,17 +21,17 @@ class MoodleSyncSuccessEmail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Moodle Account Created Successfully',
+            subject: 'Your MOH Learning Account Has Been Approved',
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            view: 'emails.moodle-sync-success',
+            view: 'emails.account-approved',
             with: [
                 'user' => $this->user,
-                'moodleUrl' => config('services.moodle.url', '#'),
+                'loginUrl' => config('app.url', 'https://mohlearn.hin.gov.tt') . '/login',
             ]
         );
     }

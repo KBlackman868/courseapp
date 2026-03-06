@@ -27,13 +27,14 @@ class RoleManagementController extends Controller
     }
 
     /**
-     * Display role assignments page
-     * Returns ALL users for client-side filtering (no server pagination)
+     * Roles that should never appear in the UI
      */
+    public const HIDDEN_ROLES = ['student', 'registrar', 'instructor', 'user', 'course_creator'];
+
     public function index()
     {
         $users = User::with('roles')->orderBy('created_at', 'desc')->get();
-        $roles = Role::pluck('name');
+        $roles = Role::whereNotIn('name', self::HIDDEN_ROLES)->pluck('name');
 
         return Inertia::render('Admin/Roles/Index', [
             'users' => $users,
@@ -59,7 +60,7 @@ class RoleManagementController extends Controller
         }
 
         $request->validate([
-            'role' => 'required|exists:roles,name'
+            'role' => ['required', 'exists:roles,name', 'not_in:' . implode(',', self::HIDDEN_ROLES)],
         ]);
 
         // Prevent self-demotion from superadmin
@@ -100,7 +101,7 @@ class RoleManagementController extends Controller
         $request->validate([
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
-            'role' => 'required|exists:roles,name'
+            'role' => ['required', 'exists:roles,name', 'not_in:' . implode(',', self::HIDDEN_ROLES)],
         ]);
 
         $users = User::whereIn('id', $request->user_ids)->get();
