@@ -173,9 +173,9 @@ Route::middleware('guest')->group(function () {
 Route::get('/logout', function () {
     if (Auth::check()) {
         Auth::guard('web')->logout();
-        request()->session()->invalidate();
-        request()->session()->regenerateToken();
     }
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
     return redirect('/login');
 })->name('logout.get');
 
