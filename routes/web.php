@@ -172,7 +172,7 @@ Route::middleware('guest')->group(function () {
 */
 Route::get('/logout', function () {
     if (Auth::check()) {
-        Auth::logout();
+        Auth::guard('web')->logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
     }
