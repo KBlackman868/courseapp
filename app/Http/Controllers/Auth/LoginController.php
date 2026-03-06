@@ -370,8 +370,7 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Use a standard redirect (not Inertia) to avoid CSRF issues
-        // The redirect will load a fresh page with a new CSRF token
-        return redirect()->route('home')->with('success', 'You have been logged out successfully.');
+        // Redirect to login page (not home) to ensure clean post-logout state
+        return redirect('/login');
     }
 }
