@@ -13,5 +13,6 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         'auth/google/callback',  // Exclude Google OAuth callback
+        'logout',                // Allow GET /logout from Moodle redirect
     ];
 }
