@@ -28,7 +28,7 @@ class EnrollmentConfirmationEmail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.enrollment-confirmation',
+            view: 'emails.enrollment-confirmation',
             with: [
                 'enrollment' => $this->enrollment,
                 'user' => $this->enrollment->user,

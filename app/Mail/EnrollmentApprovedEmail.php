@@ -28,12 +28,11 @@ class EnrollmentApprovedEmail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.enrollment-approved',
+            view: 'emails.enrollment-approved',
             with: [
                 'enrollment' => $this->enrollment,
                 'user' => $this->enrollment->user,
                 'course' => $this->enrollment->course,
-                'moodleUrl' => config('services.moodle.url', '#'),
             ]
         );
     }

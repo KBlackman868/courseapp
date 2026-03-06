@@ -18,7 +18,8 @@ class UserManagementController extends Controller
     public function index()
     {
         $users = User::with('roles')->orderBy('created_at', 'desc')->get();
-        $roles = \Spatie\Permission\Models\Role::pluck('name');
+        $hiddenRoles = ['student', 'registrar', 'instructor', 'user', 'course_creator'];
+        $roles = \Spatie\Permission\Models\Role::whereNotIn('name', $hiddenRoles)->pluck('name');
         return Inertia::render('Admin/Users/Index', ['users' => $users, 'roles' => $roles]);
     }
 
