@@ -127,13 +127,30 @@ export default function ActivityLogShow({ log }) {
                                 <dt className="text-sm font-medium text-gray-500">Timestamp</dt>
                                 <dd className="mt-1 text-sm text-gray-900">{formatDateTime(log.created_at)}</dd>
                             </div>
-                            {log.metadata && Object.keys(log.metadata).length > 0 && (
+                            {log.properties && typeof log.properties === 'object' && Object.keys(log.properties).length > 0 && (
                                 <div className="sm:col-span-2">
-                                    <dt className="text-sm font-medium text-gray-500">Metadata</dt>
-                                    <dd className="mt-1">
-                                        <pre className="rounded-md bg-gray-50 p-4 text-sm text-gray-800 overflow-x-auto">
-                                            {JSON.stringify(log.metadata, null, 2)}
-                                        </pre>
+                                    <dt className="text-sm font-medium text-gray-500">Details</dt>
+                                    <dd className="mt-2">
+                                        <div className="rounded-md bg-gray-50 border border-gray-200 overflow-hidden">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {Object.entries(log.properties).map(([key, value]) => (
+                                                        <tr key={key}>
+                                                            <td className="px-4 py-2 text-sm font-medium text-gray-500 whitespace-nowrap bg-gray-50 w-1/4">
+                                                                {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                            </td>
+                                                            <td className="px-4 py-2 text-sm text-gray-900 break-all">
+                                                                {typeof value === 'object' ? (
+                                                                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">{JSON.stringify(value, null, 2)}</pre>
+                                                                ) : (
+                                                                    String(value)
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </dd>
                                 </div>
                             )}

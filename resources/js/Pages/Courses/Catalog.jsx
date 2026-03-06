@@ -158,8 +158,8 @@ export default function Catalog({ courses = [] }) {
                                     style={{ animation: 'fadeIn 0.2s ease-in-out' }}
                                 >
                                     {/* Image */}
-                                    {course.image ? (
-                                        <img src={course.image} alt={course.title} className="h-44 w-full object-cover" />
+                                    {course.image_url ? (
+                                        <img src={course.image_url} alt={course.title} className="h-44 w-full object-cover" />
                                     ) : (
                                         <div className="h-44 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
                                             <svg className="h-14 w-14 text-white/50" viewBox="0 0 24 24" fill="currentColor">

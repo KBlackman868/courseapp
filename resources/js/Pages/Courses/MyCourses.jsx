@@ -47,8 +47,8 @@ export default function MyCourses({ enrollments = {}, allCourses = [], enrolledC
             key={course.id}
             className="overflow-hidden rounded-lg bg-white shadow hover:shadow-md transition-all duration-200 ease-in-out"
         >
-            {course.image ? (
-                <img src={course.image} alt={course.title} className="h-40 w-full object-cover" />
+            {course.image_url ? (
+                <img src={course.image_url} alt={course.title} className="h-40 w-full object-cover" />
             ) : (
                 <div className="h-40 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
                     <svg className="h-12 w-12 text-white/50" viewBox="0 0 24 24" fill="currentColor">
@@ -241,8 +241,8 @@ export default function MyCourses({ enrollments = {}, allCourses = [], enrolledC
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                                 {filteredPending.map((course) => (
                                     <div key={course.id} className="overflow-hidden rounded-lg bg-white shadow opacity-75 grayscale transition-all duration-200 ease-in-out">
-                                        {course.image ? (
-                                            <img src={course.image} alt={course.title} className="h-40 w-full object-cover" />
+                                        {course.image_url ? (
+                                            <img src={course.image_url} alt={course.title} className="h-40 w-full object-cover" />
                                         ) : (
                                             <div className="h-40 bg-gradient-to-r from-gray-400 to-gray-500 flex items-center justify-center">
                                                 <svg className="h-12 w-12 text-white/50" viewBox="0 0 24 24" fill="currentColor">

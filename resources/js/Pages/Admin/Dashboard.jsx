@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     UsersIcon,
     AcademicCapIcon,
@@ -7,7 +7,6 @@ import {
     ArrowTrendingUpIcon,
     ArrowTrendingDownIcon,
     PlusIcon,
-    ArrowDownTrayIcon,
     UserPlusIcon,
 } from '@heroicons/react/24/outline';
 
@@ -220,18 +219,12 @@ export default function AdminDashboard({
                         <QuickAction
                             icon={UserPlusIcon}
                             label="Add User"
-                            onClick={() => console.log('Add user')}
+                            onClick={() => router.visit('/admin/users')}
                         />
                         <QuickAction
                             icon={PlusIcon}
                             label="Create Course"
-                            onClick={() => console.log('Create course')}
-                            variant="secondary"
-                        />
-                        <QuickAction
-                            icon={ArrowDownTrayIcon}
-                            label="Export"
-                            onClick={() => console.log('Export')}
+                            onClick={() => router.visit('/courses/create')}
                             variant="secondary"
                         />
                     </div>

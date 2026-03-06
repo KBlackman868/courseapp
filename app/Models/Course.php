@@ -72,6 +72,28 @@ class Course extends Model
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     */
+    protected $appends = [
+        'image_url',
+    ];
+
+    /**
+     * Get the course image URL with storage prefix.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $value = $this->attributes['image'] ?? null;
+        if (!$value) {
+            return null;
+        }
+        if (str_starts_with($value, 'http') || str_starts_with($value, '/storage/')) {
+            return $value;
+        }
+        return '/storage/' . $value;
+    }
+
+    /**
      * Get the enrollments for the course
      */
     public function enrollments(): HasMany

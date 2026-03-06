@@ -105,6 +105,13 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     */
+    protected $appends = [
+        'profile_photo_url',
+    ];
+
+    /**
      * The attributes that should be hidden for serialization.
      */
     protected $hidden = [
@@ -526,6 +533,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";
+    }
+
+    // Get profile photo URL accessor
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        if ($this->profile_photo) {
+            return '/storage/' . $this->profile_photo;
+        }
+        return null;
     }
 
         public function canCreateCourses(): bool
