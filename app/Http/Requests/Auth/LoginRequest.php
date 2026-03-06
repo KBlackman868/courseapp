@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\AccountRequest;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +44,17 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+
+            // Check if there's a pending account request for this email
+            $pendingRequest = AccountRequest::where('email', $this->string('email'))
+                ->where('status', 'pending')
+                ->exists();
+
+            if ($pendingRequest) {
+                throw ValidationException::withMessages([
+                    'email' => 'Your account request is still pending approval by a Course Administrator. You will receive an email once your account has been approved.',
+                ]);
+            }
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
