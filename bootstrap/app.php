@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -45,8 +48,28 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->shouldRenderJsonWhen(function ($request, \Throwable $e) {
-            return $request->expectsJson() || $request->ajax();
+        $exceptions->respond(function ($response, $exception, Request $request) {
+            // For Inertia requests or regular web requests with HTTP exceptions,
+            // render a proper error page instead of blank/JSON responses
+            if ($exception instanceof HttpExceptionInterface) {
+                $status = $exception->getStatusCode();
+                $errorStatuses = [401, 403, 404, 419, 429, 500, 503];
+
+                if (in_array($status, $errorStatuses)) {
+                    return Inertia::render('Error', ['status' => $status])
+                        ->toResponse($request)
+                        ->setStatusCode($status);
+                }
+            }
+
+            // For 500-level errors on Inertia requests (non-HTTP exceptions)
+            if ($request->header('X-Inertia') && !($exception instanceof HttpExceptionInterface)) {
+                return Inertia::render('Error', ['status' => 500])
+                    ->toResponse($request)
+                    ->setStatusCode(500);
+            }
+
+            return $response;
         });
     })
     ->create();
