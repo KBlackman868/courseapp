@@ -283,6 +283,7 @@ export default function RolesIndex({ users, roles = [] }) {
                                                             className="h-8 w-8 rounded-full object-cover"
                                                             src={user.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=6366f1&color=fff&size=32`}
                                                             alt=""
+                                                            onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=6366f1&color=fff&size=32`; }}
                                                         />
                                                         <span className="ml-3 text-sm font-medium text-gray-900">
                                                             {user.first_name} {user.last_name}

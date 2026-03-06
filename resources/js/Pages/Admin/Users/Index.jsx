@@ -407,7 +407,7 @@ export default function UsersIndex({ users, roles = [] }) {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
-                                                        <img className="h-10 w-10 rounded-full object-cover" src={avatarUrl} alt="" />
+                                                        <img className="h-10 w-10 rounded-full object-cover" src={avatarUrl} alt="" onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=6366f1&color=fff&size=40`; }} />
                                                         <div className="ml-4">
                                                             <div className="text-sm font-medium text-gray-900">{user.first_name} {user.last_name}</div>
                                                             <div className="text-sm text-gray-500">{user.email}</div>

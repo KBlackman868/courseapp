@@ -1,8 +1,8 @@
 import { Head } from '@inertiajs/react';
 
 export default function Show({ user, enrollments }) {
-    const avatarSrc = user.profile_photo_url
-        || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name + ' ' + user.last_name)}&background=6366f1&color=fff`;
+    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name + ' ' + user.last_name)}&background=6366f1&color=fff&size=128`;
+    const avatarSrc = user.profile_photo_url || fallbackUrl;
 
     return (
         <>
@@ -15,6 +15,7 @@ export default function Show({ user, enrollments }) {
                         src={avatarSrc}
                         className="w-32 h-32 rounded-full mx-auto object-cover"
                         alt="Avatar"
+                        onError={(e) => { e.target.onerror = null; e.target.src = fallbackUrl; }}
                     />
                     <h2 className="mt-4 text-center text-2xl font-semibold text-gray-900">
                         {user.first_name} {user.last_name}

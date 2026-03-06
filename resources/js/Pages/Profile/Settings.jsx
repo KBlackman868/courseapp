@@ -114,7 +114,8 @@ export default function Settings({ user }) {
         });
     };
 
-    const avatarUrl = photoPreview || user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((user?.first_name || '') + ' ' + (user?.last_name || ''))}&background=6366f1&color=fff&size=96`;
+    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((user?.first_name || '') + ' ' + (user?.last_name || ''))}&background=6366f1&color=fff&size=96`;
+    const avatarUrl = photoPreview || user?.profile_photo_url || fallbackUrl;
 
     return (
         <>
@@ -146,7 +147,7 @@ export default function Settings({ user }) {
                     </div>
                     <form onSubmit={handlePhotoSubmit} className="px-6 py-5">
                         <div className="flex items-center gap-6">
-                            <img src={avatarUrl} alt="Profile" className="h-20 w-20 rounded-full object-cover ring-2 ring-gray-200" />
+                            <img src={avatarUrl} alt="Profile" className="h-20 w-20 rounded-full object-cover ring-2 ring-gray-200" onError={(e) => { e.target.onerror = null; e.target.src = fallbackUrl; }} />
                             <div className="flex-1">
                                 <input
                                     type="file"
