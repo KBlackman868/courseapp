@@ -148,9 +148,9 @@ export default function CatalogShow({ course, enrollmentStatus = 'none', enrollm
 
                 {/* Course Image */}
                 <div className="overflow-hidden rounded-lg shadow">
-                    {course.image ? (
+                    {course.image_url ? (
                         <img
-                            src={course.image}
+                            src={course.image_url}
                             alt={course.title}
                             className="h-64 w-full object-cover"
                         />

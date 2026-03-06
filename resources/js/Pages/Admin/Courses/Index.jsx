@@ -179,11 +179,11 @@ export default function CoursesIndex({ courses, stats = {} }) {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-                    <StatCard title="Total Courses" value={stats.totalCourses || 0} color="indigo" />
-                    <StatCard title="Active Courses" value={stats.activeCourses || 0} color="green" />
-                    <StatCard title="Inactive Courses" value={stats.inactiveCourses || 0} color="gray" />
-                    <StatCard title="Synced to Moodle" value={stats.syncedCourses || 0} color="blue" />
-                    <StatCard title="Not Synced" value={stats.notSyncedCourses || 0} color="red" />
+                    <StatCard title="Total Courses" value={stats.total || 0} color="indigo" />
+                    <StatCard title="Active Courses" value={stats.active || 0} color="green" />
+                    <StatCard title="Inactive Courses" value={stats.inactive || 0} color="gray" />
+                    <StatCard title="Synced to Moodle" value={stats.synced || 0} color="blue" />
+                    <StatCard title="Not Synced" value={stats.not_synced || 0} color="red" />
                 </div>
 
                 {/* Filters */}
@@ -208,6 +208,8 @@ export default function CoursesIndex({ courses, stats = {} }) {
                         <option value="">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
+                        <option value="synced">Synced to Moodle</option>
+                        <option value="not_synced">Not Synced</option>
                     </select>
                 </div>
 

@@ -129,8 +129,8 @@ export default function Index({ requests, counts = {}, status = 'all' }) {
                                     <div className="flex flex-col sm:flex-row">
                                         {/* Course Image */}
                                         <div className="sm:w-48 flex-shrink-0">
-                                            {course.image ? (
-                                                <img src={course.image} alt={course.title} className="h-32 w-full sm:h-full object-cover" />
+                                            {course.image_url ? (
+                                                <img src={course.image_url} alt={course.title} className="h-32 w-full sm:h-full object-cover" />
                                             ) : (
                                                 <div className="h-32 sm:h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
                                                     <svg className="h-10 w-10 text-white/50" viewBox="0 0 24 24" fill="currentColor">

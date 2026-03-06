@@ -138,10 +138,10 @@ export default function Edit({ course }) {
                                 <label htmlFor="image" className="block text-sm font-medium text-gray-700">
                                     Course Image
                                 </label>
-                                {course.image && (
+                                {course.image_url && (
                                     <div className="mt-2 mb-3">
                                         <img
-                                            src={course.image}
+                                            src={course.image_url}
                                             alt={course.title}
                                             className="h-32 w-48 rounded-md object-cover"
                                         />

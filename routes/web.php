@@ -343,6 +343,9 @@ Route::middleware('auth')->group(function () {
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
                 Route::post('/bulk-sync', 'bulkSync')->name('bulkSync');
                 Route::post('/bulk-status', 'bulkUpdateStatus')->name('bulkStatus');
+                Route::get('/{course}', 'adminShow')->name('show');
+                Route::put('/{course}', 'update')->name('update');
+                Route::delete('/{course}', 'destroy')->name('destroy');
                 Route::post('/{course}/toggle-status', 'toggleStatus')->name('toggleStatus');
             });
             

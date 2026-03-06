@@ -711,25 +711,35 @@ class CourseController extends Controller
             'status' => $course->status
         ];
         
-        // Note: We don't delete from Moodle automatically for safety
+        $moodleWarning = '';
+
+        // Delete from Moodle if synced
         if ($course->moodle_course_id) {
-            Log::warning('Deleting course that exists in Moodle', [
-                'course_id' => $course->id,
-                'moodle_course_id' => $course->moodle_course_id
-            ]);
-            
-            // Log warning about Moodle course
-            ActivityLogger::logCourse('delete_warning', $course,
-                "Deleting course that exists in Moodle: {$course->title}",
-                [
+            try {
+                $this->moodleClient->call('core_course_delete_courses', [
+                    'courseids' => [$course->moodle_course_id],
+                ]);
+
+                ActivityLogger::logMoodle('course_deleted_moodle',
+                    "Course deleted from Moodle: {$course->title}",
+                    null,
+                    ['moodle_course_id' => $course->moodle_course_id]
+                );
+            } catch (\Exception $e) {
+                Log::error('Failed to delete course from Moodle', [
+                    'course_id' => $course->id,
                     'moodle_course_id' => $course->moodle_course_id,
-                    'enrollment_count' => $courseData['enrollment_count']
-                ],
-                'success',
-                'warning'
-            );
+                    'error' => $e->getMessage(),
+                ]);
+                $moodleWarning = ' Warning: Course could not be removed from Moodle — manual cleanup may be needed.';
+            }
         }
-        
+
+        // Delete course image from storage
+        if ($course->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($course->image)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($course->image);
+        }
+
         $course->delete();
 
         // Log course deletion
@@ -742,8 +752,8 @@ class CourseController extends Controller
             ]
         );
 
-        return redirect()->route('courses.index')
-            ->with('success', 'Course deleted successfully from local system.');
+        return redirect()->route('admin.courses.index')
+            ->with('success', 'Course deleted successfully.' . $moodleWarning);
     }
 
 /**
@@ -1038,6 +1048,18 @@ class CourseController extends Controller
     }
 
     /**
+     * Admin course detail/edit view
+     */
+    public function adminShow($id)
+    {
+        $course = Course::withCount('enrollments')->findOrFail($id);
+
+        return Inertia::render('Admin/Courses/Show', [
+            'course' => $course,
+        ]);
+    }
+
+    /**
      * Admin course management view
      */
     public function adminIndex(Request $request)
@@ -1054,12 +1076,18 @@ class CourseController extends Controller
             });
         }
         
-        // Filter by status
+        // Filter by status (active/inactive) or sync status (synced/not_synced)
         if ($request->has('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
+            if ($request->status === 'synced') {
+                $query->whereNotNull('moodle_course_id');
+            } elseif ($request->status === 'not_synced') {
+                $query->whereNull('moodle_course_id');
+            } else {
+                $query->where('status', $request->status);
+            }
         }
-        
-        // Filter by sync status
+
+        // Filter by sync status (separate param, kept for backward compatibility)
         if ($request->has('sync_status')) {
             if ($request->sync_status === 'synced') {
                 $query->whereNotNull('moodle_course_id');

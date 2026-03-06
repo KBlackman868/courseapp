@@ -166,9 +166,9 @@ export default function Index({ enrollments, counts = {}, status = 'all', search
                             return (
                                 <div key={enrollment.id} className="overflow-hidden rounded-lg bg-white shadow hover:shadow-md transition-shadow flex flex-col">
                                     {/* Image */}
-                                    {course.image ? (
+                                    {course.image_url ? (
                                         <div className="relative">
-                                            <img src={course.image} alt={course.title} className="h-40 w-full object-cover" />
+                                            <img src={course.image_url} alt={course.title} className="h-40 w-full object-cover" />
                                             <div className="absolute top-2 right-2">
                                                 <StatusBadge status={enrollment.status} />
                                             </div>
