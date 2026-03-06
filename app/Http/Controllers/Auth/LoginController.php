@@ -360,11 +360,11 @@ class LoginController extends Controller
         $request->session()->forget('otp_user_id');
         $request->session()->forget('registration_pending');
 
-        // Logout the user
-        Auth::logout();
+        // Logout the user — use guard('web') explicitly to ensure
+        // the remember_token cookie is cleared from both browser and DB
+        Auth::guard('web')->logout();
 
         // Invalidate the session and regenerate the CSRF token
-        // This is critical to prevent "Page Expired" errors
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

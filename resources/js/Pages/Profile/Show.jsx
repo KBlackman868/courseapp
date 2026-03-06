@@ -1,9 +1,8 @@
 import { Head } from '@inertiajs/react';
 
 export default function Show({ user, enrollments }) {
-    const avatarSrc = user.profile_photo
-        ? `/storage/${user.profile_photo}`
-        : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name + ' ' + user.last_name)}&background=6366f1&color=fff`;
+    const avatarSrc = user.profile_photo_url
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name + ' ' + user.last_name)}&background=6366f1&color=fff`;
 
     return (
         <>
