@@ -56,6 +56,8 @@ function isActive(href, currentUrl) {
     return currentUrl.startsWith(href);
 }
 
+const avatarFallback = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=6366f1&color=fff`;
+
 export default function DashboardLayout({ children, header }) {
     const { auth, flash } = usePage().props;
     const currentUrl = usePage().url.split('?')[0];
@@ -80,11 +82,14 @@ export default function DashboardLayout({ children, header }) {
                                 <div className="flex">
                                     <div className="flex flex-shrink-0 items-center">
                                         <Link href="/" className="flex items-center gap-2">
-                                            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                                                <span className="text-white font-bold text-sm">MOH</span>
-                                            </div>
+                                            <img
+                                                src="/images/moh_logo.jpg"
+                                                alt="MOH"
+                                                className="h-8 w-8 rounded-full object-cover"
+                                                onError={(e) => { e.target.onerror = null; e.target.src = avatarFallback('MOH'); }}
+                                            />
                                             <span className="hidden sm:block text-lg font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                                Learning
+                                                MOH Learning
                                             </span>
                                         </Link>
                                     </div>
@@ -185,8 +190,9 @@ export default function DashboardLayout({ children, header }) {
                                         <MenuButton className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
                                             <img
                                                 className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-100"
-                                                src={user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.first_name || 'U')}&background=6366f1&color=fff`}
+                                                src={user?.profile_photo_url || avatarFallback(user?.first_name)}
                                                 alt=""
+                                                onError={(e) => { e.target.onerror = null; e.target.src = avatarFallback(user?.first_name); }}
                                             />
                                             <div className="hidden lg:block text-left">
                                                 <p className="text-sm font-medium text-gray-700">
@@ -290,7 +296,7 @@ export default function DashboardLayout({ children, header }) {
                             </div>
                             <div className="border-t border-gray-200 pb-3 pt-4">
                                 <div className="flex items-center px-4">
-                                    <img className="h-10 w-10 rounded-full object-cover" src={user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.first_name || 'U')}&background=6366f1&color=fff`} alt="" />
+                                    <img className="h-10 w-10 rounded-full object-cover" src={user?.profile_photo_url || avatarFallback(user?.first_name)} alt="" onError={(e) => { e.target.onerror = null; e.target.src = avatarFallback(user?.first_name); }} />
                                     <div className="ml-3">
                                         <div className="text-base font-medium text-gray-800">{user?.first_name} {user?.last_name}</div>
                                         <div className="text-sm font-medium text-gray-500">{user?.email}</div>

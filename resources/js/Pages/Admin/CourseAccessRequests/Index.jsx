@@ -495,6 +495,7 @@ export default function CourseAccessRequestsIndex({
                                                         className="h-8 w-8 rounded-full object-cover"
                                                         src={request.user?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((request.user?.first_name || '') + ' ' + (request.user?.last_name || ''))}&background=6366f1&color=fff&size=32`}
                                                         alt=""
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent((request.user?.first_name || '') + ' ' + (request.user?.last_name || ''))}&background=6366f1&color=fff&size=32`; }}
                                                     />
                                                     <div className="ml-3">
                                                         <div className="text-sm font-medium text-gray-900">
