@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\{
     CourseController,
     EnrollmentController,
@@ -163,12 +164,29 @@ Route::middleware('guest')->group(function () {
 
 /*
 |==========================================================================
+| MOODLE LOGOUT ROUTE (No auth middleware — session may already be expired)
+|==========================================================================
+| Handles GET /logout from Moodle redirect after Moodle kills its session.
+| If the user has an active Laravel session, it is destroyed.
+| Always redirects to /login regardless of session state.
+*/
+Route::get('/logout', function () {
+    if (Auth::check()) {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+    }
+    return redirect('/login');
+})->name('logout.get');
+
+/*
+|==========================================================================
 | AUTHENTICATED ROUTES (Login Required)
 |==========================================================================
 */
 Route::middleware('auth')->group(function () {
-    
-    // Logout
+
+    // Logout (POST — used by the Sign Out button in the app)
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     
     /*
