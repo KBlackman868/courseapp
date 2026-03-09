@@ -45,6 +45,7 @@ class ExternalRegistrationController extends Controller
                 'date_of_birth' => $validated['date_of_birth'],
                 'email' => $validated['email'],
                 'organization' => $validated['organization'],
+                'department' => 'External',
                 'password' => Hash::make($validated['password']),
                 'user_type' => User::TYPE_EXTERNAL,
                 'account_status' => User::STATUS_PENDING,
@@ -93,9 +94,7 @@ class ExternalRegistrationController extends Controller
 
             ActivityLogger::logAuth('external_registration_failed',
                 "External registration failed for: {$validated['email']}",
-                ['error' => $e->getMessage()],
-                'failed',
-                'error'
+                ['error' => $e->getMessage()]
             );
 
             return back()
