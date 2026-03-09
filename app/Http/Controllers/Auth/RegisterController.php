@@ -163,6 +163,8 @@ class RegisterController extends Controller
      */
     private function handleExternalRegistration(Request $request, array $validatedData)
     {
+        Log::info('External registration attempt via RegisterController', ['email' => $validatedData['email']]);
+
         // Create the user with verification tracking
         $user = User::create([
             'first_name' => $validatedData['first_name'],
@@ -183,8 +185,15 @@ class RegisterController extends Controller
             'auth_method' => 'local',
         ]);
 
-        // Assign External User role
-        $user->assignRole(User::ROLE_EXTERNAL_USER);
+        // Assign External User role (wrapped to prevent cascading failures)
+        try {
+            $user->assignRole(User::ROLE_EXTERNAL_USER);
+        } catch (\Exception $e) {
+            Log::warning('Role assignment failed during external registration', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Store the plain password temporarily for Moodle sync
         Cache::put('moodle_temp_password_' . $user->id, $validatedData['password'], 300);
@@ -195,19 +204,32 @@ class RegisterController extends Controller
             'verification_status' => 'pending',
         ]);
 
-        // Log the action
-        ActivityLogger::logAuth('external_register', "External user registered: {$user->email}", [
-            'user_id' => $user->id,
-            'email' => $user->email,
-        ]);
+        // Log the action (wrapped to prevent cascading failures)
+        try {
+            ActivityLogger::logAuth('external_register', "External user registered: {$user->email}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Activity logging failed during external registration', [
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Send OTP for verification
-        $otpResult = $this->otpService->sendOtp($user);
+        try {
+            $otpResult = $this->otpService->sendOtp($user);
 
-        if (!$otpResult['success']) {
-            Log::error('Failed to send OTP during registration', [
+            if (!$otpResult['success']) {
+                Log::error('Failed to send OTP during registration', [
+                    'user_id' => $user->id,
+                    'error' => $otpResult['message']
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('OTP send threw exception during registration', [
                 'user_id' => $user->id,
-                'error' => $otpResult['message']
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -216,8 +238,15 @@ class RegisterController extends Controller
         session(['registration_pending' => true]);
 
         // Send welcome email with credentials (queued)
-        if (class_exists(WelcomeEmail::class)) {
-            Mail::to($user->email)->queue(new WelcomeEmail($user, $validatedData['password']));
+        try {
+            if (class_exists(WelcomeEmail::class)) {
+                Mail::to($user->email)->queue(new WelcomeEmail($user, $validatedData['password']));
+            }
+        } catch (\Exception $e) {
+            Log::error('Welcome email failed during registration', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         // Redirect to OTP verification page
