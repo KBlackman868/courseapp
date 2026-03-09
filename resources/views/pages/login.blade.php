@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In - Ministry of Health LMS</title>
+  <link rel="icon" type="image/jpeg" href="{{ asset('images/moh_logo.jpg') }}">
   @vite(['resources/css/app.css'])
   <style>
     * {
