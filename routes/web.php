@@ -71,7 +71,7 @@ Route::get('/terms', fn() => Inertia::render('Legal/Terms'))->name('terms');
 Route::get('/privacy', fn() => Inertia::render('Legal/Privacy'))->name('privacy');
 // Legacy redirects
 Route::get('/terms-and-conditions', fn() => redirect('/terms'));
-Route::get('/privacy-policy', fn() => redirect('/privacy'));
+Route::get('/privacy-policy', fn() => redirect('/privacy'))->name('privacy-policy');
 
 // SSO to Moodle Dashboard (for navigation link)
 Route::get('/moodle/sso', function () {
