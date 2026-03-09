@@ -6,17 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AccountRequest;
 use App\Models\SystemNotification;
-use App\Jobs\CreateOrLinkMoodleUser;
-use App\Mail\WelcomeEmail;
-use App\Services\OtpService;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -25,33 +18,18 @@ use Inertia\Inertia;
  *
  * Handles user registration for both MOH Staff and External Users.
  *
- * REGISTRATION WORKFLOW:
- *
- * MOH STAFF (@health.gov.tt):
+ * REGISTRATION WORKFLOW (same for both):
  * 1. User submits registration form
- * 2. Account Request created in "pending" status
- * 3. User sees "Request submitted, pending approval" message
+ * 2. AccountRequest created in "pending" status
+ * 3. User sees "Request submitted, pending approval" page
  * 4. Course Admin reviews and approves/rejects
- * 5. On approval: User account created, notification sent
+ * 5. On approval: User account created, Moodle account synced, notification sent
  * 6. User can then log in
- *
- * EXTERNAL USERS (other emails):
- * 1. User submits registration form
- * 2. Account created immediately (auto-approved)
- * 3. User goes through OTP verification
- * 4. User can access courses and request enrollment
  *
  * NOTE: Google OAuth has been REMOVED. All authentication is via password.
  */
 class RegisterController extends Controller
 {
-    protected $redirectTo = '/auth/otp/verify';
-    protected OtpService $otpService;
-
-    public function __construct(OtpService $otpService)
-    {
-        $this->otpService = $otpService;
-    }
 
     /**
      * Show the registration form
@@ -134,126 +112,105 @@ class RegisterController extends Controller
             'department' => $accountRequest->department,
         ]);
 
-        // Log the action
-        ActivityLogger::log(
-            'account_request_submitted',
-            "MOH Staff account request submitted for {$accountRequest->email}",
-            $accountRequest,
-            [
-                'email' => $accountRequest->email,
-                'department' => $accountRequest->department,
-            ],
-            'success',
-            'info'
-        );
+        // Log the action (wrapped to prevent cascading failures)
+        try {
+            ActivityLogger::log(
+                'account_request_submitted',
+                "MOH Staff account request submitted for {$accountRequest->email}",
+                $accountRequest,
+                [
+                    'email' => $accountRequest->email,
+                    'department' => $accountRequest->department,
+                ],
+                'success',
+                'info'
+            );
+        } catch (\Exception $e) {
+            Log::warning('Activity logging failed during MOH registration', [
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Notify Course Admins about new request
-        SystemNotification::notifyNewAccountRequest($accountRequest);
+        try {
+            SystemNotification::notifyNewAccountRequest($accountRequest);
+        } catch (\Exception $e) {
+            Log::warning('Failed to notify admins about MOH registration', [
+                'error' => $e->getMessage(),
+            ]);
+        }
 
-        // Redirect with success message
-        return redirect()->route('login')->with('success',
-            'Your account request has been submitted successfully. ' .
-            'A Course Administrator will review your request. ' .
-            'You will receive an email notification once your account is approved.'
-        );
+        // Show registration pending page
+        return Inertia::render('Auth/RegistrationPending', [
+            'email' => $accountRequest->email,
+            'type' => 'moh_staff',
+        ]);
     }
 
     /**
      * Handle External User registration
      *
-     * External users are auto-approved and go through OTP verification
+     * External users go through account request workflow (same as MOH Staff).
+     * Account is NOT created until admin approves the request.
+     * No Moodle account, OTP, or welcome email until approval.
      */
     private function handleExternalRegistration(Request $request, array $validatedData)
     {
         Log::info('External registration attempt via RegisterController', ['email' => $validatedData['email']]);
 
-        // Create the user with verification tracking
-        $user = User::create([
+        // Create account request instead of user (same pattern as MOH Staff)
+        $accountRequest = AccountRequest::create([
             'first_name' => $validatedData['first_name'],
-            'last_name'  => $validatedData['last_name'],
-            'date_of_birth' => $validatedData['date_of_birth'],
-            'email'      => $validatedData['email'],
-            'password'   => $validatedData['password'],
+            'last_name' => $validatedData['last_name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
             'department' => $validatedData['department'],
-            'organization' => $validatedData['organization'] ?? '',
-            'temp_moodle_password' => encrypt($validatedData['password']),
-            'verification_status' => 'pending',
-            'verification_sent_at' => now(),
-            'verification_attempts' => 1,
-            'must_verify_before' => now()->addHours(48),
-            'initial_otp_completed' => false,
-            'user_type' => User::TYPE_EXTERNAL,
-            'account_status' => User::STATUS_ACTIVE, // External users are auto-approved
-            'auth_method' => 'local',
+            'organization' => $validatedData['organization'] ?? null,
+            'phone' => $validatedData['phone'] ?? null,
+            'status' => AccountRequest::STATUS_PENDING,
+            'request_type' => AccountRequest::TYPE_EXTERNAL,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
         ]);
 
-        // Assign External User role (wrapped to prevent cascading failures)
-        try {
-            $user->assignRole(User::ROLE_EXTERNAL_USER);
-        } catch (\Exception $e) {
-            Log::warning('Role assignment failed during external registration', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        // Store the plain password temporarily for Moodle sync
-        Cache::put('moodle_temp_password_' . $user->id, $validatedData['password'], 300);
-
-        Log::info('External user registered', [
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'verification_status' => 'pending',
+        Log::info('External user account request submitted', [
+            'request_id' => $accountRequest->id,
+            'email' => $accountRequest->email,
         ]);
 
         // Log the action (wrapped to prevent cascading failures)
         try {
-            ActivityLogger::logAuth('external_register', "External user registered: {$user->email}", [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ]);
+            ActivityLogger::log(
+                'account_request_submitted',
+                "External user account request submitted for {$accountRequest->email}",
+                $accountRequest,
+                [
+                    'email' => $accountRequest->email,
+                    'organization' => $accountRequest->organization,
+                ],
+                'success',
+                'info'
+            );
         } catch (\Exception $e) {
             Log::warning('Activity logging failed during external registration', [
                 'error' => $e->getMessage(),
             ]);
         }
 
-        // Send OTP for verification
+        // Notify Course Admins about new request
         try {
-            $otpResult = $this->otpService->sendOtp($user);
-
-            if (!$otpResult['success']) {
-                Log::error('Failed to send OTP during registration', [
-                    'user_id' => $user->id,
-                    'error' => $otpResult['message']
-                ]);
-            }
+            SystemNotification::notifyNewAccountRequest($accountRequest);
         } catch (\Exception $e) {
-            Log::error('OTP send threw exception during registration', [
-                'user_id' => $user->id,
+            Log::warning('Failed to notify admins about external registration', [
                 'error' => $e->getMessage(),
             ]);
         }
 
-        // Store user ID in session for OTP verification (don't log them in yet)
-        session(['otp_user_id' => $user->id]);
-        session(['registration_pending' => true]);
-
-        // Send welcome email with credentials (queued)
-        try {
-            if (class_exists(WelcomeEmail::class)) {
-                Mail::to($user->email)->queue(new WelcomeEmail($user, $validatedData['password']));
-            }
-        } catch (\Exception $e) {
-            Log::error('Welcome email failed during registration', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        // Redirect to OTP verification page
-        return redirect()->route('auth.otp.verify')
-            ->with('success', 'Registration successful! Please enter the verification code sent to your email.');
+        // Redirect to registration pending page
+        return Inertia::render('Auth/RegistrationPending', [
+            'email' => $accountRequest->email,
+            'type' => 'external',
+        ]);
     }
 
     /**

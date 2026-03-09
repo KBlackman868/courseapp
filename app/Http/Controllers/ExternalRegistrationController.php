@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountRequest;
+use App\Models\SystemNotification;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
@@ -23,7 +25,10 @@ class ExternalRegistrationController extends Controller
 
     /**
      * Handle external user registration
-     * Creates user with pending account_status
+     *
+     * Creates an AccountRequest with pending status.
+     * User account is NOT created until admin approves.
+     * No Moodle account, OTP, or welcome email until approval.
      */
     public function store(Request $request)
     {
@@ -46,49 +51,38 @@ class ExternalRegistrationController extends Controller
         ]);
 
         try {
-            $user = User::create([
+            // Create account request (NOT a user) - admin must approve first
+            $accountRequest = AccountRequest::create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
-                'date_of_birth' => $validated['date_of_birth'],
                 'email' => $validated['email'],
-                'organization' => $validated['organization'],
+                'password' => Hash::make($validated['password']),
                 'department' => 'External',
-                'password' => $validated['password'],
-                'user_type' => User::TYPE_EXTERNAL,
-                'account_status' => User::STATUS_PENDING,
-                'auth_method' => 'local',
+                'organization' => $validated['organization'],
+                'status' => AccountRequest::STATUS_PENDING,
+                'request_type' => AccountRequest::TYPE_EXTERNAL,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
-            // Assign external_user role if it exists
-            try {
-                if (class_exists(\Spatie\Permission\Models\Role::class)) {
-                    $role = \Spatie\Permission\Models\Role::where('name', 'external_user')->first();
-                    if ($role) {
-                        $user->assignRole($role);
-                    } else {
-                        $userRole = \Spatie\Permission\Models\Role::where('name', 'user')->first();
-                        if ($userRole) {
-                            $user->assignRole($userRole);
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Role assignment failed during external registration', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            Log::info('External user account request created', [
+                'request_id' => $accountRequest->id,
+                'email' => $accountRequest->email,
+            ]);
 
             // Log registration (wrapped to prevent cascading failures)
             try {
-                ActivityLogger::logAuth('external_registration',
-                    "External user registered: {$user->email}",
+                ActivityLogger::log(
+                    'account_request_submitted',
+                    "External user account request submitted for {$accountRequest->email}",
+                    $accountRequest,
                     [
-                        'user_id' => $user->id,
-                        'email' => $user->email,
-                        'organization' => $user->organization,
+                        'email' => $accountRequest->email,
+                        'organization' => $accountRequest->organization,
                         'account_status' => 'pending',
-                    ]
+                    ],
+                    'success',
+                    'info'
                 );
             } catch (\Exception $e) {
                 Log::warning('Activity logging failed during external registration', [
@@ -96,13 +90,18 @@ class ExternalRegistrationController extends Controller
                 ]);
             }
 
-            Log::info('External user registered', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ]);
+            // Notify Course Admins about new request
+            try {
+                SystemNotification::notifyNewAccountRequest($accountRequest);
+            } catch (\Exception $e) {
+                Log::warning('Failed to notify admins about external registration', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return redirect()->route('login')->with('success',
-                'Your registration has been submitted. Please wait for an administrator to approve your account before you can log in.'
+                'Thank you for registering! Your account request has been submitted and is pending administrator approval. ' .
+                'You will receive an email once your account has been approved.'
             );
 
         } catch (\Exception $e) {
@@ -111,15 +110,6 @@ class ExternalRegistrationController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'email' => $validated['email'] ?? $request->input('email'),
             ]);
-
-            try {
-                ActivityLogger::logAuth('external_registration_failed',
-                    "External registration failed for: {$validated['email']}",
-                    ['error' => $e->getMessage()]
-                );
-            } catch (\Exception $logException) {
-                Log::warning('Activity logging also failed', ['error' => $logException->getMessage()]);
-            }
 
             return back()
                 ->withInput($request->except('password', 'password_confirmation'))
