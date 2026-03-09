@@ -27,6 +27,8 @@ class ExternalRegistrationController extends Controller
      */
     public function store(Request $request)
     {
+        Log::info('External registration attempt', ['email' => $request->input('email')]);
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
@@ -58,29 +60,41 @@ class ExternalRegistrationController extends Controller
             ]);
 
             // Assign external_user role if it exists
-            if (class_exists(\Spatie\Permission\Models\Role::class)) {
-                $role = \Spatie\Permission\Models\Role::where('name', 'external_user')->first();
-                if ($role) {
-                    $user->assignRole($role);
-                } else {
-                    // Fallback to user role
-                    $userRole = \Spatie\Permission\Models\Role::where('name', 'user')->first();
-                    if ($userRole) {
-                        $user->assignRole($userRole);
+            try {
+                if (class_exists(\Spatie\Permission\Models\Role::class)) {
+                    $role = \Spatie\Permission\Models\Role::where('name', 'external_user')->first();
+                    if ($role) {
+                        $user->assignRole($role);
+                    } else {
+                        $userRole = \Spatie\Permission\Models\Role::where('name', 'user')->first();
+                        if ($userRole) {
+                            $user->assignRole($userRole);
+                        }
                     }
                 }
+            } catch (\Exception $e) {
+                Log::warning('Role assignment failed during external registration', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
-            // Log registration
-            ActivityLogger::logAuth('external_registration',
-                "External user registered: {$user->email}",
-                [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'organization' => $user->organization,
-                    'account_status' => 'pending',
-                ]
-            );
+            // Log registration (wrapped to prevent cascading failures)
+            try {
+                ActivityLogger::logAuth('external_registration',
+                    "External user registered: {$user->email}",
+                    [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'organization' => $user->organization,
+                        'account_status' => 'pending',
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::warning('Activity logging failed during external registration', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             Log::info('External user registered', [
                 'user_id' => $user->id,
@@ -94,13 +108,18 @@ class ExternalRegistrationController extends Controller
         } catch (\Exception $e) {
             Log::error('External registration failed', [
                 'error' => $e->getMessage(),
-                'email' => $validated['email'],
+                'trace' => $e->getTraceAsString(),
+                'email' => $validated['email'] ?? $request->input('email'),
             ]);
 
-            ActivityLogger::logAuth('external_registration_failed',
-                "External registration failed for: {$validated['email']}",
-                ['error' => $e->getMessage()]
-            );
+            try {
+                ActivityLogger::logAuth('external_registration_failed',
+                    "External registration failed for: {$validated['email']}",
+                    ['error' => $e->getMessage()]
+                );
+            } catch (\Exception $logException) {
+                Log::warning('Activity logging also failed', ['error' => $logException->getMessage()]);
+            }
 
             return back()
                 ->withInput($request->except('password', 'password_confirmation'))
