@@ -468,10 +468,10 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                                 </div>
                                 <h3 className="mb-2 text-lg font-semibold text-white">Email</h3>
                                 <a
-                                    href="mailto:lms@health.gov.tt"
+                                    href="mailto:helpdesk@health.gov.tt"
                                     className="text-indigo-400 transition hover:text-indigo-300"
                                 >
-                                    lms@health.gov.tt
+                                    helpdesk@health.gov.tt
                                 </a>
                             </div>
 
