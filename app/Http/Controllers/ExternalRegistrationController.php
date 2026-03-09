@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class ExternalRegistrationController extends Controller
@@ -29,7 +30,11 @@ class ExternalRegistrationController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => [
+                'required', 'string', 'email', 'max:255',
+                'unique:users',
+                Rule::unique('account_requests', 'email')->where(fn ($query) => $query->where('status', 'pending')),
+            ],
             'organization' => ['required', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
             'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
