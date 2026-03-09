@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 /**
@@ -68,28 +69,36 @@ class RegisterController extends Controller
      */
     public function register(Request $request)
     {
+        // Determine password minimum before validation so we can use it in the rule
+        $isMoh = User::isMohEmail($request->input('email', ''));
+        $minLength = $isMoh ? 14 : 12;
+
         $validatedData = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
-            'email'      => 'required|string|email|max:255|unique:users|unique:account_requests,email',
+            'email'      => [
+                'required', 'string', 'email', 'max:255',
+                // Friendly message if the user already has an account
+                function ($attribute, $value, $fail) {
+                    if (User::where('email', strtolower($value))->exists()) {
+                        $fail('An account with this email already exists. Please sign in instead.');
+                    }
+                },
+                // Only block PENDING account requests — rejected users may re-apply
+                Rule::unique('account_requests', 'email')->where(
+                    fn ($q) => $q->where('status', AccountRequest::STATUS_PENDING)
+                ),
+            ],
             'department' => 'required|string|max:255',
             'organization' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
             'date_of_birth' => 'required|date|before_or_equal:' . now()->subYears(18)->toDateString(),
-        ]);
-
-        // Determine password minimum based on account type
-        // MOH staff (high-risk): 14 chars; External (standard): 12 chars
-        $isMoh = User::isMohEmail($validatedData['email']);
-        $minLength = $isMoh ? 14 : 12;
-        $passwordData = $request->validate([
             'password' => "required|string|min:{$minLength}|confirmed",
         ], [
+            'email.unique' => 'A pending account request with this email already exists. Please wait for admin approval or contact helpdesk@health.gov.tt.',
             'password.min' => "Password must be at least {$minLength} characters for " . ($isMoh ? 'MOH staff (high-risk) accounts' : 'standard accounts') . '.',
             'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);
-
-        $validatedData = array_merge($validatedData, $passwordData);
 
         // Check if this is an MOH Staff registration
         if ($isMoh) {
@@ -245,12 +254,17 @@ class RegisterController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                'unique:users',
-                'unique:account_requests,email',
+                'required', 'string', 'email', 'max:255',
+                // Friendly message if user already has an active account
+                function ($attribute, $value, $fail) {
+                    if (User::where('email', strtolower($value))->exists()) {
+                        $fail('An account with this email already exists. Please sign in instead.');
+                    }
+                },
+                // Only block PENDING requests — rejected applicants may re-apply
+                Rule::unique('account_requests', 'email')->where(
+                    fn ($q) => $q->where('status', AccountRequest::STATUS_PENDING)
+                ),
                 // Ensure it's an MOH email
                 function ($attribute, $value, $fail) {
                     if (!User::isMohEmail($value)) {
@@ -263,6 +277,7 @@ class RegisterController extends Controller
             'phone' => 'nullable|string|max:50',
             'date_of_birth' => 'required|date|before_or_equal:' . now()->subYears(18)->toDateString(),
         ], [
+            'email.unique' => 'A pending account request with this email already exists. Please wait for admin approval or contact helpdesk@health.gov.tt.',
             'password.min' => 'Password must be at least 14 characters for MOH staff (high-risk) accounts.',
             'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
         ]);

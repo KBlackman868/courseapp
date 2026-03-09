@@ -29,7 +29,14 @@ class ExternalRegistrationController extends Controller
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => [
+                'required', 'string', 'email', 'max:255',
+                function ($attribute, $value, $fail) {
+                    if (User::where('email', strtolower($value))->exists()) {
+                        $fail('An account with this email already exists. Please sign in instead.');
+                    }
+                },
+            ],
             'organization' => ['required', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
             'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],

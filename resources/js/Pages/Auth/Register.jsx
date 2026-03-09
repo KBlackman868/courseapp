@@ -264,7 +264,14 @@ export default function Register() {
                                         className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
                                         placeholder="you@example.com"
                                     />
-                                    {errors.email && <p className="mt-1.5 text-sm text-red-600">{errors.email}</p>}
+                                    {errors.email && (
+                                        <p className="mt-1.5 text-sm text-red-600">
+                                            {errors.email}
+                                            {errors.email.includes('already exists') && (
+                                                <> <Link href={route('login')} className="underline font-semibold hover:text-red-800">Sign in here</Link></>
+                                            )}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Department */}
