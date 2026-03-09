@@ -7,48 +7,33 @@ use App\Models\AccountRequest;
 use App\Models\User;
 use App\Models\SystemNotification;
 use App\Services\ActivityLogger;
+use App\Services\MoodleService;
 use App\Jobs\CreateOrLinkMoodleUser;
-use App\Mail\AccountApproved;
-use App\Mail\AccountRejected;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Inertia\Inertia;
 
 /**
  * AccountRequestController
  *
- * Handles the approval workflow for account requests, especially from MOH Staff.
- *
- * WORKFLOW:
- * 1. User registers with @health.gov.tt email
- * 2. Account request created in "pending" status
- * 3. Course Admin sees request in pending queue
- * 4. Course Admin approves/rejects
- * 5. On approval: User account created, notification sent
+ * APPROVAL: Creates user account, assigns role, queues Moodle sync.
+ * REJECTION: Permanently deletes ALL records (user, Moodle, account_request).
+ *            No email sent to the rejected user.
  */
 class AccountRequestController extends Controller
 {
-    /**
-     * Display the list of account requests
-     * Shows pending requests prominently at the top
-     */
     public function index(Request $request)
     {
         $this->authorize('viewAny', AccountRequest::class);
 
-        // Get filter parameters
-        $status = $request->input('status', 'pending');
+        $status = $request->input('status', 'email_verified');
         $department = $request->input('department');
         $search = $request->input('search');
 
-        // Build query
         $query = AccountRequest::query()
             ->with('reviewer')
             ->orderBy('created_at', 'desc');
 
-        // Apply filters
         if ($status && $status !== 'all') {
             $query->where('status', $status);
         }
@@ -66,44 +51,31 @@ class AccountRequestController extends Controller
         }
 
         $requests = $query->paginate(20);
-
-        // Get departments for filter dropdown
         $departments = AccountRequest::getPendingDepartments();
 
-        // Get counts for tabs
         $counts = [
+            'email_verified' => AccountRequest::where('status', AccountRequest::STATUS_EMAIL_VERIFIED)->count(),
+            'pending_verification' => AccountRequest::where('status', AccountRequest::STATUS_PENDING_VERIFICATION)->count(),
             'pending' => AccountRequest::pending()->count(),
-            'approved' => AccountRequest::where('status', 'approved')->count(),
-            'rejected' => AccountRequest::where('status', 'rejected')->count(),
+            'approved' => AccountRequest::where('status', AccountRequest::STATUS_APPROVED)->count(),
+            'rejected' => AccountRequest::where('status', AccountRequest::STATUS_REJECTED)->count(),
             'all' => AccountRequest::count(),
         ];
 
-        return Inertia::render('Admin/AccountRequests/Index', [
-            'requests' => $requests,
-            'departments' => $departments,
-            'counts' => $counts,
-            'status' => $status,
-            'department' => $department,
-            'search' => $search,
-        ]);
+        return view('admin.account-requests.index', compact(
+            'requests', 'departments', 'counts', 'status', 'department', 'search'
+        ));
     }
 
-    /**
-     * Show a specific account request
-     */
     public function show(AccountRequest $accountRequest)
     {
         $this->authorize('view', $accountRequest);
 
-        return Inertia::render('Admin/AccountRequests/Show', [
-            'accountRequest' => $accountRequest->load('reviewer', 'user'),
+        return view('admin.account-requests.show', [
+            'request' => $accountRequest->load('reviewer', 'user'),
         ]);
     }
 
-    /**
-     * Approve an account request
-     * Creates the user account and sends notification
-     */
     public function approve(Request $request, AccountRequest $accountRequest)
     {
         $this->authorize('approve', $accountRequest);
@@ -115,32 +87,28 @@ class AccountRequestController extends Controller
         DB::beginTransaction();
 
         try {
-            // Approve the request (this creates the user)
             $user = $accountRequest->approve(
                 auth()->user(),
                 $validated['admin_notes'] ?? null
             );
 
-            // Queue Moodle account creation for MOH staff
-            if ($accountRequest->isMohStaffRequest()) {
-                CreateOrLinkMoodleUser::dispatch($user);
+            try { CreateOrLinkMoodleUser::dispatch($user); } catch (\Exception $e) {
+                Log::warning('Failed to dispatch Moodle sync', ['error' => $e->getMessage()]);
             }
 
-            // Send notification to the new user
-            SystemNotification::notifyAccountApproved($user);
+            try { SystemNotification::notifyAccountApproved($user); } catch (\Exception $e) {
+                Log::warning('Failed to send approval notification', ['error' => $e->getMessage()]);
+            }
 
-            // Send approval email
-            Mail::to($user->email)->send(new AccountApproved($user));
-
-            // Log the action
             ActivityLogger::log(
                 'account_approved',
                 "Approved account request for {$accountRequest->email}",
                 $accountRequest,
                 [
-                    'user_id' => $user->id,
+                    'user_id'      => $user->id,
                     'request_type' => $accountRequest->request_type,
-                    'department' => $accountRequest->department,
+                    'department'   => $accountRequest->department,
+                    'approved_by'  => auth()->user()->email,
                 ],
                 'success',
                 'info'
@@ -156,7 +124,7 @@ class AccountRequestController extends Controller
             DB::rollBack();
             Log::error('Failed to approve account request', [
                 'request_id' => $accountRequest->id,
-                'error' => $e->getMessage(),
+                'error'      => $e->getMessage(),
             ]);
 
             return back()->with('error', 'Failed to approve account. Please try again.');
@@ -164,7 +132,8 @@ class AccountRequestController extends Controller
     }
 
     /**
-     * Reject an account request
+     * Reject — permanently deletes all related records.
+     * No email sent to the rejected user.
      */
     public function reject(Request $request, AccountRequest $accountRequest)
     {
@@ -172,52 +141,89 @@ class AccountRequestController extends Controller
 
         $validated = $request->validate([
             'rejection_reason' => 'required|string|max:1000',
-            'admin_notes' => 'nullable|string|max:1000',
+            'admin_notes'      => 'nullable|string|max:1000',
         ]);
 
-        $accountRequest->reject(
-            auth()->user(),
-            $validated['rejection_reason'],
-            $validated['admin_notes'] ?? null
-        );
+        // Capture data for logging before deletion
+        $logData = [
+            'request_id'       => $accountRequest->id,
+            'email'            => $accountRequest->email,
+            'full_name'        => $accountRequest->full_name,
+            'request_type'     => $accountRequest->request_type,
+            'department'       => $accountRequest->department,
+            'rejection_reason' => $validated['rejection_reason'],
+            'rejected_by'      => auth()->user()->email,
+        ];
 
-        // Log the action
-        ActivityLogger::log(
-            'account_rejected',
-            "Rejected account request for {$accountRequest->email}",
-            $accountRequest,
-            [
-                'rejection_reason' => $validated['rejection_reason'],
-                'request_type' => $accountRequest->request_type,
-            ],
-            'success',
-            'warning'
-        );
+        DB::beginTransaction();
 
-        // Send rejection email to the applicant
-        Mail::to($accountRequest->email)->send(new AccountRejected($accountRequest, $validated['rejection_reason']));
+        try {
+            // Delete user + Moodle account if they were created
+            if ($accountRequest->user_id) {
+                $user = User::find($accountRequest->user_id);
+                if ($user) {
+                    if ($user->moodle_user_id) {
+                        try {
+                            app(MoodleService::class)->deleteUser($user->moodle_user_id);
+                            $logData['moodle_deleted'] = true;
+                        } catch (\Exception $e) {
+                            Log::warning('Failed to delete Moodle account', [
+                                'moodle_user_id' => $user->moodle_user_id,
+                                'error'          => $e->getMessage(),
+                            ]);
+                        }
+                    }
 
-        return redirect()
-            ->route('admin.account-requests.index')
-            ->with('success', "Account request rejected for {$accountRequest->full_name}.");
+                    // Delete all related records
+                    $user->systemNotifications()->delete();
+                    $user->courseAccessRequests()->delete();
+                    $user->forceDelete();
+                    $logData['user_deleted'] = true;
+                }
+            }
+
+            // Log BEFORE deleting the request
+            ActivityLogger::log(
+                'account_rejected',
+                "Rejected and permanently deleted account request for {$logData['email']}",
+                null,
+                $logData,
+                'success',
+                'warning'
+            );
+
+            // Permanently delete the account request
+            $accountRequest->forceDelete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.account-requests.index')
+                ->with('success', "Account request for {$logData['full_name']} has been rejected and permanently removed.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to reject account request', [
+                'request_id' => $accountRequest->id,
+                'error'      => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Failed to reject account. Please try again.');
+        }
     }
 
-    /**
-     * Bulk approve account requests
-     */
     public function bulkApprove(Request $request)
     {
         $this->authorize('bulkApprove', AccountRequest::class);
 
         $validated = $request->validate([
-            'request_ids' => 'required|array',
+            'request_ids'   => 'required|array',
             'request_ids.*' => 'exists:account_requests,id',
-            'admin_notes' => 'nullable|string|max:1000',
+            'admin_notes'   => 'nullable|string|max:1000',
         ]);
 
         $successCount = 0;
         $failedCount = 0;
-        $approvedUsers = [];
 
         DB::beginTransaction();
 
@@ -232,38 +238,30 @@ class AccountRequestController extends Controller
                             $validated['admin_notes'] ?? 'Bulk approved'
                         );
 
-                        // Queue Moodle account creation for MOH staff
-                        if ($accountRequest->isMohStaffRequest()) {
-                            CreateOrLinkMoodleUser::dispatch($user);
-                        }
+                        try { CreateOrLinkMoodleUser::dispatch($user); } catch (\Exception $e) {}
+                        try { SystemNotification::notifyAccountApproved($user); } catch (\Exception $e) {}
 
-                        SystemNotification::notifyAccountApproved($user);
-                        Mail::to($user->email)->send(new AccountApproved($user));
-                        $approvedUsers[] = $user->id;
                         $successCount++;
                     } catch (\Exception $e) {
                         $failedCount++;
-                        Log::error('Failed to approve account in bulk', [
+                        Log::error('Failed to approve in bulk', [
                             'request_id' => $requestId,
-                            'error' => $e->getMessage(),
+                            'error'      => $e->getMessage(),
                         ]);
                     }
                 }
             }
 
-            // Log bulk action
-            ActivityLogger::log(
-                'bulk_account_approval',
-                "Bulk approved {$successCount} account requests",
-                null,
-                [
-                    'approved_count' => $successCount,
-                    'failed_count' => $failedCount,
-                    'affected_ids' => $approvedUsers,
-                ],
-                'success',
-                'info'
-            );
+            try {
+                ActivityLogger::log(
+                    'bulk_account_approval',
+                    "Bulk approved {$successCount} account requests",
+                    null,
+                    ['approved_count' => $successCount, 'failed_count' => $failedCount],
+                    'success',
+                    'info'
+                );
+            } catch (\Exception $e) {}
 
             DB::commit();
 
@@ -272,9 +270,7 @@ class AccountRequestController extends Controller
                 $message .= " {$failedCount} failed.";
             }
 
-            return redirect()
-                ->route('admin.account-requests.index')
-                ->with('success', $message);
+            return redirect()->route('admin.account-requests.index')->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -282,27 +278,19 @@ class AccountRequestController extends Controller
         }
     }
 
-    /**
-     * Bulk approve all pending MOH staff requests (optionally filtered by department)
-     */
     public function bulkApproveAllMoh(Request $request)
     {
         $this->authorize('bulkApprove', AccountRequest::class);
 
-        $validated = $request->validate([
-            'department' => 'nullable|string',
-        ]);
+        $validated = $request->validate(['department' => 'nullable|string']);
 
-        $query = AccountRequest::pending()->mohStaff();
+        $query = AccountRequest::awaitingApproval()->mohStaff();
 
         if (!empty($validated['department'])) {
             $query->forDepartment($validated['department']);
         }
 
-        $pendingRequests = $query->pluck('id')->toArray();
-
-        // Reuse bulkApprove logic
-        $request->merge(['request_ids' => $pendingRequests]);
+        $request->merge(['request_ids' => $query->pluck('id')->toArray()]);
 
         return $this->bulkApprove($request);
     }

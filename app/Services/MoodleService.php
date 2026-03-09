@@ -9,10 +9,6 @@ class MoodleService
 {
     protected $baseUrl;
     protected $token;
-    protected int $timeout;
-    protected int $connectTimeout;
-    protected int $retryTimes;
-    protected int $retrySleep;
 
     public function __construct()
     {
@@ -22,11 +18,6 @@ class MoodleService
 
         // Remove trailing slash from base URL if present
         $this->baseUrl = rtrim($this->baseUrl, '/');
-
-        $this->timeout = (int) config('moodle.timeout', 30);
-        $this->connectTimeout = (int) config('moodle.connect_timeout', 15);
-        $this->retryTimes = (int) config('moodle.retry_times', 3);
-        $this->retrySleep = (int) config('moodle.retry_sleep', 1000);
     }
 
     /**
@@ -49,45 +40,27 @@ class MoodleService
         ]);
 
         try {
-            // Create HTTP client with timeout, retry, and SSL verification settings
-            $client = Http::asForm()
-                ->timeout($this->timeout)
-                ->connectTimeout($this->connectTimeout)
-                ->retry($this->retryTimes, $this->retrySleep, function (\Exception $exception) {
-                    $message = $exception->getMessage();
-                    return str_contains($message, 'cURL error 28')
-                        || str_contains($message, 'timed out')
-                        || str_contains($message, 'cURL error 7')
-                        || str_contains($message, 'cURL error 35');
-                }, throw: false);
-
+            // Create HTTP client with SSL verification setting
+            $client = Http::asForm();
+            
             // Check if SSL verification should be disabled
-            if (config('moodle.verify_ssl', true) === false) {
+            if (env('MOODLE_VERIFY_SSL', true) === false || env('MOODLE_VERIFY_SSL', true) === 'false') {
                 $client = $client->withoutVerifying();
             }
-
+            
             $response = $client->post($url, $requestParams);
             
             if ($response->successful()) {
                 $data = $response->json();
-
+                
                 // Check for Moodle errors
                 if (isset($data['exception'])) {
                     throw new \Exception("Moodle error: " . ($data['message'] ?? 'Unknown error'));
                 }
-
+                
                 return $data;
             } else {
-                $body = $response->body();
-                Log::error('Moodle HTTP error response', [
-                    'function' => $function,
-                    'status' => $response->status(),
-                    'body' => substr($body, 0, 2000),
-                ]);
-                throw new \Exception(
-                    "HTTP request failed with status: " . $response->status()
-                    . " — " . substr($body, 0, 500)
-                );
+                throw new \Exception("HTTP request failed with status: " . $response->status());
             }
         } catch (\Exception $e) {
             Log::error('Moodle API call failed', [
@@ -334,81 +307,72 @@ class MoodleService
     }
 
     /**
-     * Generate an auto-login URL for a user using auth_userkey plugin.
-     *
-     * Tries auth_userkey_request_login_url first, then auth_userkey_generatekey.
-     * On success, returns the SSO login URL with optional redirect.
-     * On failure, returns null and populates $lastSsoError with the reason.
+     * Generate an auto-login URL for a user using auth_userkey plugin
+     * This allows users to be automatically logged into Moodle
      *
      * @param array $userData User data with username, email, firstname, lastname
-     * @param string|null $redirectUrl Optional URL to redirect after login
-     * @param string|null &$lastSsoError Populated with error details on failure
+     * @param string|null $redirectUrl Optional URL to redirect after login (e.g., course page)
      * @return string|null The auto-login URL or null on failure
      */
-    public function generateLoginUrl(array $userData, ?string $redirectUrl = null, ?string &$lastSsoError = null): ?string
+    public function generateLoginUrl(array $userData, ?string $redirectUrl = null): ?string
     {
-        $params = ['user' => $userData];
-        $lastSsoError = null;
-
-        // Try the newer function name first (auth_userkey v2+)
         try {
-            $response = $this->call('auth_userkey_request_login_url', $params);
+            // Send all user fields - auth_userkey may match on any of these
+            $params = ['user' => $userData];
+            $response = null;
+            $functionName = null;
+
+            // Try the newer function first
+            try {
+                $response = $this->call('auth_userkey_request_login_url', $params);
+                $functionName = 'auth_userkey_request_login_url';
+            } catch (\Exception $e) {
+                Log::info('auth_userkey_request_login_url not available, trying generatekey', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+
+            // If that fails, try the older function name
+            if (!$response || !isset($response['loginurl'])) {
+                try {
+                    $response = $this->call('auth_userkey_generatekey', $params);
+                    $functionName = 'auth_userkey_generatekey';
+                } catch (\Exception $e) {
+                    Log::warning('auth_userkey_generatekey also failed', [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
 
             if (isset($response['loginurl'])) {
                 $loginUrl = $response['loginurl'];
+
+                // Append redirect URL if provided
                 if ($redirectUrl) {
                     $separator = (strpos($loginUrl, '?') !== false) ? '&' : '?';
                     $loginUrl .= $separator . 'wantsurl=' . urlencode($redirectUrl);
                 }
 
-                Log::info('Generated Moodle SSO URL via auth_userkey_request_login_url', [
+                Log::info('Generated Moodle auto-login URL', [
+                    'username' => $userData['username'] ?? 'N/A',
                     'email' => $userData['email'] ?? 'N/A',
+                    'function' => $functionName,
+                    'has_redirect' => !empty($redirectUrl)
                 ]);
+
                 return $loginUrl;
             }
 
-            // Function returned a response but no loginurl key — log the raw response
-            $lastSsoError = 'auth_userkey_request_login_url returned unexpected response: ' . json_encode($response);
-            Log::warning($lastSsoError);
+            return null;
         } catch (\Exception $e) {
-            $lastSsoError = 'auth_userkey_request_login_url: ' . $e->getMessage();
-            Log::warning('SSO function call failed', [
-                'function' => 'auth_userkey_request_login_url',
+            // If auth_userkey is not installed, try fallback method
+            Log::warning('auth_userkey not available, falling back to direct URL', [
                 'error' => $e->getMessage(),
-                'email' => $userData['email'] ?? 'N/A',
+                'email' => $userData['email'] ?? 'N/A'
             ]);
+
+            return $this->generateFallbackLoginUrl($userData['email'] ?? '', $redirectUrl);
         }
-
-        // Try the older function name (auth_userkey v1)
-        try {
-            $response = $this->call('auth_userkey_generatekey', $params);
-
-            if (isset($response['loginurl'])) {
-                $loginUrl = $response['loginurl'];
-                if ($redirectUrl) {
-                    $separator = (strpos($loginUrl, '?') !== false) ? '&' : '?';
-                    $loginUrl .= $separator . 'wantsurl=' . urlencode($redirectUrl);
-                }
-
-                Log::info('Generated Moodle SSO URL via auth_userkey_generatekey', [
-                    'email' => $userData['email'] ?? 'N/A',
-                ]);
-                return $loginUrl;
-            }
-
-            $lastSsoError = 'auth_userkey_generatekey returned unexpected response: ' . json_encode($response);
-            Log::warning($lastSsoError);
-        } catch (\Exception $e) {
-            $lastSsoError = 'auth_userkey_generatekey: ' . $e->getMessage();
-            Log::warning('SSO function call failed', [
-                'function' => 'auth_userkey_generatekey',
-                'error' => $e->getMessage(),
-                'email' => $userData['email'] ?? 'N/A',
-            ]);
-        }
-
-        // Both function calls failed
-        return null;
     }
 
     /**
@@ -428,6 +392,30 @@ class MoodleService
 
         // Return the redirect URL directly - user will need to login
         return $redirectUrl;
+    }
+
+    /**
+     * Delete a user from Moodle
+     *
+     * @param int $moodleUserId Moodle user ID
+     * @return bool Success status
+     */
+    public function deleteUser(int $moodleUserId): bool
+    {
+        try {
+            $this->call('core_user_delete_users', [
+                'userids' => [$moodleUserId],
+            ]);
+
+            Log::info('Moodle user deleted', ['moodle_user_id' => $moodleUserId]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to delete Moodle user', [
+                'moodle_user_id' => $moodleUserId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -463,115 +451,6 @@ class MoodleService
     }
 
     /**
-     * Suspend a user in Moodle
-     *
-     * @param \App\Models\User $user The user to suspend
-     * @return bool Success status
-     */
-    public function suspendUser($user): bool
-    {
-        if (!$user->moodle_user_id) {
-            Log::warning('Cannot suspend user in Moodle - no moodle_user_id', [
-                'user_id' => $user->id,
-            ]);
-            return false;
-        }
-
-        try {
-            $this->call('core_user_update_users', [
-                'users' => [
-                    [
-                        'id' => $user->moodle_user_id,
-                        'suspended' => 1,
-                    ]
-                ]
-            ]);
-
-            Log::info('User suspended in Moodle', [
-                'user_id' => $user->id,
-                'moodle_user_id' => $user->moodle_user_id,
-            ]);
-
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to suspend user in Moodle', [
-                'user_id' => $user->id,
-                'moodle_user_id' => $user->moodle_user_id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Reactivate (unsuspend) a user in Moodle
-     *
-     * @param \App\Models\User $user The user to reactivate
-     * @return bool Success status
-     */
-    public function reactivateUser($user): bool
-    {
-        if (!$user->moodle_user_id) {
-            Log::warning('Cannot reactivate user in Moodle - no moodle_user_id', [
-                'user_id' => $user->id,
-            ]);
-            return false;
-        }
-
-        try {
-            $this->call('core_user_update_users', [
-                'users' => [
-                    [
-                        'id' => $user->moodle_user_id,
-                        'suspended' => 0,
-                    ]
-                ]
-            ]);
-
-            Log::info('User reactivated in Moodle', [
-                'user_id' => $user->id,
-                'moodle_user_id' => $user->moodle_user_id,
-            ]);
-
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to reactivate user in Moodle', [
-                'user_id' => $user->id,
-                'moodle_user_id' => $user->moodle_user_id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Delete a user from Moodle
-     *
-     * @param int $moodleUserId The Moodle user ID to delete
-     * @return bool Success status
-     */
-    public function deleteUser(int $moodleUserId): bool
-    {
-        try {
-            $this->call('core_user_delete_users', [
-                'userids' => [$moodleUserId]
-            ]);
-
-            Log::info('User deleted from Moodle', [
-                'moodle_user_id' => $moodleUserId,
-            ]);
-
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to delete user from Moodle', [
-                'moodle_user_id' => $moodleUserId,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
      * Build a direct Moodle course URL
      *
      * @param int $moodleCourseId The Moodle course ID
@@ -583,28 +462,19 @@ class MoodleService
     }
 
     /**
-     * Generate auto-login URL for a course.
-     *
-     * Calls Moodle's auth_userkey plugin to get a one-time SSO login URL.
-     * If SSO fails, throws an exception with the ACTUAL Moodle error
-     * (instead of silently falling back to a guest URL).
+     * Generate auto-login URL for a course
      *
      * @param \App\Models\User $user The user object
      * @param int $moodleCourseId Moodle course ID
-     * @return string The SSO auto-login URL to the course
-     * @throws \App\Exceptions\MoodleException If SSO login URL cannot be generated
+     * @return string The auto-login URL to the course
      */
     public function generateCourseLoginUrl($user, int $moodleCourseId): string
     {
         $courseUrl = $this->getCourseUrl($moodleCourseId);
 
-        // Build user data for auth_userkey lookup.
-        // The plugin matches Moodle users by email (primary) or username.
-        // IMPORTANT: username must match what CreateOrLinkMoodleUser::generateUsername()
-        // produces — lowercase email prefix with ONLY alphanumeric chars and dots
-        // (hyphens are stripped). A mismatch causes auth_userkey to fail.
-        $rawUsername = $user->username ?? strtolower(explode('@', $user->email)[0]);
-        $username = preg_replace('/[^a-z0-9.]/', '', strtolower($rawUsername));
+        // Build user data array with all fields needed for auth_userkey
+        // Username is typically the part before @ in email for MOH users
+        $username = $user->username ?? explode('@', $user->email)[0];
 
         $userData = [
             'username' => $username,
@@ -613,19 +483,9 @@ class MoodleService
             'lastname' => $user->last_name ?? $user->lastname ?? explode('.', $username)[1] ?? 'User',
         ];
 
-        // $ssoError will be populated with the actual Moodle error if SSO fails
-        $ssoError = null;
-        $loginUrl = $this->generateLoginUrl($userData, $courseUrl, $ssoError);
+        $loginUrl = $this->generateLoginUrl($userData, $courseUrl);
 
-        if ($loginUrl) {
-            return $loginUrl;
-        }
-
-        // SSO failed — throw with the ACTUAL error from Moodle so the user/admin
-        // can see exactly what went wrong (e.g., "User not found", "Invalid auth",
-        // "Access control exception", etc.)
-        throw new \App\Exceptions\MoodleException(
-            "Moodle SSO login failed. " . ($ssoError ?? 'No error details available.')
-        );
+        // If SSO failed, return the direct course URL
+        return $loginUrl ?? $courseUrl;
     }
 }

@@ -8,9 +8,10 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;             // ← need this
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\ValidationException;   // ← and this
+use Illuminate\Validation\ValidationException;
+use App\Rules\PasswordRules;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,11 +21,10 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // Eager-load all enrollments (approved, pending, etc.) with their courses
+        // Eager-load approved enrollments + their courses
         $enrollments = Enrollment::with('course')
                          ->where('user_id', $user->id)
-                         ->whereIn('status', ['approved', 'pending'])
-                         ->orderBy('status')
+                         ->where('status', 'approved')
                          ->get();
 
         return Inertia::render('Profile/Show', [
@@ -57,19 +57,12 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request)
     {
-        $user = $request->user();
-
-        // High-risk accounts (admin, superadmin, course_admin, MOH staff): 14 chars
-        // Standard accounts (external users): 12 chars
-        $isHighRisk = $user->hasRole(['superadmin', 'admin', 'course_admin', 'moh_staff']);
-        $minLength = $isHighRisk ? 14 : 12;
-
         $data = $request->validate([
             'current_password' => 'required',
-            'password'         => "required|min:{$minLength}|confirmed",
-        ], [
-            'password.min' => "Password must be at least {$minLength} characters for " . ($isHighRisk ? 'high-risk' : 'standard') . ' accounts.',
-        ]);
+            'password'         => PasswordRules::rules($request),
+        ], PasswordRules::messages());
+
+        $user = $request->user();
 
         if (! Hash::check($data['current_password'], $user->password)) {
             throw ValidationException::withMessages([

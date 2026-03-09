@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountRequest;
+use App\Models\SystemNotification;
 use App\Models\User;
+use App\Mail\VerifyEmailMail;
+use App\Rules\PasswordRules;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class ExternalRegistrationController extends Controller
 {
@@ -18,93 +22,129 @@ class ExternalRegistrationController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Auth/RegisterExternal');
+        return view('auth.register-external');
     }
 
     /**
      * Handle external user registration
-     * Creates user with pending account_status
+     *
+     * Creates an AccountRequest with pending_verification status.
+     * Sends verification email with 24-hour signed link.
+     * User account is NOT created until admin approves (after email verification).
      */
     public function store(Request $request)
     {
+        Log::info('External registration attempt', ['email' => $request->input('email')]);
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required', 'string', 'email', 'max:255',
                 'unique:users',
-                Rule::unique('account_requests', 'email')->where(fn ($query) => $query->where('status', 'pending')),
+                Rule::unique('account_requests', 'email')->where(
+                    fn ($query) => $query->whereIn('status', [
+                        AccountRequest::STATUS_PENDING_VERIFICATION,
+                        AccountRequest::STATUS_EMAIL_VERIFIED,
+                        AccountRequest::STATUS_APPROVED,
+                    ])
+                ),
             ],
             'organization' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
+            'password' => PasswordRules::rules($request),
             'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
-        ], [
-            'password.min' => 'Password must be at least 12 characters for standard accounts.',
+        ], array_merge(PasswordRules::messages(), [
+            'email.unique' => 'This email is already registered or has a pending request.',
             'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
-        ]);
+        ]));
 
         try {
-            $user = User::create([
+            $accountRequest = AccountRequest::create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
-                'date_of_birth' => $validated['date_of_birth'],
                 'email' => $validated['email'],
-                'organization' => $validated['organization'],
+                'password' => Hash::make($validated['password']),
                 'department' => 'External',
-                'password' => $validated['password'],
-                'user_type' => User::TYPE_EXTERNAL,
-                'account_status' => User::STATUS_PENDING,
-                'auth_method' => 'local',
+                'organization' => $validated['organization'],
+                'status' => AccountRequest::STATUS_PENDING_VERIFICATION,
+                'request_type' => AccountRequest::TYPE_EXTERNAL,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
-            // Assign external_user role if it exists
-            if (class_exists(\Spatie\Permission\Models\Role::class)) {
-                $role = \Spatie\Permission\Models\Role::where('name', 'external_user')->first();
-                if ($role) {
-                    $user->assignRole($role);
-                } else {
-                    // Fallback to user role
-                    $userRole = \Spatie\Permission\Models\Role::where('name', 'user')->first();
-                    if ($userRole) {
-                        $user->assignRole($userRole);
-                    }
-                }
-            }
+            Log::info('External user account request created', [
+                'request_id' => $accountRequest->id,
+                'email' => $accountRequest->email,
+            ]);
+
+            // Send verification email
+            $this->sendVerificationEmail($accountRequest);
 
             // Log registration
-            ActivityLogger::logAuth('external_registration',
-                "External user registered: {$user->email}",
-                [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'organization' => $user->organization,
-                    'account_status' => 'pending',
-                ]
-            );
-
-            Log::info('External user registered', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ]);
+            try {
+                ActivityLogger::log(
+                    'account_request_submitted',
+                    "External user account request submitted for {$accountRequest->email}",
+                    $accountRequest,
+                    [
+                        'email' => $accountRequest->email,
+                        'organization' => $accountRequest->organization,
+                    ],
+                    'success',
+                    'info'
+                );
+            } catch (\Exception $e) {
+                Log::warning('Activity logging failed during external registration', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return redirect()->route('login')->with('success',
-                'Your registration has been submitted. Please wait for an administrator to approve your account before you can log in.'
+                'Thank you for registering! A verification email has been sent to ' . $accountRequest->email . '. ' .
+                'Please click the link in the email within 24 hours to verify your address.'
             );
 
         } catch (\Exception $e) {
             Log::error('External registration failed', [
                 'error' => $e->getMessage(),
-                'email' => $validated['email'],
+                'trace' => $e->getTraceAsString(),
+                'email' => $validated['email'] ?? $request->input('email'),
             ]);
-
-            ActivityLogger::logAuth('external_registration_failed',
-                "External registration failed for: {$validated['email']}",
-                ['error' => $e->getMessage()]
-            );
 
             return back()
                 ->withInput($request->except('password', 'password_confirmation'))
                 ->with('error', 'Registration failed. Please try again.');
+        }
+    }
+
+    /**
+     * Send the verification email with a 24-hour signed link.
+     */
+    private function sendVerificationEmail(AccountRequest $accountRequest): void
+    {
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify-email',
+            now()->addHours(24),
+            [
+                'id'   => $accountRequest->id,
+                'hash' => sha1($accountRequest->email),
+            ]
+        );
+
+        try {
+            Mail::to($accountRequest->email)->send(
+                new VerifyEmailMail($accountRequest, $verificationUrl)
+            );
+
+            Log::info('Verification email sent', [
+                'request_id' => $accountRequest->id,
+                'email'      => $accountRequest->email,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send verification email', [
+                'request_id' => $accountRequest->id,
+                'error'      => $e->getMessage(),
+            ]);
         }
     }
 }
