@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Validation\Rule;
 
 /**
  * RegisterController
@@ -70,7 +71,11 @@ class RegisterController extends Controller
         $validatedData = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
-            'email'      => 'required|string|email|max:255|unique:users|unique:account_requests,email',
+            'email'      => [
+                'required', 'string', 'email', 'max:255',
+                'unique:users',
+                Rule::unique('account_requests', 'email')->where(fn ($query) => $query->where('status', AccountRequest::STATUS_PENDING)),
+            ],
             'department' => 'required|string|max:255',
             'organization' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
@@ -247,7 +252,7 @@ class RegisterController extends Controller
                 'email',
                 'max:255',
                 'unique:users',
-                'unique:account_requests,email',
+                Rule::unique('account_requests', 'email')->where(fn ($query) => $query->where('status', AccountRequest::STATUS_PENDING)),
                 // Ensure it's an MOH email
                 function ($attribute, $value, $fail) {
                     if (!User::isMohEmail($value)) {
