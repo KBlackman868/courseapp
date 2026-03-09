@@ -14,7 +14,8 @@ use App\Http\Controllers\Auth\{
     LoginController,
     RegisterController,
     ForgotPasswordController,
-    ResetPasswordController
+    ResetPasswordController,
+    EmailVerificationController
 };
 use App\Http\Controllers\Admin\{
     RoleManagementController,
@@ -161,6 +162,18 @@ Route::middleware('guest')->group(function () {
             Route::post('/reset', 'reset')->name('update');
         });
     });
+
+    // Email Verification Routes (for registration signed links)
+    Route::get('/email/verify-registration/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify-email');
+
+    Route::get('/email/verification-expired', [EmailVerificationController::class, 'expired'])
+        ->name('verification.expired');
+
+    Route::post('/email/resend-verification', [RegisterController::class, 'resendVerification'])
+        ->middleware('throttle:3,1')
+        ->name('verification.resend');
 });
 
 /*

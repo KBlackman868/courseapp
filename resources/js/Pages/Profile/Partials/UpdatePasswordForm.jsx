@@ -2,6 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
 import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
@@ -23,6 +24,8 @@ export default function UpdatePasswordForm({ className = '' }) {
         password: '',
         password_confirmation: '',
     });
+
+    const { allValid } = usePasswordValidation(data.password);
 
     const updatePassword = (e) => {
         e.preventDefault();
@@ -96,6 +99,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                     />
 
                     <InputError message={errors.password} className="mt-2" />
+                    <PasswordChecklist password={data.password} />
                 </div>
 
                 <div>
@@ -122,7 +126,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                    <PrimaryButton disabled={processing || !allValid}>Save</PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}

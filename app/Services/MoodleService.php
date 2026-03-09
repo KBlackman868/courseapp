@@ -395,6 +395,30 @@ class MoodleService
     }
 
     /**
+     * Delete a user from Moodle
+     *
+     * @param int $moodleUserId Moodle user ID
+     * @return bool Success status
+     */
+    public function deleteUser(int $moodleUserId): bool
+    {
+        try {
+            $this->call('core_user_delete_users', [
+                'userids' => [$moodleUserId],
+            ]);
+
+            Log::info('Moodle user deleted', ['moodle_user_id' => $moodleUserId]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to delete Moodle user', [
+                'moodle_user_id' => $moodleUserId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Get Moodle user by email
      *
      * @param string $email

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\MoodleService;
+use App\Rules\PasswordRules;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -24,8 +24,8 @@ class ResetPasswordController extends Controller
         $request->validate([
             'token'    => 'required',
             'email'    => 'required|email',
-            'password' => 'required|min:8|confirmed',
-        ]);
+            'password' => PasswordRules::rules($request),
+        ], PasswordRules::messages());
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
@@ -35,26 +35,11 @@ class ResetPasswordController extends Controller
                     'remember_token' => Str::random(60)
                 ])->save();
 
-                // Update Moodle password if user has Moodle account
-                if ($user->moodle_user_id) {
-                    try {
-                        $moodleService = new MoodleService();
-                        $moodleService->createOrUpdateUser($user, $password);
-                        
-                        Log::info('Moodle password updated for user', ['user_id' => $user->id]);
-                    } catch (\Exception $e) {
-                        Log::error('Failed to update Moodle password', [
-                            'user_id' => $user->id,
-                            'error' => $e->getMessage()
-                        ]);
-                    }
-                }
-
                 event(new PasswordReset($user));
             }
         );
 
-        return $status === Password::PasswordReset
+        return $status === Password::PASSWORD_RESET
             ? redirect()->route('login')->with('status', __($status))
             : back()->withErrors(['email' => [__($status)]]);
     }

@@ -2,6 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 
@@ -12,6 +13,8 @@ export default function ResetPassword({ token, email }) {
         password: '',
         password_confirmation: '',
     });
+
+    const { allValid } = usePasswordValidation(data.password);
 
     const submit = (e) => {
         e.preventDefault();
@@ -57,6 +60,7 @@ export default function ResetPassword({ token, email }) {
                     />
 
                     <InputError message={errors.password} className="mt-2" />
+                    <PasswordChecklist password={data.password} />
                 </div>
 
                 <div className="mt-4">
@@ -84,7 +88,7 @@ export default function ResetPassword({ token, email }) {
                 </div>
 
                 <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
+                    <PrimaryButton className="ms-4" disabled={processing || !allValid}>
                         Reset Password
                     </PrimaryButton>
                 </div>

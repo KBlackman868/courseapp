@@ -2,8 +2,40 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+
+const departments = [
+    'Administration',
+    'Chronic Disease',
+    'Community Health',
+    'County Medical Office of Health',
+    'Dental',
+    'Environmental Health',
+    'Epidemiology',
+    'Health Education',
+    'Health Policy',
+    'Human Resources',
+    'Information Technology',
+    'Insect Vector Control',
+    'Legal',
+    'Medical Stores',
+    'Mental Health',
+    'Nursing',
+    'Nutrition',
+    'Occupational Health',
+    'Pharmacy',
+    'Planning',
+    'Population Programme',
+    'Primary Care',
+    'Procurement',
+    'Public Health',
+    'Public Health Laboratory',
+    'Quality Standards',
+    'Veterinary Public Health',
+    'Other',
+];
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -11,25 +43,24 @@ export default function Register() {
         last_name: '',
         email: '',
         department: '',
-        organization: '',
-        phone: '',
-        date_of_birth: '',
         password: '',
         password_confirmation: '',
+        terms: false,
     });
+
+    const { allValid } = usePasswordValidation(
+        data.password,
+        data.first_name,
+        data.last_name,
+        data.email
+    );
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
         });
     };
-
-    // Calculate max date (18 years ago)
-    const maxDate = new Date();
-    maxDate.setFullYear(maxDate.getFullYear() - 18);
-    const maxDateStr = maxDate.toISOString().split('T')[0];
 
     return (
         <GuestLayout>
@@ -87,43 +118,22 @@ export default function Register() {
 
                 <div className="mt-4">
                     <InputLabel htmlFor="department" value="Department" />
-                    <TextInput
+                    <select
                         id="department"
                         name="department"
                         value={data.department}
-                        className="mt-1 block w-full"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         onChange={(e) => setData('department', e.target.value)}
                         required
-                    />
+                    >
+                        <option value="">Select a department</option>
+                        {departments.map((dept) => (
+                            <option key={dept} value={dept}>
+                                {dept}
+                            </option>
+                        ))}
+                    </select>
                     <InputError message={errors.department} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="organization" value="Organization (optional)" />
-                    <TextInput
-                        id="organization"
-                        name="organization"
-                        value={data.organization}
-                        className="mt-1 block w-full"
-                        onChange={(e) => setData('organization', e.target.value)}
-                    />
-                    <InputError message={errors.organization} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="date_of_birth" value="Date of Birth" />
-                    <TextInput
-                        id="date_of_birth"
-                        type="date"
-                        name="date_of_birth"
-                        value={data.date_of_birth}
-                        className="mt-1 block w-full"
-                        max={maxDateStr}
-                        onChange={(e) => setData('date_of_birth', e.target.value)}
-                        required
-                    />
-                    <InputError message={errors.date_of_birth} className="mt-2" />
-                    <p className="mt-1 text-xs text-gray-500">You must be at least 18 years old.</p>
                 </div>
 
                 <div className="mt-4">
@@ -139,9 +149,12 @@ export default function Register() {
                         required
                     />
                     <InputError message={errors.password} className="mt-2" />
-                    <p className="mt-1 text-xs text-gray-500">
-                        MOH staff: 14 characters min. External users: 12 characters min.
-                    </p>
+                    <PasswordChecklist
+                        password={data.password}
+                        firstName={data.first_name}
+                        lastName={data.last_name}
+                        email={data.email}
+                    />
                 </div>
 
                 <div className="mt-4">
@@ -159,28 +172,51 @@ export default function Register() {
                     <InputError message={errors.password_confirmation} className="mt-2" />
                 </div>
 
-                <div className="mt-4 flex items-center justify-between">
-                    <div className="text-sm">
-                        <Link
-                            href={route('login')}
-                            className="text-gray-600 underline hover:text-gray-900"
-                        >
-                            Already registered?
-                        </Link>
-                    </div>
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
-                    </PrimaryButton>
+                <div className="mt-4">
+                    <label className="flex items-start">
+                        <input
+                            type="checkbox"
+                            name="terms"
+                            checked={data.terms}
+                            onChange={(e) => setData('terms', e.target.checked)}
+                            className="mt-1 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                        />
+                        <span className="ms-2 text-sm text-gray-600">
+                            I agree to the{' '}
+                            <a
+                                href={route('terms')}
+                                target="_blank"
+                                className="text-indigo-600 underline hover:text-indigo-500"
+                            >
+                                Terms and Conditions
+                            </a>{' '}
+                            and{' '}
+                            <a
+                                href={route('privacy-policy')}
+                                target="_blank"
+                                className="text-indigo-600 underline hover:text-indigo-500"
+                            >
+                                Privacy Policy
+                            </a>
+                        </span>
+                    </label>
+                    <InputError message={errors.terms} className="mt-2" />
                 </div>
 
-                <div className="mt-4 text-center">
+                <div className="mt-6 flex items-center justify-between">
                     <Link
-                        href={route('register.external')}
-                        className="text-sm text-indigo-600 hover:text-indigo-500"
+                        href={route('login')}
+                        className="text-sm text-gray-600 underline hover:text-gray-900"
                     >
-                        External user? Register here instead
+                        Already registered?
                     </Link>
+
+                    <PrimaryButton
+                        className="ms-4"
+                        disabled={processing || !allValid || !data.terms}
+                    >
+                        Register
+                    </PrimaryButton>
                 </div>
             </form>
         </GuestLayout>
