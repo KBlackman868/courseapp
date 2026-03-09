@@ -7,8 +7,13 @@ import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
+        first_name: '',
+        last_name: '',
         email: '',
+        department: '',
+        organization: '',
+        phone: '',
+        date_of_birth: '',
         password: '',
         password_confirmation: '',
     });
@@ -21,31 +26,49 @@ export default function Register() {
         });
     };
 
+    // Calculate max date (18 years ago)
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() - 18);
+    const maxDateStr = maxDate.toISOString().split('T')[0];
+
     return (
         <GuestLayout>
             <Head title="Register" />
 
             <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <InputLabel htmlFor="first_name" value="First Name" />
+                        <TextInput
+                            id="first_name"
+                            name="first_name"
+                            value={data.first_name}
+                            className="mt-1 block w-full"
+                            autoComplete="given-name"
+                            isFocused={true}
+                            onChange={(e) => setData('first_name', e.target.value)}
+                            required
+                        />
+                        <InputError message={errors.first_name} className="mt-2" />
+                    </div>
 
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
+                    <div>
+                        <InputLabel htmlFor="last_name" value="Last Name" />
+                        <TextInput
+                            id="last_name"
+                            name="last_name"
+                            value={data.last_name}
+                            className="mt-1 block w-full"
+                            autoComplete="family-name"
+                            onChange={(e) => setData('last_name', e.target.value)}
+                            required
+                        />
+                        <InputError message={errors.last_name} className="mt-2" />
+                    </div>
                 </div>
 
                 <div className="mt-4">
                     <InputLabel htmlFor="email" value="Email" />
-
                     <TextInput
                         id="email"
                         type="email"
@@ -56,13 +79,55 @@ export default function Register() {
                         onChange={(e) => setData('email', e.target.value)}
                         required
                     />
-
                     <InputError message={errors.email} className="mt-2" />
+                    <p className="mt-1 text-xs text-gray-500">
+                        MOH staff: use your @health.gov.tt email. External users: use any email.
+                    </p>
+                </div>
+
+                <div className="mt-4">
+                    <InputLabel htmlFor="department" value="Department" />
+                    <TextInput
+                        id="department"
+                        name="department"
+                        value={data.department}
+                        className="mt-1 block w-full"
+                        onChange={(e) => setData('department', e.target.value)}
+                        required
+                    />
+                    <InputError message={errors.department} className="mt-2" />
+                </div>
+
+                <div className="mt-4">
+                    <InputLabel htmlFor="organization" value="Organization (optional)" />
+                    <TextInput
+                        id="organization"
+                        name="organization"
+                        value={data.organization}
+                        className="mt-1 block w-full"
+                        onChange={(e) => setData('organization', e.target.value)}
+                    />
+                    <InputError message={errors.organization} className="mt-2" />
+                </div>
+
+                <div className="mt-4">
+                    <InputLabel htmlFor="date_of_birth" value="Date of Birth" />
+                    <TextInput
+                        id="date_of_birth"
+                        type="date"
+                        name="date_of_birth"
+                        value={data.date_of_birth}
+                        className="mt-1 block w-full"
+                        max={maxDateStr}
+                        onChange={(e) => setData('date_of_birth', e.target.value)}
+                        required
+                    />
+                    <InputError message={errors.date_of_birth} className="mt-2" />
+                    <p className="mt-1 text-xs text-gray-500">You must be at least 18 years old.</p>
                 </div>
 
                 <div className="mt-4">
                     <InputLabel htmlFor="password" value="Password" />
-
                     <TextInput
                         id="password"
                         type="password"
@@ -73,16 +138,14 @@ export default function Register() {
                         onChange={(e) => setData('password', e.target.value)}
                         required
                     />
-
                     <InputError message={errors.password} className="mt-2" />
+                    <p className="mt-1 text-xs text-gray-500">
+                        MOH staff: 14 characters min. External users: 12 characters min.
+                    </p>
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Confirm Password"
-                    />
-
+                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
                     <TextInput
                         id="password_confirmation"
                         type="password"
@@ -90,29 +153,34 @@ export default function Register() {
                         value={data.password_confirmation}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
+                        onChange={(e) => setData('password_confirmation', e.target.value)}
                         required
                     />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
+                    <InputError message={errors.password_confirmation} className="mt-2" />
                 </div>
 
-                <div className="mt-4 flex items-center justify-end">
-                    <Link
-                        href={route('login')}
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Already registered?
-                    </Link>
+                <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm">
+                        <Link
+                            href={route('login')}
+                            className="text-gray-600 underline hover:text-gray-900"
+                        >
+                            Already registered?
+                        </Link>
+                    </div>
 
                     <PrimaryButton className="ms-4" disabled={processing}>
                         Register
                     </PrimaryButton>
+                </div>
+
+                <div className="mt-4 text-center">
+                    <Link
+                        href={route('register.external')}
+                        className="text-sm text-indigo-600 hover:text-indigo-500"
+                    >
+                        External user? Register here instead
+                    </Link>
                 </div>
             </form>
         </GuestLayout>
