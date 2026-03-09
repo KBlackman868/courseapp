@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\{
     CourseController,
     EnrollmentController,
@@ -31,7 +30,6 @@ use App\Http\Controllers\{
     ExternalRegistrationController,
     CourseCatalogController
 };
-use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,33 +43,25 @@ use Inertia\Inertia;
 |==========================================================================
 */
 Route::get('/', function () {
-    $featuredCourses = \App\Models\Course::where('status', 'active')->take(3)->get();
     if (auth()->check()) {
-        return Inertia::render('Welcome', [
+        return view('landing.welcome', [
             'isAuthenticated' => true,
             'user' => auth()->user(),
-            'enrolledCourses' => auth()->user()->hasRole(['admin', 'superadmin'])
-                ? \App\Models\Course::count()
+            'enrolledCourses' => auth()->user()->hasRole(['admin', 'superadmin']) 
+                ? \App\Models\Course::count() 
                 : \App\Models\Enrollment::where('user_id', auth()->id())
                     ->where('status', 'approved')
-                    ->count(),
-            'featuredCourses' => $featuredCourses,
+                    ->count()
         ]);
     }
-    return Inertia::render('Welcome', [
-        'isAuthenticated' => false,
-        'featuredCourses' => $featuredCourses,
-    ]);
+    return view('landing.welcome', ['isAuthenticated' => false]);
 })->name('home');
 
-Route::get('/home', fn() => auth()->check() ? redirect('/dashboard') : redirect('/'));
+Route::get('/home', fn() => redirect('/'));
 
-// Legal Pages (Public — accessible to all users including guests)
-Route::get('/terms', fn() => Inertia::render('Legal/Terms'))->name('terms');
-Route::get('/privacy', fn() => Inertia::render('Legal/Privacy'))->name('privacy');
-// Legacy redirects
-Route::get('/terms-and-conditions', fn() => redirect('/terms'));
-Route::get('/privacy-policy', fn() => redirect('/privacy'));
+// Policy Pages (Public)
+Route::get('/terms-and-conditions', fn() => view('policies.terms'))->name('terms');
+Route::get('/privacy-policy', fn() => view('policies.privacy'))->name('privacy-policy');
 
 // SSO to Moodle Dashboard (for navigation link)
 Route::get('/moodle/sso', function () {
@@ -192,8 +182,8 @@ Route::middleware('guest')->group(function () {
 |==========================================================================
 */
 Route::middleware('auth')->group(function () {
-
-    // Logout (POST — used by the Sign Out button in the app)
+    
+    // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     
     /*
@@ -271,27 +261,26 @@ Route::middleware('auth')->group(function () {
         Route::prefix('courses')->name('courses.')->group(function () {
             // LIST route (static)
             Route::get('/', [CourseController::class, 'index'])->name('index');
-
+            
             // CREATE route (static) - MUST come before {course} routes
             Route::middleware('role:admin|superadmin|course_admin')->group(function () {
                 Route::get('/create', [CourseController::class, 'create'])->name('create');
                 Route::post('/store', [CourseController::class, 'store'])->name('store');
             });
-
-            // Admin dynamic routes - MUST come before the public show route
-            // so that /courses/{id}/edit is matched before /courses/{course}
-            Route::middleware('role:admin|superadmin|course_admin')->group(function () {
-                Route::get('/{course}/edit', [CourseController::class, 'edit'])->name('edit')->where('course', '[0-9]+');
-                Route::put('/{course}', [CourseController::class, 'update'])->name('update')->where('course', '[0-9]+');
-                Route::delete('/{course}', [CourseController::class, 'destroy'])->name('destroy')->where('course', '[0-9]+');
-                Route::post('/{course}/sync-to-moodle', [CourseController::class, 'syncToMoodle'])->name('syncToMoodle')->where('course', '[0-9]+');
-            });
-
+            
             // DYNAMIC routes - These come AFTER static routes
-            Route::get('/{course}', [CourseController::class, 'show'])->name('show')->where('course', '[0-9]+');
-            Route::get('/{course}/register', [CourseController::class, 'register'])->name('register')->where('course', '[0-9]+');
-            Route::post('/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store')->where('course', '[0-9]+');
-            Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle')->where('course', '[0-9]+');
+            Route::get('/{course}', [CourseController::class, 'show'])->name('show');
+            Route::get('/{course}/register', [CourseController::class, 'register'])->name('register');
+            Route::post('/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store');
+            Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle');
+            
+            // Admin dynamic routes
+            Route::middleware('role:admin|superadmin|course_admin')->group(function () {
+                Route::get('/{course}/edit', [CourseController::class, 'edit'])->name('edit');
+                Route::put('/{course}', [CourseController::class, 'update'])->name('update');
+                Route::delete('/{course}', [CourseController::class, 'destroy'])->name('destroy');
+                Route::post('/{course}/sync-to-moodle', [CourseController::class, 'syncToMoodle'])->name('syncToMoodle');
+            });
         });
         
         // My Courses (Legacy)
@@ -323,7 +312,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/settings', 'settings')->name('settings');
             Route::post('/photo', 'updatePhoto')->name('photo');
             Route::post('/password', 'updatePassword')->name('password');
-            Route::delete('/', 'destroy')->name('destroy');
         });
 
         // =========================================================================
@@ -349,17 +337,15 @@ Route::middleware('auth')->group(function () {
             // Admin Dashboard
             Route::get('/dashboard', function() {
                 $stats = [
-                    'totalUsers' => \App\Models\User::count(),
-                    'totalCourses' => \App\Models\Course::count(),
-                    'pendingRequests' => \App\Models\Enrollment::where('status', 'pending')->count(),
-                    'activeEnrollments' => \App\Models\Enrollment::where('status', 'approved')->count(),
+                    'total_users' => \App\Models\User::count(),
+                    'total_courses' => \App\Models\Course::count(),
+                    'pending_enrollments' => \App\Models\Enrollment::where('status', 'pending')->count(),
+                    'active_enrollments' => \App\Models\Enrollment::where('status', 'approved')->count(),
                 ];
-
-                return \Inertia\Inertia::render('Admin/Dashboard', [
-                    'stats' => $stats,
-                    'recentActivity' => [],
-                    'pendingRequests' => [],
-                ]);
+                
+                return view()->exists('admin.dashboard') 
+                    ? view('admin.dashboard', compact('stats'))
+                    : redirect()->route('dashboard');
             })->name('dashboard');
             
             // Course Management (Admin View)
@@ -368,9 +354,6 @@ Route::middleware('auth')->group(function () {
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
                 Route::post('/bulk-sync', 'bulkSync')->name('bulkSync');
                 Route::post('/bulk-status', 'bulkUpdateStatus')->name('bulkStatus');
-                Route::get('/{course}', 'adminShow')->name('show');
-                Route::put('/{course}', 'update')->name('update');
-                Route::delete('/{course}', 'destroy')->name('destroy');
                 Route::post('/{course}/toggle-status', 'toggleStatus')->name('toggleStatus');
             });
             
@@ -391,10 +374,8 @@ Route::middleware('auth')->group(function () {
             // User Management
             Route::prefix('users')->name('users.')->controller(UserManagementController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
-                Route::post('/', 'store')->name('store');
                 // IMPORTANT: Static routes MUST come before dynamic {user} routes
                 Route::delete('/bulk-delete', 'bulkDelete')->name('bulkDelete');
-                Route::post('/bulk-suspend', 'bulkSuspend')->name('bulkSuspend');
                 // Dynamic routes with {user} parameter
                 // SECURITY: Role update is SuperAdmin-only to prevent privilege escalation
                 Route::post('/{user}/role', 'updateRole')->middleware('role:superadmin')->name('updateRole');
@@ -472,8 +453,10 @@ Route::middleware('auth')->group(function () {
                         'moodle_synced_courses' => \App\Models\Course::whereNotNull('moodle_course_id')->count(),
                         'pending_enrollments' => \App\Models\Enrollment::where('status', 'pending')->count(),
                     ];
-
-                    return \Inertia\Inertia::render('Admin/Moodle/Status', ['stats' => $stats]);
+                    
+                    return view()->exists('admin.moodle.status')
+                        ? view('admin.moodle.status', compact('stats'))
+                        : response()->json(['status' => 'success', 'data' => $stats]);
                 })->name('status');
                 
                 Route::get('/test-connection', function() {
@@ -482,14 +465,18 @@ Route::middleware('auth')->group(function () {
                         return $moodleService->testConnection()
                             ? response()->json(['status' => 'success', 'message' => 'Connection successful'])
                             : response()->json(['status' => 'error', 'message' => 'Connection failed']);
-                    } catch (\Throwable $e) {
+                    } catch (\Exception $e) {
                         return response()->json(['status' => 'error', 'message' => $e->getMessage()]);
                     }
                 })->name('testConnection');
                 
                 Route::get('/failed-jobs', function() {
                     $failedJobs = \DB::table('failed_jobs')->latest()->take(20)->get();
-                    return response()->json($failedJobs);
+                    return request()->wantsJson()
+                        ? response()->json($failedJobs)
+                        : (view()->exists('admin.moodle.failed-jobs')
+                            ? view('admin.moodle.failed-jobs', compact('failedJobs'))
+                            : response()->json($failedJobs));
                 })->name('failedJobs');
                 
                 Route::post('/retry-failed', function(\Illuminate\Http\Request $request) {
@@ -565,7 +552,9 @@ Route::middleware('auth')->group(function () {
                         return response()->stream($callback, 200, $headers);
                     })->name('template');
                     
-                    Route::get('/missing', fn() => response()->json(['message' => 'No missing courses view'])
+                    Route::get('/missing', fn() => view()->exists('admin.moodle.missing-courses')
+                        ? view('admin.moodle.missing-courses')
+                        : response()->json(['message' => 'View not found'])
                     )->name('missing');
                     
                     Route::post('/{course}/sync-enrollments', [EnrollmentController::class, 'bulkSyncCourseEnrollments'])->name('sync.enrollments');

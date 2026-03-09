@@ -9,13 +9,9 @@ use App\Models\SystemNotification;
 use App\Services\ActivityLogger;
 use App\Services\MoodleService;
 use App\Jobs\CreateOrLinkMoodleUser;
-use App\Mail\AccountApproved;
-use App\Mail\AccountRejected;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Inertia\Inertia;
 
 /**
  * AccountRequestController
@@ -75,8 +71,8 @@ class AccountRequestController extends Controller
     {
         $this->authorize('view', $accountRequest);
 
-        return Inertia::render('Admin/AccountRequests/Show', [
-            'accountRequest' => $accountRequest->load('reviewer', 'user'),
+        return view('admin.account-requests.show', [
+            'request' => $accountRequest->load('reviewer', 'user'),
         ]);
     }
 

@@ -185,7 +185,7 @@ class RegisterController extends Controller
 
     public function showMohRequestForm()
     {
-        return Inertia::render('Auth/MohRequestAccount');
+        return view('auth.moh-request-account');
     }
 
     public function submitMohRequest(Request $request)
@@ -256,6 +256,6 @@ class RegisterController extends Controller
 
     public function mohRequestSubmitted()
     {
-        return Inertia::render('Auth/MohRequestSubmitted');
+        return view('auth.moh-request-submitted');
     }
 }

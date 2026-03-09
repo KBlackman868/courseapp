@@ -10,7 +10,6 @@ use App\Rules\PasswordRules;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -23,7 +22,7 @@ class ExternalRegistrationController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Auth/RegisterExternal');
+        return view('auth.register-external');
     }
 
     /**
