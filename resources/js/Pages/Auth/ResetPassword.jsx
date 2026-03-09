@@ -1,42 +1,10 @@
-import { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
-
-const css = `
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-@keyframes float1 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(30px, -40px) scale(1.05); }
-    66% { transform: translate(-20px, 20px) scale(0.95); }
-}
-@keyframes float2 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(-25px, 35px) scale(1.08); }
-    66% { transform: translate(15px, -25px) scale(0.92); }
-}
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.8; }
-}
-.animate-gradient { background-size: 200% 200%; animation: gradientShift 8s ease infinite; }
-.animate-float1 { animation: float1 7s ease-in-out infinite; }
-.animate-float2 { animation: float2 9s ease-in-out infinite; }
-.animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
-.animate-fade-in-up-delay-1 { animation: fadeInUp 0.6s ease-out 0.1s forwards; opacity: 0; }
-.animate-fade-in-up-delay-2 { animation: fadeInUp 0.6s ease-out 0.2s forwards; opacity: 0; }
-.animate-fade-in-up-delay-3 { animation: fadeInUp 0.6s ease-out 0.3s forwards; opacity: 0; }
-.animate-pulse-slow { animation: pulse 3s ease-in-out infinite; }
-.input-focus-glow:focus { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); border-color: #4F46E5; }
-.btn-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
-.btn-hover:active { transform: translateY(0); }
-`;
+import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel';
+import PrimaryButton from '@/Components/PrimaryButton';
+import TextInput from '@/Components/TextInput';
+import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
+import GuestLayout from '@/Layouts/GuestLayout';
+import { Head, useForm } from '@inertiajs/react';
 
 export default function ResetPassword({ token, email }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -45,8 +13,8 @@ export default function ResetPassword({ token, email }) {
         password: '',
         password_confirmation: '',
     });
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
+
+    const { allValid } = usePasswordValidation(data.password);
 
     const submit = (e) => {
         e.preventDefault();
@@ -142,42 +110,23 @@ export default function ResetPassword({ token, email }) {
                                     {errors.email && <p className="mt-1.5 text-sm text-red-600">{errors.email}</p>}
                                 </div>
 
-                                <div className="animate-fade-in-up-delay-2">
-                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        New Password
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            id="password"
-                                            type={showPassword ? 'text' : 'password'}
-                                            name="password"
-                                            value={data.password}
-                                            autoComplete="new-password"
-                                            autoFocus
-                                            onChange={(e) => setData('password', e.target.value)}
-                                            className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                            placeholder="Enter new password"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                                            tabIndex={-1}
-                                        >
-                                            {showPassword ? (
-                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                    </div>
-                                    {errors.password && <p className="mt-1.5 text-sm text-red-600">{errors.password}</p>}
-                                </div>
+                <div className="mt-4">
+                    <InputLabel htmlFor="password" value="Password" />
+
+                    <TextInput
+                        id="password"
+                        type="password"
+                        name="password"
+                        value={data.password}
+                        className="mt-1 block w-full"
+                        autoComplete="new-password"
+                        isFocused={true}
+                        onChange={(e) => setData('password', e.target.value)}
+                    />
+
+                    <InputError message={errors.password} className="mt-2" />
+                    <PasswordChecklist password={data.password} />
+                </div>
 
                                 <div className="animate-fade-in-up-delay-2">
                                     <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -215,37 +164,10 @@ export default function ResetPassword({ token, email }) {
                                     {errors.password_confirmation && <p className="mt-1.5 text-sm text-red-600">{errors.password_confirmation}</p>}
                                 </div>
 
-                                <div className="animate-fade-in-up-delay-3">
-                                    <button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="btn-hover w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
-                                    >
-                                        {processing ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                                </svg>
-                                                Resetting...
-                                            </span>
-                                        ) : (
-                                            'Reset Password'
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-
-                            <div className="animate-fade-in-up-delay-3 mt-8 text-center">
-                                <Link href={route('login')} className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors inline-flex items-center gap-1">
-                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                                    </svg>
-                                    Back to Sign In
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
+                <div className="mt-4 flex items-center justify-end">
+                    <PrimaryButton className="ms-4" disabled={processing || !allValid}>
+                        Reset Password
+                    </PrimaryButton>
                 </div>
             </div>
         </>

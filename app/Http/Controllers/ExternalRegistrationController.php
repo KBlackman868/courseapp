@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\AccountRequest;
 use App\Models\SystemNotification;
 use App\Models\User;
+use App\Mail\VerifyEmailMail;
+use App\Rules\PasswordRules;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class ExternalRegistrationController extends Controller
 {
@@ -26,9 +29,9 @@ class ExternalRegistrationController extends Controller
     /**
      * Handle external user registration
      *
-     * Creates an AccountRequest with pending status.
-     * User account is NOT created until admin approves.
-     * No Moodle account, OTP, or welcome email until approval.
+     * Creates an AccountRequest with pending_verification status.
+     * Sends verification email with 24-hour signed link.
+     * User account is NOT created until admin approves (after email verification).
      */
     public function store(Request $request)
     {
@@ -40,18 +43,23 @@ class ExternalRegistrationController extends Controller
             'email' => [
                 'required', 'string', 'email', 'max:255',
                 'unique:users',
-                Rule::unique('account_requests', 'email')->where(fn ($query) => $query->where('status', 'pending')),
+                Rule::unique('account_requests', 'email')->where(
+                    fn ($query) => $query->whereIn('status', [
+                        AccountRequest::STATUS_PENDING_VERIFICATION,
+                        AccountRequest::STATUS_EMAIL_VERIFIED,
+                        AccountRequest::STATUS_APPROVED,
+                    ])
+                ),
             ],
             'organization' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
+            'password' => PasswordRules::rules($request),
             'date_of_birth' => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->toDateString()],
-        ], [
-            'password.min' => 'Password must be at least 12 characters for standard accounts.',
+        ], array_merge(PasswordRules::messages(), [
+            'email.unique' => 'This email is already registered or has a pending request.',
             'date_of_birth.before_or_equal' => 'You must be at least 18 years old to register.',
-        ]);
+        ]));
 
         try {
-            // Create account request (NOT a user) - admin must approve first
             $accountRequest = AccountRequest::create([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
@@ -59,7 +67,7 @@ class ExternalRegistrationController extends Controller
                 'password' => Hash::make($validated['password']),
                 'department' => 'External',
                 'organization' => $validated['organization'],
-                'status' => AccountRequest::STATUS_PENDING,
+                'status' => AccountRequest::STATUS_PENDING_VERIFICATION,
                 'request_type' => AccountRequest::TYPE_EXTERNAL,
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
@@ -70,7 +78,10 @@ class ExternalRegistrationController extends Controller
                 'email' => $accountRequest->email,
             ]);
 
-            // Log registration (wrapped to prevent cascading failures)
+            // Send verification email
+            $this->sendVerificationEmail($accountRequest);
+
+            // Log registration
             try {
                 ActivityLogger::log(
                     'account_request_submitted',
@@ -79,7 +90,6 @@ class ExternalRegistrationController extends Controller
                     [
                         'email' => $accountRequest->email,
                         'organization' => $accountRequest->organization,
-                        'account_status' => 'pending',
                     ],
                     'success',
                     'info'
@@ -90,18 +100,9 @@ class ExternalRegistrationController extends Controller
                 ]);
             }
 
-            // Notify Course Admins about new request
-            try {
-                SystemNotification::notifyNewAccountRequest($accountRequest);
-            } catch (\Exception $e) {
-                Log::warning('Failed to notify admins about external registration', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-
             return redirect()->route('login')->with('success',
-                'Thank you for registering! Your account request has been submitted and is pending administrator approval. ' .
-                'You will receive an email once your account has been approved.'
+                'Thank you for registering! A verification email has been sent to ' . $accountRequest->email . '. ' .
+                'Please click the link in the email within 24 hours to verify your address.'
             );
 
         } catch (\Exception $e) {
@@ -114,6 +115,37 @@ class ExternalRegistrationController extends Controller
             return back()
                 ->withInput($request->except('password', 'password_confirmation'))
                 ->with('error', 'Registration failed. Please try again.');
+        }
+    }
+
+    /**
+     * Send the verification email with a 24-hour signed link.
+     */
+    private function sendVerificationEmail(AccountRequest $accountRequest): void
+    {
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify-email',
+            now()->addHours(24),
+            [
+                'id'   => $accountRequest->id,
+                'hash' => sha1($accountRequest->email),
+            ]
+        );
+
+        try {
+            Mail::to($accountRequest->email)->send(
+                new VerifyEmailMail($accountRequest, $verificationUrl)
+            );
+
+            Log::info('Verification email sent', [
+                'request_id' => $accountRequest->id,
+                'email'      => $accountRequest->email,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send verification email', [
+                'request_id' => $accountRequest->id,
+                'error'      => $e->getMessage(),
+            ]);
         }
     }
 }

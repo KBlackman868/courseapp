@@ -15,7 +15,8 @@ use App\Http\Controllers\Auth\{
     LoginController,
     RegisterController,
     ForgotPasswordController,
-    ResetPasswordController
+    ResetPasswordController,
+    EmailVerificationController
 };
 use App\Http\Controllers\Admin\{
     RoleManagementController,
@@ -159,25 +160,31 @@ Route::middleware('guest')->group(function () {
         Route::get('/moh/request-submitted', 'mohRequestSubmitted')->name('moh.request-submitted');
     });
 
-    // Password Reset Routes are handled by auth.php (Breeze controllers)
-});
+    // Password Reset Routes
+    Route::prefix('password')->name('password.')->group(function () {
+        Route::controller(ForgotPasswordController::class)->group(function () {
+            Route::get('/reset', 'showLinkRequestForm')->name('request');
+            Route::post('/email', 'sendResetLinkEmail')->name('email');
+        });
 
-/*
-|==========================================================================
-| MOODLE LOGOUT ROUTE (No auth middleware — session may already be expired)
-|==========================================================================
-| Handles GET /logout from Moodle redirect after Moodle kills its session.
-| If the user has an active Laravel session, it is destroyed.
-| Always redirects to /login regardless of session state.
-*/
-Route::get('/logout', function () {
-    if (Auth::check()) {
-        Auth::guard('web')->logout();
-    }
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/login');
-})->name('logout.get');
+        Route::controller(ResetPasswordController::class)->group(function () {
+            Route::get('/reset/{token}', 'showResetForm')->name('reset');
+            Route::post('/reset', 'reset')->name('update');
+        });
+    });
+
+    // Email Verification Routes (for registration signed links)
+    Route::get('/email/verify-registration/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify-email');
+
+    Route::get('/email/verification-expired', [EmailVerificationController::class, 'expired'])
+        ->name('verification.expired');
+
+    Route::post('/email/resend-verification', [RegisterController::class, 'resendVerification'])
+        ->middleware('throttle:3,1')
+        ->name('verification.resend');
+});
 
 /*
 |==========================================================================
