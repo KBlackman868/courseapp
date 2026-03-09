@@ -30,7 +30,6 @@ class EnsureEmailVerified
         'auth.otp.submit',
         'auth.otp.resend',
         'logout',
-        'verification.notice',
     ];
 
     /**
@@ -142,11 +141,11 @@ class EnsureEmailVerified
             return response()->json([
                 'message' => 'Email verification required.',
                 'verification_required' => true,
-                'redirect' => route('verification.notice')
+                'redirect' => route('auth.otp.verify')
             ], 403);
         }
 
-        return redirect()->route('verification.notice')
+        return redirect()->route('auth.otp.verify')
             ->with('warning', 'Please verify your email address to access this page.');
     }
 }
