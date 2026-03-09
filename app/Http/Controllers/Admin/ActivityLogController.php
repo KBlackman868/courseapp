@@ -21,57 +21,32 @@ class ActivityLogController extends Controller
     public function index(Request $request)
     {
         $query = ActivityLog::with('user')->latest();
-        
+
         // Filters
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
-        
+
         if ($request->filled('action')) {
             $query->where('action', 'like', '%' . $request->action . '%');
         }
-        
+
         if ($request->filled('date_from')) {
             $query->where('created_at', '>=', Carbon::parse($request->date_from));
         }
-        
+
         if ($request->filled('date_to')) {
             $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
         }
-        
+
         if ($request->filled('severity')) {
             $query->where('severity', $request->severity);
         }
-        
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
-        // For AJAX requests (live updates)
-        if ($request->ajax()) {
-            $logs = $query->take(50)->get();
-            return response()->json([
-                'logs' => $logs->map(function ($log) {
-                    return [
-                        'id' => $log->id,
-                        'icon' => $log->action_icon,
-                        'action' => $log->formatted_action,
-                        'description' => $log->description,
-                        'user' => $log->user_name ?? 'System',
-                        'time' => $log->created_at->diffForHumans(),
-                        'timestamp' => $log->created_at->format('Y-m-d H:i:s'),
-                        'severity' => $log->severity,
-                        'severity_color' => $log->severity_color,
-                        'status' => $log->status,
-                        'status_color' => $log->status_color,
-                        'ip' => $log->ip_address,
-                        'url' => $log->url,
-                    ];
-                }),
-                'last_id' => $logs->first()?->id,
-            ]);
-        }
-        
+
         $logs = $query->paginate(50);
 
         // PERFORMANCE FIX: Only load users for the dropdown (paginated if many users)

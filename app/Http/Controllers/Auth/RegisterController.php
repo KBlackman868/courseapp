@@ -168,7 +168,7 @@ class RegisterController extends Controller
             'last_name'  => $validatedData['last_name'],
             'date_of_birth' => $validatedData['date_of_birth'],
             'email'      => $validatedData['email'],
-            'password'   => Hash::make($validatedData['password']),
+            'password'   => $validatedData['password'],
             'department' => $validatedData['department'],
             'organization' => $validatedData['organization'] ?? null,
             'temp_moodle_password' => encrypt($validatedData['password']),

@@ -50,7 +50,7 @@ class ExternalRegistrationController extends Controller
                 'email' => $validated['email'],
                 'organization' => $validated['organization'],
                 'department' => 'External',
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'],
                 'user_type' => User::TYPE_EXTERNAL,
                 'account_status' => User::STATUS_PENDING,
                 'auth_method' => 'local',
