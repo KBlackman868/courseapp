@@ -88,13 +88,26 @@ export default function RegistrationPending({ email, type, verified = false, res
                     </div>
                 )}
 
-                {verified && type === 'moh_staff' && (
+                {verified && type === 'moh_staff' && !error && (
                     <div className="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 text-left">
                         <h3 className="mb-2 font-semibold text-green-800">
                             Account Activated
                         </h3>
                         <p className="text-sm text-green-700">
                             Your MOH staff account has been activated. You can now sign in with your credentials.
+                        </p>
+                    </div>
+                )}
+
+                {verified && type === 'moh_staff' && error && (
+                    <div className="mb-6 rounded-lg bg-amber-50 border border-amber-200 p-4 text-left">
+                        <h3 className="mb-2 font-semibold text-amber-800">
+                            What happens next?
+                        </h3>
+                        <p className="text-sm text-amber-700">
+                            Your email has been verified, but your account could not be activated automatically.
+                            An administrator has been notified and will activate your account shortly.
+                            You will be able to sign in once your account is activated.
                         </p>
                     </div>
                 )}
