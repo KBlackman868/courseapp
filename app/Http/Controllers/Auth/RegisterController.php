@@ -86,6 +86,7 @@ class RegisterController extends Controller
                 'email'        => $validatedData['email'],
                 'password'     => Hash::make($validatedData['password']),
                 'department'   => $validatedData['department'],
+                'organization' => $validatedData['department'],
                 'status'       => AccountRequest::STATUS_PENDING_VERIFICATION,
                 'request_type' => $isMoh ? AccountRequest::TYPE_MOH_STAFF : AccountRequest::TYPE_EXTERNAL,
                 'ip_address'   => $request->ip(),

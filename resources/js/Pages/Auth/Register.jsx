@@ -44,34 +44,6 @@ const css = `
 .btn-hover:active { transform: translateY(0); }
 `;
 
-function getPasswordStrength(password) {
-    if (!password) return { score: 0, label: '', color: '' };
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[^a-zA-Z0-9]/.test(password)) score++;
-
-    if (score <= 1) return { score: 1, label: 'Weak', color: 'bg-red-500' };
-    if (score <= 2) return { score: 2, label: 'Fair', color: 'bg-orange-500' };
-    if (score <= 3) return { score: 3, label: 'Good', color: 'bg-yellow-500' };
-    if (score <= 4) return { score: 4, label: 'Strong', color: 'bg-green-500' };
-    return { score: 5, label: 'Very Strong', color: 'bg-emerald-500' };
-}
-
-function calculateAge(dateString) {
-    if (!dateString) return null;
-    const birth = new Date(dateString);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-}
-
 export default function Register() {
     const { data, setData, post, processing, errors, setError, clearErrors, reset } = useForm({
         first_name: '',
@@ -267,10 +239,10 @@ export default function Register() {
                                     {errors.email && <p className="mt-1.5 text-sm text-red-600">{errors.email}</p>}
                                 </div>
 
-                                {/* Department */}
-                                <div className="animate-fade-in-up-delay-1">
+                                {/* Department / Organization */}
+                                <div className="animate-fade-in-up-delay-2">
                                     <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Department <span className="text-gray-400 font-normal">(optional)</span>
+                                        Department / Organization
                                     </label>
                                     <input
                                         id="department"
@@ -279,7 +251,8 @@ export default function Register() {
                                         value={data.department}
                                         onChange={(e) => setData('department', e.target.value)}
                                         className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                        placeholder="e.g. Public Health, Nursing"
+                                        placeholder="e.g. Insect Vector Control, Ministry of Health"
+                                        required
                                     />
                                     {errors.department && <p className="mt-1.5 text-sm text-red-600">{errors.department}</p>}
                                 </div>
