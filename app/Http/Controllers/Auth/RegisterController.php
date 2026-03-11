@@ -36,44 +36,37 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
-        // Before validation, clean up orphaned records from previous failed attempts.
-        // This handles the case where auto-approval partially succeeded (User created
-        // but account_request stuck at email_verified due to missing transaction).
-        $email = $request->input('email');
-        if ($email) {
-            try {
-                $this->cleanUpOrphanedRecords($email);
-            } catch (\Exception $e) {
-                Log::error('Failed to clean up orphaned records', [
-                    'email' => $email,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        $validatedData = $request->validate([
-            'first_name'  => 'required|string|max:255',
-            'last_name'   => 'required|string|max:255',
-            'email'       => [
-                'required', 'string', 'email', 'max:255',
-                'unique:users',
-                Rule::unique('account_requests', 'email')->where(
-                    fn ($query) => $query->whereIn('status', [
-                        AccountRequest::STATUS_PENDING_VERIFICATION,
-                        AccountRequest::STATUS_EMAIL_VERIFIED,
-                        AccountRequest::STATUS_APPROVED,
-                    ])
-                ),
-            ],
-            'department'  => 'required|string|max:255',
-            'password'    => PasswordRules::rules($request),
-            'terms'       => 'accepted',
-        ], array_merge(PasswordRules::messages(), [
-            'email.unique' => 'This email is already registered or has a pending request.',
-            'terms.accepted' => 'You must agree to the Terms and Conditions.',
-        ]));
-
         try {
+            // Clean up orphaned records from previous failed attempts.
+            // This handles the case where auto-approval partially succeeded (User created
+            // but account_request stuck at email_verified due to missing transaction).
+            $email = $request->input('email');
+            if ($email) {
+                $this->cleanUpOrphanedRecords($email);
+            }
+
+            $validatedData = $request->validate([
+                'first_name'  => 'required|string|max:255',
+                'last_name'   => 'required|string|max:255',
+                'email'       => [
+                    'required', 'string', 'email', 'max:255',
+                    'unique:users',
+                    Rule::unique('account_requests', 'email')->where(
+                        fn ($query) => $query->whereIn('status', [
+                            AccountRequest::STATUS_PENDING_VERIFICATION,
+                            AccountRequest::STATUS_EMAIL_VERIFIED,
+                            AccountRequest::STATUS_APPROVED,
+                        ])
+                    ),
+                ],
+                'department'  => 'required|string|max:255',
+                'password'    => PasswordRules::rules($request),
+                'terms'       => 'accepted',
+            ], array_merge(PasswordRules::messages(), [
+                'email.unique' => 'This email is already registered or has a pending request.',
+                'terms.accepted' => 'You must agree to the Terms and Conditions.',
+            ]));
+
             $isMoh = User::isMohEmail($validatedData['email']);
 
             // Create the account request
@@ -121,16 +114,19 @@ class RegisterController extends Controller
                 'type'  => $accountRequest->request_type,
             ]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e; // Let Laravel handle validation errors normally (422)
+
         } catch (\Exception $e) {
             Log::error('Registration failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'email' => $validatedData['email'] ?? $request->input('email'),
+                'email' => $request->input('email'),
             ]);
 
             return back()
                 ->withInput($request->except('password', 'password_confirmation'))
-                ->withErrors(['email' => 'Registration failed. Please try again.']);
+                ->withErrors(['email' => 'Registration failed: ' . $e->getMessage()]);
         }
     }
 
