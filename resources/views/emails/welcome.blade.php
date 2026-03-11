@@ -22,12 +22,14 @@
                             <span style="font-size:14px;color:#14532D;font-family:Consolas,'Liberation Mono',Menlo,monospace;padding-left:8px;">{{ $user->email }}</span>
                         </td>
                     </tr>
+                    @if($password)
                     <tr>
                         <td style="padding:8px 0;border-bottom:1px dashed #BBF7D0;">
                             <span style="font-size:13px;font-weight:600;color:#166534;">Password:</span>
                             <span style="font-size:14px;color:#14532D;font-family:Consolas,'Liberation Mono',Menlo,monospace;padding-left:8px;">{{ $password }}</span>
                         </td>
                     </tr>
+                    @endif
                     @if($user->department)
                     <tr>
                         <td style="padding:8px 0;">
