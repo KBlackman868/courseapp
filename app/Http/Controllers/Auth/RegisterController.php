@@ -41,7 +41,14 @@ class RegisterController extends Controller
         // but account_request stuck at email_verified due to missing transaction).
         $email = $request->input('email');
         if ($email) {
-            $this->cleanUpOrphanedRecords($email);
+            try {
+                $this->cleanUpOrphanedRecords($email);
+            } catch (\Exception $e) {
+                Log::error('Failed to clean up orphaned records', [
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $validatedData = $request->validate([
@@ -152,19 +159,22 @@ class RegisterController extends Controller
             ->first();
 
         if ($stuckRequest) {
+            Log::warning('Cleaning up stuck account request from failed auto-approval', [
+                'email' => $email,
+                'account_request_id' => $stuckRequest->id,
+            ]);
+
+            // Check if a User was also orphaned (created before the transaction failed)
             $orphanedUser = User::where('email', $email)->first();
             if ($orphanedUser) {
-                // The previous auto-approval created a User but the account_request
-                // was never updated. Clean up both so the person can start fresh.
-                Log::warning('Cleaning up orphaned registration records', [
-                    'email' => $email,
-                    'user_id' => $orphanedUser->id,
-                    'account_request_id' => $stuckRequest->id,
-                ]);
-
-                $orphanedUser->forceDelete();
-                $stuckRequest->delete();
+                // Remove role assignments first to avoid FK constraint violations
+                $orphanedUser->roles()->detach();
+                $orphanedUser->permissions()->detach();
+                $orphanedUser->delete();
             }
+
+            // Always delete the stuck account request so re-registration can proceed
+            $stuckRequest->delete();
         }
     }
 

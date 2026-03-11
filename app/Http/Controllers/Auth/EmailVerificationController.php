@@ -189,14 +189,18 @@ class EmailVerificationController extends Controller
                 Log::warning('Failed to create admin notification', ['error' => $e->getMessage()]);
             }
 
-            ActivityLogger::log(
-                'moh_staff_auto_approved',
-                "MOH Staff auto-approved after email verification: {$user->email}",
-                $user,
-                ['user_id' => $user->id, 'email' => $user->email, 'department' => $user->department],
-                'success',
-                'info'
-            );
+            try {
+                ActivityLogger::log(
+                    'moh_staff_auto_approved',
+                    "MOH Staff auto-approved after email verification: {$user->email}",
+                    $user,
+                    ['user_id' => $user->id, 'email' => $user->email, 'department' => $user->department],
+                    'success',
+                    'info'
+                );
+            } catch (\Exception $e) {
+                Log::warning('Activity logging failed', ['error' => $e->getMessage()]);
+            }
 
             Log::info('MOH Staff auto-approved', [
                 'user_id' => $user->id,
