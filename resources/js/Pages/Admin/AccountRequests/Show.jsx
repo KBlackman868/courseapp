@@ -108,7 +108,7 @@ export default function AccountRequestShow({ accountRequest }) {
                             Review the details of this account registration request.
                         </p>
                     </div>
-                    {accountRequest.status === 'pending' && (
+                    {['pending', 'pending_verification', 'email_verified'].includes(accountRequest.status) && (
                         <div className="mt-4 sm:mt-0 flex gap-3">
                             <button
                                 onClick={handleApprove}

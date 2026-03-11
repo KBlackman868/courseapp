@@ -12,11 +12,15 @@ function debounce(fn, delay) {
 function StatusBadge({ status }) {
     const styles = {
         pending: 'bg-yellow-100 text-yellow-800',
+        pending_verification: 'bg-orange-100 text-orange-800',
+        email_verified: 'bg-blue-100 text-blue-800',
         approved: 'bg-green-100 text-green-800',
         rejected: 'bg-red-100 text-red-800',
     };
     const labels = {
         pending: 'Pending',
+        pending_verification: 'Pending Verification',
+        email_verified: 'Email Verified',
         approved: 'Approved',
         rejected: 'Rejected',
     };
@@ -146,8 +150,9 @@ export default function AccountRequestsIndex({
     const [processing, setProcessing] = useState(null);
     const [rejectModal, setRejectModal] = useState({ open: false, requestId: null, requestName: '' });
 
+    const pendingCount = (counts.pending || 0) + (counts.email_verified || 0) + (counts.pending_verification || 0);
     const tabs = [
-        { key: 'pending', label: 'Pending', count: counts.pending || 0 },
+        { key: 'pending', label: 'Pending', count: pendingCount },
         { key: 'approved', label: 'Approved', count: counts.approved || 0 },
         { key: 'rejected', label: 'Denied', count: counts.rejected || 0 },
         { key: '', label: 'All', count: counts.all || 0 },
@@ -454,7 +459,7 @@ export default function AccountRequestsIndex({
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {request.status === 'pending' && (
+                                                    {['pending', 'pending_verification', 'email_verified'].includes(request.status) && (
                                                         <>
                                                             <button
                                                                 onClick={() => handleApprove(request.id)}
@@ -472,7 +477,7 @@ export default function AccountRequestsIndex({
                                                             </button>
                                                         </>
                                                     )}
-                                                    {request.status !== 'pending' && (
+                                                    {!['pending', 'pending_verification', 'email_verified'].includes(request.status) && (
                                                         <span className="text-xs text-gray-400">No actions available</span>
                                                     )}
                                                 </div>

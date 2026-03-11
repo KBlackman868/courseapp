@@ -27,7 +27,7 @@ class AccountRequestController extends Controller
     {
         $this->authorize('viewAny', AccountRequest::class);
 
-        $status = $request->input('status', 'email_verified');
+        $status = $request->input('status', 'pending');
         $department = $request->input('department');
         $search = $request->input('search');
 
@@ -35,7 +35,14 @@ class AccountRequestController extends Controller
             ->with('reviewer')
             ->orderBy('created_at', 'desc');
 
-        if ($status && $status !== 'all') {
+        if ($status === 'pending') {
+            // Show all actionable pending states together
+            $query->whereIn('status', [
+                AccountRequest::STATUS_PENDING,
+                AccountRequest::STATUS_PENDING_VERIFICATION,
+                AccountRequest::STATUS_EMAIL_VERIFIED,
+            ]);
+        } elseif ($status && $status !== 'all') {
             $query->where('status', $status);
         }
 
