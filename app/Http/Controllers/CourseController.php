@@ -745,6 +745,10 @@ class CourseController extends Controller
             \Illuminate\Support\Facades\Storage::disk('public')->delete($course->image);
         }
 
+        // Delete related records that use onDelete('no action') in their foreign keys
+        // (SQL Server doesn't allow multiple cascade paths, so these must be cleaned up manually)
+        $course->courseAccessRequests()->delete();
+
         $course->delete();
 
         // Log course deletion
