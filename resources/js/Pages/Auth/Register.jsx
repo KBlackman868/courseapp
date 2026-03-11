@@ -42,41 +42,9 @@ const css = `
 .animate-fade-in-up-delay-4 { animation: fadeInUp 0.6s ease-out 0.4s forwards; opacity: 0; }
 .animate-pulse-slow { animation: pulse 3s ease-in-out infinite; }
 .input-focus-glow:focus { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); border-color: #4F46E5; }
-.select-focus-glow:focus { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); border-color: #4F46E5; }
 .btn-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
 .btn-hover:active { transform: translateY(0); }
 `;
-
-const departments = [
-    'Administration',
-    'Chronic Disease',
-    'Community Health',
-    'County Medical Office of Health',
-    'Dental',
-    'Environmental Health',
-    'Epidemiology',
-    'Health Education',
-    'Health Policy',
-    'Human Resources',
-    'Information Technology',
-    'Insect Vector Control',
-    'Legal',
-    'Medical Stores',
-    'Mental Health',
-    'Nursing',
-    'Nutrition',
-    'Occupational Health',
-    'Pharmacy',
-    'Planning',
-    'Population Programme',
-    'Primary Care',
-    'Procurement',
-    'Public Health',
-    'Public Health Laboratory',
-    'Quality Standards',
-    'Veterinary Public Health',
-    'Other',
-];
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -260,26 +228,21 @@ export default function Register() {
                                     </p>
                                 </div>
 
-                                {/* Department */}
+                                {/* Department / Organization */}
                                 <div className="animate-fade-in-up-delay-2">
                                     <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Department
+                                        Department / Organization
                                     </label>
-                                    <select
+                                    <input
                                         id="department"
+                                        type="text"
                                         name="department"
                                         value={data.department}
                                         onChange={(e) => setData('department', e.target.value)}
-                                        className="select-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 transition-all duration-200 outline-none appearance-none bg-white"
+                                        className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
+                                        placeholder="e.g. Insect Vector Control, Ministry of Health"
                                         required
-                                    >
-                                        <option value="">Select a department</option>
-                                        {departments.map((dept) => (
-                                            <option key={dept} value={dept}>
-                                                {dept}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                     {errors.department && <p className="mt-1.5 text-sm text-red-600">{errors.department}</p>}
                                 </div>
 
