@@ -44,6 +44,37 @@ const css = `
 .btn-hover:active { transform: translateY(0); }
 `;
 
+function getPasswordStrength(password) {
+    if (!password) return { score: 0, label: '', color: 'bg-gray-200' };
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    const levels = [
+        { label: 'Very Weak', color: 'bg-red-500' },
+        { label: 'Weak', color: 'bg-red-500' },
+        { label: 'Fair', color: 'bg-orange-500' },
+        { label: 'Good', color: 'bg-yellow-500' },
+        { label: 'Strong', color: 'bg-green-500' },
+        { label: 'Very Strong', color: 'bg-green-600' },
+    ];
+    return { score, ...levels[score] };
+}
+
+function calculateAge(dateString) {
+    if (!dateString) return null;
+    const today = new Date();
+    const birth = new Date(dateString);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
 export default function Register() {
     const { data, setData, post, processing, errors, setError, clearErrors, reset } = useForm({
         first_name: '',
@@ -53,7 +84,7 @@ export default function Register() {
         date_of_birth: '',
         password: '',
         password_confirmation: '',
-        terms_accepted: false,
+        terms: false,
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -79,7 +110,7 @@ export default function Register() {
             return;
         }
 
-        if (!data.terms_accepted) {
+        if (!data.terms) {
             setTermsError('You must accept the Terms and Conditions to register.');
             return;
         }
@@ -387,9 +418,9 @@ export default function Register() {
                                         <input
                                             id="terms_accepted"
                                             type="checkbox"
-                                            checked={data.terms_accepted}
+                                            checked={data.terms}
                                             onChange={(e) => {
-                                                setData('terms_accepted', e.target.checked);
+                                                setData('terms', e.target.checked);
                                                 setTermsError('');
                                             }}
                                             className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
