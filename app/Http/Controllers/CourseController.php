@@ -131,7 +131,10 @@ class CourseController extends Controller
                 case 'approved':
                     return [
                         'level' => 'enrolled',
-                        'can_access_moodle' => $hasMoodleSync && $user->moodle_user_id,
+                        // Don't require moodle_user_id here — accessMoodle() creates
+                        // the Moodle account on-the-fly if it doesn't exist yet.
+                        // The async job from registration may not have run.
+                        'can_access_moodle' => $hasMoodleSync,
                         'message' => 'You are enrolled in this course.',
                         'action' => $hasMoodleSync ? 'access_course' : 'view_content'
                     ];
@@ -169,7 +172,8 @@ class CourseController extends Controller
                 // Approved access request - user can access the course
                 return [
                     'level' => 'enrolled',
-                    'can_access_moodle' => $hasMoodleSync && $user->moodle_user_id,
+                    // Don't require moodle_user_id — accessMoodle() handles it.
+                    'can_access_moodle' => $hasMoodleSync,
                     'message' => 'Your access has been approved! You can now access this course.',
                     'action' => $hasMoodleSync ? 'access_course' : 'view_content'
                 ];
