@@ -98,8 +98,9 @@ Route::get('/moodle/sso', function () {
         return redirect()->away($loginUrl);
     }
 
-    // Fallback to direct URL if SSO fails
-    return redirect()->away(config('moodle.base_url'));
+    // Don't redirect to Moodle without SSO — user would land as a guest.
+    return redirect()->route('dashboard')
+        ->with('error', 'Could not log you into Moodle automatically. The SSO login plugin (auth_userkey) may need to be configured by a Moodle administrator.');
 })->middleware('auth')->name('moodle.sso');
 
 /*

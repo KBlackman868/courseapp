@@ -376,22 +376,23 @@ class MoodleService
     }
 
     /**
-     * Fallback method to generate a Moodle URL without SSO
-     * This simply constructs the course URL - user will need to login manually
+     * Fallback method when auth_userkey is not available.
+     *
+     * Returns null so callers know SSO failed and can show an error
+     * instead of silently redirecting the user to Moodle as a guest.
      *
      * @param string $email User's email
      * @param string|null $redirectUrl The target URL in Moodle
-     * @return string|null The Moodle URL
+     * @return string|null Always null — SSO is required
      */
     protected function generateFallbackLoginUrl(string $email, ?string $redirectUrl = null): ?string
     {
-        // If no redirect URL, just return the Moodle base URL
-        if (!$redirectUrl) {
-            return $this->baseUrl;
-        }
+        Log::warning('SSO fallback triggered — returning null to prevent guest access', [
+            'email' => $email,
+            'redirect_url' => $redirectUrl,
+        ]);
 
-        // Return the redirect URL directly - user will need to login
-        return $redirectUrl;
+        return null;
     }
 
     /**
@@ -467,6 +468,7 @@ class MoodleService
      * @param \App\Models\User $user The user object
      * @param int $moodleCourseId Moodle course ID
      * @return string The auto-login URL to the course
+     * @throws \Exception If SSO login URL cannot be generated
      */
     public function generateCourseLoginUrl($user, int $moodleCourseId): string
     {
@@ -485,7 +487,16 @@ class MoodleService
 
         $loginUrl = $this->generateLoginUrl($userData, $courseUrl);
 
-        // If SSO failed, return the direct course URL
-        return $loginUrl ?? $courseUrl;
+        // Do NOT silently fall back to the direct course URL — the user would
+        // land on Moodle as an unauthenticated guest. Throw so the caller
+        // (CourseController::accessMoodle) can show a proper error message.
+        if (!$loginUrl) {
+            throw new \Exception(
+                'SSO login URL could not be generated. '
+                . 'The auth_userkey plugin may not be installed or configured on Moodle.'
+            );
+        }
+
+        return $loginUrl;
     }
 }

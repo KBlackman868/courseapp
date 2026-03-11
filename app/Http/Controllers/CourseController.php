@@ -441,8 +441,9 @@ class CourseController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            // Fallback to direct URL (user will need to login manually)
-            return $moodleBaseUrl . '/course/view.php?id=' . $course->moodle_course_id;
+            // Don't fall back to direct URL — user would land as a guest.
+            // Re-throw so the caller can show a proper error message.
+            throw $e;
         }
     }
 
