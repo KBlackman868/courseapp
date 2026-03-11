@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
+import { useState, useMemo } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 const css = `
@@ -39,68 +38,80 @@ const css = `
 .animate-fade-in-up-delay-1 { animation: fadeInUp 0.6s ease-out 0.1s forwards; opacity: 0; }
 .animate-fade-in-up-delay-2 { animation: fadeInUp 0.6s ease-out 0.2s forwards; opacity: 0; }
 .animate-fade-in-up-delay-3 { animation: fadeInUp 0.6s ease-out 0.3s forwards; opacity: 0; }
-.animate-fade-in-up-delay-4 { animation: fadeInUp 0.6s ease-out 0.4s forwards; opacity: 0; }
 .animate-pulse-slow { animation: pulse 3s ease-in-out infinite; }
 .input-focus-glow:focus { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); border-color: #4F46E5; }
-.select-focus-glow:focus { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); border-color: #4F46E5; }
 .btn-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
 .btn-hover:active { transform: translateY(0); }
 `;
 
-const departments = [
-    'Administration',
-    'Chronic Disease',
-    'Community Health',
-    'County Medical Office of Health',
-    'Dental',
-    'Environmental Health',
-    'Epidemiology',
-    'Health Education',
-    'Health Policy',
-    'Human Resources',
-    'Information Technology',
-    'Insect Vector Control',
-    'Legal',
-    'Medical Stores',
-    'Mental Health',
-    'Nursing',
-    'Nutrition',
-    'Occupational Health',
-    'Pharmacy',
-    'Planning',
-    'Population Programme',
-    'Primary Care',
-    'Procurement',
-    'Public Health',
-    'Public Health Laboratory',
-    'Quality Standards',
-    'Veterinary Public Health',
-    'Other',
-];
+function getPasswordStrength(password) {
+    if (!password) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    if (score <= 1) return { score: 1, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 2) return { score: 2, label: 'Fair', color: 'bg-orange-500' };
+    if (score <= 3) return { score: 3, label: 'Good', color: 'bg-yellow-500' };
+    if (score <= 4) return { score: 4, label: 'Strong', color: 'bg-green-500' };
+    return { score: 5, label: 'Very Strong', color: 'bg-emerald-500' };
+}
+
+function calculateAge(dateString) {
+    if (!dateString) return null;
+    const birth = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, setError, clearErrors, reset } = useForm({
         first_name: '',
         last_name: '',
         email: '',
         department: '',
+        date_of_birth: '',
         password: '',
         password_confirmation: '',
-        terms: false,
+        terms_accepted: false,
     });
-
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [ageError, setAgeError] = useState('');
+    const [termsError, setTermsError] = useState('');
 
-    const { allValid } = usePasswordValidation(
-        data.password,
-        data.first_name,
-        data.last_name,
-        data.email
-    );
+    const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
+
+    const maxDate = useMemo(() => {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() - 18);
+        return d.toISOString().split('T')[0];
+    }, []);
 
     const submit = (e) => {
         e.preventDefault();
+        setAgeError('');
+        setTermsError('');
+
+        const age = calculateAge(data.date_of_birth);
+        if (age === null || age < 18) {
+            setAgeError('You must be 18 or older to register.');
+            return;
+        }
+
+        if (!data.terms_accepted) {
+            setTermsError('You must accept the Terms and Conditions to register.');
+            return;
+        }
+
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
         });
@@ -114,7 +125,6 @@ export default function Register() {
             <div className="flex min-h-screen">
                 {/* Left Panel - Branding */}
                 <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 animate-gradient">
-                    {/* Floating shapes */}
                     <div className="absolute inset-0 overflow-hidden">
                         <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-xl animate-float1" />
                         <div className="absolute bottom-32 right-20 w-96 h-96 bg-purple-400/10 rounded-full blur-2xl animate-float2" />
@@ -123,7 +133,6 @@ export default function Register() {
                         <div className="absolute top-32 right-32 w-20 h-20 bg-white/5 rounded-full animate-pulse-slow" style={{ animationDelay: '1.5s' }} />
                     </div>
 
-                    {/* Content */}
                     <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
                         <div className="animate-fade-in-up">
                             <div className="flex items-center gap-4 mb-10">
@@ -148,7 +157,7 @@ export default function Register() {
 
                         <div className="animate-fade-in-up-delay-2">
                             <p className="text-lg text-indigo-100/80 max-w-md leading-relaxed mb-10">
-                                Create your account to access professional training courses managed by the Ministry of Health.
+                                Join the Ministry of Health&apos;s learning platform and gain access to professional development courses designed for healthcare professionals.
                             </p>
                         </div>
 
@@ -157,19 +166,19 @@ export default function Register() {
                                 <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
                                     <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                 </div>
-                                <span className="text-indigo-100">24/7 Online Access</span>
+                                <span className="text-indigo-100">Access 50+ professional courses</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
                                     <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                 </div>
-                                <span className="text-indigo-100">Self-Generated Certificates</span>
+                                <span className="text-indigo-100">Track your learning progress</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
                                     <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                                 </div>
-                                <span className="text-indigo-100">Secure MOH Managed Platform</span>
+                                <span className="text-indigo-100">Earn certificates of completion</span>
                             </div>
                         </div>
                     </div>
@@ -190,16 +199,16 @@ export default function Register() {
                         <p className="text-indigo-100 text-sm">Create your account to get started</p>
                     </div>
 
-                    <div className="flex-1 flex items-center justify-center px-6 sm:px-12 lg:px-16 py-12">
+                    <div className="flex-1 flex items-center justify-center px-6 sm:px-12 lg:px-16 py-8 lg:py-12">
                         <div className="w-full max-w-md">
                             <div className="animate-fade-in-up">
-                                <h1 className="text-3xl font-bold text-gray-900 mb-2">Create an Account</h1>
-                                <p className="text-gray-500 mb-8">Register to access your courses and training</p>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-2">Join MOH Learning</h1>
+                                <p className="text-gray-500 mb-8">Create your account to start your learning journey</p>
                             </div>
 
                             <form onSubmit={submit} className="space-y-5">
-                                {/* Name fields */}
-                                <div className="animate-fade-in-up-delay-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                {/* First Name & Last Name */}
+                                <div className="animate-fade-in-up-delay-1 grid grid-cols-2 gap-4">
                                     <div>
                                         <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1.5">
                                             First Name
@@ -211,14 +220,14 @@ export default function Register() {
                                             value={data.first_name}
                                             autoComplete="given-name"
                                             autoFocus
+                                            required
+                                            minLength={2}
                                             onChange={(e) => setData('first_name', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
                                             placeholder="John"
-                                            required
                                         />
                                         {errors.first_name && <p className="mt-1.5 text-sm text-red-600">{errors.first_name}</p>}
                                     </div>
-
                                     <div>
                                         <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Last Name
@@ -229,10 +238,11 @@ export default function Register() {
                                             name="last_name"
                                             value={data.last_name}
                                             autoComplete="family-name"
+                                            required
+                                            minLength={2}
                                             onChange={(e) => setData('last_name', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
                                             placeholder="Doe"
-                                            required
                                         />
                                         {errors.last_name && <p className="mt-1.5 text-sm text-red-600">{errors.last_name}</p>}
                                     </div>
@@ -249,38 +259,53 @@ export default function Register() {
                                         name="email"
                                         value={data.email}
                                         autoComplete="username"
+                                        required
                                         onChange={(e) => setData('email', e.target.value)}
                                         className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
                                         placeholder="you@example.com"
-                                        required
                                     />
                                     {errors.email && <p className="mt-1.5 text-sm text-red-600">{errors.email}</p>}
-                                    <p className="mt-1.5 text-xs text-gray-400">
-                                        MOH staff: use your @health.gov.tt email. External users: use any email.
-                                    </p>
                                 </div>
 
                                 {/* Department */}
-                                <div className="animate-fade-in-up-delay-2">
+                                <div className="animate-fade-in-up-delay-1">
                                     <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Department
+                                        Department <span className="text-gray-400 font-normal">(optional)</span>
                                     </label>
-                                    <select
+                                    <input
                                         id="department"
+                                        type="text"
                                         name="department"
                                         value={data.department}
                                         onChange={(e) => setData('department', e.target.value)}
-                                        className="select-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 transition-all duration-200 outline-none appearance-none bg-white"
-                                        required
-                                    >
-                                        <option value="">Select a department</option>
-                                        {departments.map((dept) => (
-                                            <option key={dept} value={dept}>
-                                                {dept}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
+                                        placeholder="e.g. Public Health, Nursing"
+                                    />
                                     {errors.department && <p className="mt-1.5 text-sm text-red-600">{errors.department}</p>}
+                                </div>
+
+                                {/* Date of Birth */}
+                                <div className="animate-fade-in-up-delay-2">
+                                    <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Date of Birth
+                                    </label>
+                                    <input
+                                        id="date_of_birth"
+                                        type="date"
+                                        name="date_of_birth"
+                                        value={data.date_of_birth}
+                                        max={maxDate}
+                                        required
+                                        onChange={(e) => {
+                                            setData('date_of_birth', e.target.value);
+                                            setAgeError('');
+                                        }}
+                                        className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
+                                    />
+                                    {(ageError || errors.date_of_birth) && (
+                                        <p className="mt-1.5 text-sm text-red-600">{ageError || errors.date_of_birth}</p>
+                                    )}
+                                    <p className="mt-1 text-xs text-gray-400">You must be 18 or older to register</p>
                                 </div>
 
                                 {/* Password */}
@@ -295,10 +320,11 @@ export default function Register() {
                                             name="password"
                                             value={data.password}
                                             autoComplete="new-password"
+                                            required
+                                            minLength={12}
                                             onChange={(e) => setData('password', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                            placeholder="Create a strong password"
-                                            required
+                                            placeholder="Min. 14 characters"
                                         />
                                         <button
                                             type="button"
@@ -318,13 +344,30 @@ export default function Register() {
                                             )}
                                         </button>
                                     </div>
+                                    {/* Strength indicator */}
+                                    {data.password && (
+                                        <div className="mt-2">
+                                            <div className="flex gap-1 mb-1">
+                                                {[1, 2, 3, 4, 5].map((level) => (
+                                                    <div
+                                                        key={level}
+                                                        className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                                                            level <= strength.score ? strength.color : 'bg-gray-200'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <p className={`text-xs ${
+                                                strength.score <= 1 ? 'text-red-600' :
+                                                strength.score <= 2 ? 'text-orange-600' :
+                                                strength.score <= 3 ? 'text-yellow-600' :
+                                                'text-green-600'
+                                            }`}>
+                                                {strength.label}
+                                            </p>
+                                        </div>
+                                    )}
                                     {errors.password && <p className="mt-1.5 text-sm text-red-600">{errors.password}</p>}
-                                    <PasswordChecklist
-                                        password={data.password}
-                                        firstName={data.first_name}
-                                        lastName={data.last_name}
-                                        email={data.email}
-                                    />
                                 </div>
 
                                 {/* Confirm Password */}
@@ -335,22 +378,22 @@ export default function Register() {
                                     <div className="relative">
                                         <input
                                             id="password_confirmation"
-                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            type={showConfirm ? 'text' : 'password'}
                                             name="password_confirmation"
                                             value={data.password_confirmation}
                                             autoComplete="new-password"
+                                            required
                                             onChange={(e) => setData('password_confirmation', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                            placeholder="Confirm your password"
-                                            required
+                                            placeholder="Re-enter your password"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            onClick={() => setShowConfirm(!showConfirm)}
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                             tabIndex={-1}
                                         >
-                                            {showConfirmPassword ? (
+                                            {showConfirm ? (
                                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
                                                 </svg>
@@ -365,43 +408,48 @@ export default function Register() {
                                     {errors.password_confirmation && <p className="mt-1.5 text-sm text-red-600">{errors.password_confirmation}</p>}
                                 </div>
 
-                                {/* Terms */}
+                                {/* Terms & Conditions */}
                                 <div className="animate-fade-in-up-delay-3">
-                                    <label className="flex items-start gap-3 cursor-pointer">
+                                    <div className="flex items-start gap-3">
                                         <input
+                                            id="terms_accepted"
                                             type="checkbox"
-                                            name="terms"
-                                            checked={data.terms}
-                                            onChange={(e) => setData('terms', e.target.checked)}
-                                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 transition"
+                                            checked={data.terms_accepted}
+                                            onChange={(e) => {
+                                                setData('terms_accepted', e.target.checked);
+                                                setTermsError('');
+                                            }}
+                                            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
-                                        <span className="text-sm text-gray-600">
-                                            I agree to the{' '}
+                                        <label htmlFor="terms_accepted" className="text-sm text-gray-600">
+                                            I have read and agree to the{' '}
                                             <a
-                                                href={route('terms')}
+                                                href="/terms"
                                                 target="_blank"
-                                                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+                                                rel="noopener noreferrer"
+                                                className="font-medium text-indigo-600 hover:text-indigo-500 underline"
                                             >
                                                 Terms and Conditions
                                             </a>{' '}
                                             and{' '}
                                             <a
-                                                href={route('privacy-policy')}
+                                                href="/privacy"
                                                 target="_blank"
-                                                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+                                                rel="noopener noreferrer"
+                                                className="font-medium text-indigo-600 hover:text-indigo-500 underline"
                                             >
                                                 Privacy Policy
                                             </a>
-                                        </span>
-                                    </label>
-                                    {errors.terms && <p className="mt-1.5 text-sm text-red-600">{errors.terms}</p>}
+                                        </label>
+                                    </div>
+                                    {termsError && <p className="mt-1.5 text-sm text-red-600">{termsError}</p>}
                                 </div>
 
                                 {/* Submit */}
-                                <div className="animate-fade-in-up-delay-4">
+                                <div className="animate-fade-in-up-delay-3">
                                     <button
                                         type="submit"
-                                        disabled={processing || !allValid || !data.terms}
+                                        disabled={processing}
                                         className="btn-hover w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
                                     >
                                         {processing ? (
@@ -419,11 +467,11 @@ export default function Register() {
                                 </div>
                             </form>
 
-                            <div className="animate-fade-in-up-delay-4 mt-8 text-center">
+                            <div className="animate-fade-in-up-delay-3 mt-8 text-center">
                                 <p className="text-sm text-gray-500">
                                     Already have an account?{' '}
                                     <Link href={route('login')} className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
-                                        Log In
+                                        Sign In
                                     </Link>
                                 </p>
                             </div>

@@ -36,6 +36,7 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
+       
         try {
             // Clean up orphaned records from previous failed attempts.
             // This handles the case where auto-approval partially succeeded (User created
@@ -45,6 +46,7 @@ class RegisterController extends Controller
                 $this->cleanUpOrphanedRecords($email);
             }
 
+            try{
             $validatedData = $request->validate([
                 'first_name'  => 'required|string|max:255',
                 'last_name'   => 'required|string|max:255',
@@ -66,7 +68,15 @@ class RegisterController extends Controller
                 'email.unique' => 'This email is already registered or has a pending request.',
                 'terms.accepted' => 'You must agree to the Terms and Conditions.',
             ]));
-
+            }
+            catch(\Illuminate\Validation\ValidationException $e) {
+                // Log validation errors for debugging
+                Log::warning('Registration validation failed', [
+                    'errors' => $e->errors(),
+                    'input' => $request->except('password', 'password_confirmation'),
+                ]);
+                throw $e; // Let Laravel handle the response (422 with error messages)
+            }
             $isMoh = User::isMohEmail($validatedData['email']);
 
             // Create the account request
@@ -131,9 +141,6 @@ class RegisterController extends Controller
     }
 
     /**
-     * Clean up orphaned records from previous failed registration attempts.
-     *
-     * Handles two scenarios:
      * 1. Old rejected/pending account requests blocking the DB unique constraint
      * 2. Orphaned User + stuck account_request from a failed auto-approval
      *    (User was created but account_request never updated to 'approved')
