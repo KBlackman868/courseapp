@@ -128,32 +128,36 @@ class EmailVerificationController extends Controller
                     'Auto-approved: MOH staff email verified'
                 );
             } else {
-                // No admin exists yet — approve without a reviewer
-                $role = \App\Models\User::ROLE_MOH_STAFF;
+                // No admin exists yet — approve without a reviewer (wrapped in transaction)
+                $user = \Illuminate\Support\Facades\DB::transaction(function () use ($accountRequest) {
+                    $role = \App\Models\User::ROLE_MOH_STAFF;
 
-                $user = \App\Models\User::create([
-                    'first_name' => $accountRequest->first_name,
-                    'last_name' => $accountRequest->last_name,
-                    'email' => $accountRequest->email,
-                    'password' => $accountRequest->password,
-                    'department' => $accountRequest->department,
-                    'organization' => $accountRequest->organization,
-                    'user_type' => \App\Models\User::TYPE_INTERNAL,
-                    'account_status' => \App\Models\User::STATUS_ACTIVE,
-                    'email_verified_at' => $accountRequest->email_verified_at ?? now(),
-                    'verification_status' => 'verified',
-                    'auth_method' => 'local',
-                ]);
+                    $user = \App\Models\User::create([
+                        'first_name' => $accountRequest->first_name,
+                        'last_name' => $accountRequest->last_name,
+                        'email' => $accountRequest->email,
+                        'password' => $accountRequest->password,
+                        'department' => $accountRequest->department,
+                        'organization' => $accountRequest->organization,
+                        'user_type' => \App\Models\User::TYPE_INTERNAL,
+                        'account_status' => \App\Models\User::STATUS_ACTIVE,
+                        'email_verified_at' => $accountRequest->email_verified_at ?? now(),
+                        'verification_status' => 'verified',
+                        'auth_method' => 'local',
+                    ]);
 
-                $user->assignRole($role);
+                    $user->assignRole($role);
 
-                $accountRequest->update([
-                    'status' => AccountRequest::STATUS_APPROVED,
-                    'reviewed_by' => null,
-                    'reviewed_at' => now(),
-                    'admin_notes' => 'Auto-approved: MOH staff email verified (no admin user available)',
-                    'user_id' => $user->id,
-                ]);
+                    $accountRequest->update([
+                        'status' => AccountRequest::STATUS_APPROVED,
+                        'reviewed_by' => null,
+                        'reviewed_at' => now(),
+                        'admin_notes' => 'Auto-approved: MOH staff email verified (no admin user available)',
+                        'user_id' => $user->id,
+                    ]);
+
+                    return $user;
+                });
             }
 
             // Queue Moodle account creation

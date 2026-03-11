@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -198,35 +199,37 @@ class AccountRequest extends Model
      */
     public function approve(User $reviewer, ?string $notes = null): User
     {
-        $role = $this->isMohStaffRequest()
-            ? User::ROLE_MOH_STAFF
-            : User::ROLE_EXTERNAL_USER;
+        return DB::transaction(function () use ($reviewer, $notes) {
+            $role = $this->isMohStaffRequest()
+                ? User::ROLE_MOH_STAFF
+                : User::ROLE_EXTERNAL_USER;
 
-        $user = User::create([
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
-            'email' => $this->email,
-            'password' => $this->password, // Already hashed
-            'department' => $this->department,
-            'organization' => $this->organization,
-            'user_type' => $this->isMohStaffRequest() ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL,
-            'account_status' => User::STATUS_ACTIVE,
-            'email_verified_at' => $this->email_verified_at ?? now(),
-            'verification_status' => 'verified',
-            'auth_method' => 'local',
-        ]);
+            $user = User::create([
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name,
+                'email' => $this->email,
+                'password' => $this->password, // Already hashed
+                'department' => $this->department,
+                'organization' => $this->organization,
+                'user_type' => $this->isMohStaffRequest() ? User::TYPE_INTERNAL : User::TYPE_EXTERNAL,
+                'account_status' => User::STATUS_ACTIVE,
+                'email_verified_at' => $this->email_verified_at ?? now(),
+                'verification_status' => 'verified',
+                'auth_method' => 'local',
+            ]);
 
-        $user->assignRole($role);
+            $user->assignRole($role);
 
-        $this->update([
-            'status' => self::STATUS_APPROVED,
-            'reviewed_by' => $reviewer->id,
-            'reviewed_at' => now(),
-            'admin_notes' => $notes,
-            'user_id' => $user->id,
-        ]);
+            $this->update([
+                'status' => self::STATUS_APPROVED,
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'admin_notes' => $notes,
+                'user_id' => $user->id,
+            ]);
 
-        return $user;
+            return $user;
+        });
     }
 
     /**

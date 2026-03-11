@@ -36,6 +36,14 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
+        // Before validation, clean up orphaned records from previous failed attempts.
+        // This handles the case where auto-approval partially succeeded (User created
+        // but account_request stuck at email_verified due to missing transaction).
+        $email = $request->input('email');
+        if ($email) {
+            $this->cleanUpOrphanedRecords($email);
+        }
+
         $validatedData = $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
@@ -116,6 +124,47 @@ class RegisterController extends Controller
             return back()
                 ->withInput($request->except('password', 'password_confirmation'))
                 ->withErrors(['email' => 'Registration failed. Please try again.']);
+        }
+    }
+
+    /**
+     * Clean up orphaned records from previous failed registration attempts.
+     *
+     * Handles two scenarios:
+     * 1. Old rejected/pending account requests blocking the DB unique constraint
+     * 2. Orphaned User + stuck account_request from a failed auto-approval
+     *    (User was created but account_request never updated to 'approved')
+     */
+    private function cleanUpOrphanedRecords(string $email): void
+    {
+        // Delete old rejected or legacy pending account requests
+        AccountRequest::where('email', $email)
+            ->whereIn('status', [
+                AccountRequest::STATUS_REJECTED,
+                AccountRequest::STATUS_PENDING,
+            ])
+            ->delete();
+
+        // Check for orphaned state: account_request at email_verified but
+        // a User already exists (from a failed auto-approval transaction)
+        $stuckRequest = AccountRequest::where('email', $email)
+            ->where('status', AccountRequest::STATUS_EMAIL_VERIFIED)
+            ->first();
+
+        if ($stuckRequest) {
+            $orphanedUser = User::where('email', $email)->first();
+            if ($orphanedUser) {
+                // The previous auto-approval created a User but the account_request
+                // was never updated. Clean up both so the person can start fresh.
+                Log::warning('Cleaning up orphaned registration records', [
+                    'email' => $email,
+                    'user_id' => $orphanedUser->id,
+                    'account_request_id' => $stuckRequest->id,
+                ]);
+
+                $orphanedUser->forceDelete();
+                $stuckRequest->delete();
+            }
         }
     }
 
