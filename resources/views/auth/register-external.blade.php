@@ -250,7 +250,7 @@
               </svg>
             </div>
             <input type="password" name="password" id="password" required
-              placeholder="Password (minimum 12 characters)"
+              placeholder="Min. 12 characters"
               onkeyup="checkPasswordStrength()"
               class="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-300 @error('password') border-red-500 @enderror" />
             <button type="button" onclick="togglePassword('password')" class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -275,6 +275,18 @@
             <div class="w-full bg-gray-200 rounded-full h-1.5">
               <div id="strength-bar" class="h-1.5 rounded-full strength-bar" style="width: 0%"></div>
             </div>
+          </div>
+          <!-- Password Requirements Checklist -->
+          <div id="password-checklist" class="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 hidden">
+            <p class="mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Password Requirements</p>
+            <ul class="space-y-1">
+              <li id="req-length" class="flex items-center text-sm"><span class="mr-2 flex-shrink-0 text-red-500">&#10060;</span><span class="text-red-600">At least 12 characters <span id="req-length-count" class="text-gray-500"></span></span></li>
+              <li id="req-upper" class="flex items-center text-sm"><span class="mr-2 flex-shrink-0 text-red-500">&#10060;</span><span class="text-red-600">At least one uppercase letter (A-Z)</span></li>
+              <li id="req-lower" class="flex items-center text-sm"><span class="mr-2 flex-shrink-0 text-red-500">&#10060;</span><span class="text-red-600">At least one lowercase letter (a-z)</span></li>
+              <li id="req-digit" class="flex items-center text-sm"><span class="mr-2 flex-shrink-0 text-red-500">&#10060;</span><span class="text-red-600">At least one number (0-9)</span></li>
+              <li id="req-special" class="flex items-center text-sm"><span class="mr-2 flex-shrink-0 text-red-500">&#10060;</span><span class="text-red-600">At least one special character (! @ # $ % ^ & *)</span></li>
+              <li id="req-forbidden" class="flex items-center text-sm"><span class="mr-2 flex-shrink-0 text-green-600">&#9989;</span><span class="text-green-700">Does not contain \ ~ &lt; &gt;</span></li>
+            </ul>
           </div>
         </div>
 
@@ -419,6 +431,46 @@
         strengthBar.className = 'h-1.5 rounded-full bg-green-500 strength-bar';
         strengthText.textContent = 'Strong';
         strengthText.className = 'font-semibold text-green-500';
+      }
+
+      updatePasswordChecklist(password);
+    }
+
+    function updatePasswordChecklist(password) {
+      const checklist = document.getElementById('password-checklist');
+      if (!password) { checklist.classList.add('hidden'); return; }
+      checklist.classList.remove('hidden');
+
+      const checks = {
+        length: password.length >= 12,
+        upper: /[A-Z]/.test(password),
+        lower: /[a-z]/.test(password),
+        digit: /[0-9]/.test(password),
+        special: /[!@#$%^&*()\-_=+\[\]{}|;:'",.?\/]/.test(password),
+        forbidden: !/[\\~<>]/.test(password),
+      };
+
+      Object.keys(checks).forEach(function(key) {
+        const li = document.getElementById('req-' + key);
+        const icon = li.querySelector('span:first-child');
+        const text = li.querySelector('span:last-child');
+        if (checks[key]) {
+          icon.textContent = '\u2705';
+          icon.className = 'mr-2 flex-shrink-0 text-green-600';
+          text.className = 'text-green-700';
+        } else {
+          icon.textContent = '\u274C';
+          icon.className = 'mr-2 flex-shrink-0 text-red-500';
+          text.className = 'text-red-600';
+        }
+      });
+
+      const countSpan = document.getElementById('req-length-count');
+      if (!checks.length) {
+        countSpan.textContent = '(' + password.length + '/12)';
+        countSpan.className = 'text-gray-500';
+      } else {
+        countSpan.textContent = '';
       }
     }
 

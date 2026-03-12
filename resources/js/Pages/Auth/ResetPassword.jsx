@@ -162,7 +162,7 @@ export default function ResetPassword({ token, email }) {
                                             autoFocus
                                             onChange={(e) => setData('password', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                            placeholder="Enter your new password"
+                                            placeholder="Min. 12 characters"
                                         />
                                         <button
                                             type="button"

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
+import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
 
 const css = `
 @keyframes gradientShift {
@@ -92,6 +93,7 @@ export default function Register() {
     const [termsError, setTermsError] = useState('');
 
     const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
+    const { allValid } = usePasswordValidation(data.password, data.first_name, data.last_name, data.email);
 
     const maxDate = useMemo(() => {
         const d = new Date();
@@ -328,7 +330,7 @@ export default function Register() {
                                             minLength={12}
                                             onChange={(e) => setData('password', e.target.value)}
                                             className="input-focus-glow w-full rounded-lg border border-gray-300 px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 transition-all duration-200 outline-none"
-                                            placeholder="Min. 14 characters"
+                                            placeholder="Min. 12 characters"
                                         />
                                         <button
                                             type="button"
@@ -372,6 +374,7 @@ export default function Register() {
                                         </div>
                                     )}
                                     {errors.password && <p className="mt-1.5 text-sm text-red-600">{errors.password}</p>}
+                                    <PasswordChecklist password={data.password} firstName={data.first_name} lastName={data.last_name} email={data.email} />
                                 </div>
 
                                 {/* Confirm Password */}
@@ -453,7 +456,7 @@ export default function Register() {
                                 <div className="animate-fade-in-up-delay-3">
                                     <button
                                         type="submit"
-                                        disabled={processing}
+                                        disabled={processing || !allValid}
                                         className="btn-hover w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
                                     >
                                         {processing ? (

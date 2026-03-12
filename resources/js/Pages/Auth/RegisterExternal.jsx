@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import PasswordChecklist, { usePasswordValidation } from '@/Components/PasswordChecklist';
 
 export default function RegisterExternal() {
     const form = useForm({
@@ -10,6 +11,8 @@ export default function RegisterExternal() {
         password: '',
         password_confirmation: '',
     });
+
+    const { allValid } = usePasswordValidation(form.data.password, form.data.first_name, form.data.last_name, form.data.email);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -59,9 +62,10 @@ export default function RegisterExternal() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Password (min 12 characters)</label>
-                            <input type="password" value={form.data.password} onChange={(e) => form.setData('password', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                            <label className="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" value={form.data.password} onChange={(e) => form.setData('password', e.target.value)} placeholder="Min. 12 characters" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                             {form.errors.password && <p className="mt-1 text-sm text-red-600">{form.errors.password}</p>}
+                            <PasswordChecklist password={form.data.password} firstName={form.data.first_name} lastName={form.data.last_name} email={form.data.email} />
                         </div>
 
                         <div>
@@ -69,7 +73,7 @@ export default function RegisterExternal() {
                             <input type="password" value={form.data.password_confirmation} onChange={(e) => form.setData('password_confirmation', e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                         </div>
 
-                        <button type="submit" disabled={form.processing} className="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50">
+                        <button type="submit" disabled={form.processing || !allValid} className="w-full rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50">
                             {form.processing ? 'Registering...' : 'Create Account'}
                         </button>
                     </form>
