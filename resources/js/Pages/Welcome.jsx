@@ -408,7 +408,7 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
                                     </svg>
                                 </div>
-                                <h3 className="mb-2 text-xl font-semibold text-gray-900">iTECH</h3>
+                                <h3 className="mb-2 text-xl font-semibold text-gray-900">i-TECH</h3>
                                 <p className="text-sm text-gray-600">
                                     International Training and Education Center for Health - providing technical assistance and training solutions.
                                 </p>
@@ -423,7 +423,7 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold text-gray-900">HACU</h3>
                                 <p className="text-sm text-gray-600">
-                                    Health Accounts Coordinating Unit - supporting workforce development and healthcare capacity building.
+                                    HIV /AIDS Coordinating Unit - lead the Ministry of Health'S response in reducing the incidence of HIV infections in Trinidad and Tobago.
                                 </p>
                             </div>
 
@@ -483,7 +483,7 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                                     </svg>
                                 </div>
                                 <h3 className="mb-2 text-lg font-semibold text-white">Phone</h3>
-                                <p className="text-gray-400">1-868-XXX-XXXX</p>
+                                <p className="text-gray-400">1-868-217-4664</p>
                             </div>
 
                             {/* Location */}
