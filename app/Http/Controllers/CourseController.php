@@ -624,16 +624,17 @@ class CourseController extends Controller
             $validated['status'] = $validated['is_active'] ? 'active' : 'inactive';
         }
 
-        // Normalize audience_type to uppercase constants
+        // Normalize audience_type to DB values: CHECK constraint allows 'moh', 'external', 'all'
         if (isset($validated['audience_type'])) {
             $audienceMap = [
-                'all' => 'BOTH', 'moh' => 'MOH_ONLY', 'external' => 'EXTERNAL_ONLY',
-                'moh_only' => 'MOH_ONLY', 'external_only' => 'EXTERNAL_ONLY',
+                'moh_only' => 'moh', 'MOH_ONLY' => 'moh',
+                'external_only' => 'external', 'EXTERNAL_ONLY' => 'external',
+                'BOTH' => 'all', 'both' => 'all',
             ];
-            $validated['audience_type'] = $audienceMap[strtolower($validated['audience_type'])] ?? $validated['audience_type'];
+            $validated['audience_type'] = $audienceMap[$validated['audience_type']] ?? $validated['audience_type'];
         }
 
-        // Normalize enrollment_type to uppercase constants
+        // Normalize enrollment_type to DB values: enum allows 'OPEN_ENROLLMENT', 'APPROVAL_REQUIRED'
         if (isset($validated['enrollment_type'])) {
             $enrollmentMap = [
                 'open' => 'OPEN_ENROLLMENT', 'requires_approval' => 'APPROVAL_REQUIRED',
