@@ -306,7 +306,7 @@ export default function CoursesIndex({ courses, stats = {} }) {
                                                         View
                                                     </Link>
                                                     <Link
-                                                        href={`/admin/courses/${course.id}/edit`}
+                                                        href={`/admin/courses/${course.id}`}
                                                         className="inline-flex items-center rounded-md bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
                                                     >
                                                         Edit

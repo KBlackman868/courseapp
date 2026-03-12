@@ -604,18 +604,42 @@ class CourseController extends Controller
         $validated = $request->validate([
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
-            'status'      => 'required|string|max:255',
+            'status'      => 'nullable|string|max:255',
+            'is_active'   => 'nullable|string|in:0,1',
             'image'       => 'nullable|image|max:2048',
             // Access control
-            'audience_type' => 'nullable|string|in:moh,external,all,MOH_ONLY,EXTERNAL_ONLY,BOTH',
+            'audience_type' => 'nullable|string|in:moh,external,all,moh_only,external_only,MOH_ONLY,EXTERNAL_ONLY,BOTH',
+            'enrollment_type' => 'nullable|string|in:open,requires_approval,OPEN_ENROLLMENT,APPROVAL_REQUIRED',
             'is_free'       => 'nullable|boolean',
             'sync_to_moodle' => 'nullable|boolean',
             'moodle_course_shortname' => 'nullable|string|max:255|unique:courses,moodle_course_shortname,' . $id,
             'moodle_category_id' => 'nullable|integer',
         ]);
 
-        // Derive is_active from status
-        $validated['is_active'] = ($validated['status'] === 'active');
+        // Derive is_active from status or is_active field
+        if (isset($validated['status'])) {
+            $validated['is_active'] = ($validated['status'] === 'active');
+        } elseif (isset($validated['is_active'])) {
+            $validated['is_active'] = (bool) $validated['is_active'];
+            $validated['status'] = $validated['is_active'] ? 'active' : 'inactive';
+        }
+
+        // Normalize audience_type to uppercase constants
+        if (isset($validated['audience_type'])) {
+            $audienceMap = [
+                'all' => 'BOTH', 'moh' => 'MOH_ONLY', 'external' => 'EXTERNAL_ONLY',
+                'moh_only' => 'MOH_ONLY', 'external_only' => 'EXTERNAL_ONLY',
+            ];
+            $validated['audience_type'] = $audienceMap[strtolower($validated['audience_type'])] ?? $validated['audience_type'];
+        }
+
+        // Normalize enrollment_type to uppercase constants
+        if (isset($validated['enrollment_type'])) {
+            $enrollmentMap = [
+                'open' => 'OPEN_ENROLLMENT', 'requires_approval' => 'APPROVAL_REQUIRED',
+            ];
+            $validated['enrollment_type'] = $enrollmentMap[strtolower($validated['enrollment_type'])] ?? $validated['enrollment_type'];
+        }
 
         // Store old values for logging
         $oldValues = $course->only(['title', 'description', 'status', 'audience_type', 'is_free', 'moodle_course_id']);
