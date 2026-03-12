@@ -42,7 +42,7 @@ export default function CourseShow({ course }) {
         title: course.title || '',
         description: course.description || '',
         is_active: course.is_active ? '1' : '0',
-        audience_type: course.audience_type || 'BOTH',
+        audience_type: course.audience_type || 'all',
         enrollment_type: course.enrollment_type || 'OPEN_ENROLLMENT',
     });
 
@@ -231,9 +231,9 @@ export default function CourseShow({ course }) {
                                         onChange={(e) => form.setData('audience_type', e.target.value)}
                                         className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     >
-                                        <option value="BOTH">All Users</option>
-                                        <option value="MOH_ONLY">MOH Staff Only</option>
-                                        <option value="EXTERNAL_ONLY">External Users Only</option>
+                                        <option value="all">All Users</option>
+                                        <option value="moh">MOH Staff Only</option>
+                                        <option value="external">External Users Only</option>
                                     </select>
                                 </div>
                                 <div>
