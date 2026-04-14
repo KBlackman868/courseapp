@@ -16,7 +16,8 @@ use App\Http\Controllers\Auth\{
     RegisterController,
     ForgotPasswordController,
     ResetPasswordController,
-    EmailVerificationController
+    EmailVerificationController,
+    MoodleSSOController
 };
 use App\Http\Controllers\Admin\{
     RoleManagementController,
@@ -73,35 +74,27 @@ Route::get('/privacy', fn() => Inertia::render('Legal/Privacy'))->name('privacy'
 Route::get('/terms-and-conditions', fn() => redirect('/terms'));
 Route::get('/privacy-policy', fn() => redirect('/privacy'))->name('privacy-policy');
 
-// SSO to Moodle Dashboard (for navigation link)
-Route::get('/moodle/sso', function () {
-    $user = auth()->user();
-    if (!$user) {
-        return redirect()->route('login');
-    }
+/*
+|==========================================================================
+| MOODLE SSO ROUTES
+|==========================================================================
+| These handle SSO for both desktop and Moodle mobile app.
+|
+| /moodle/sso/login — Entry point for Moodle's $CFG->alternateloginurl.
+|   Both desktop browsers going to learnabouthealth directly and the
+|   Moodle mobile app (with "login via browser") are redirected here.
+|   No auth middleware — unauthenticated users see the login page first,
+|   then get redirected back here after authenticating.
+|
+| /moodle/sso — Legacy route for the in-app "Go to Moodle" nav link.
+|   Requires auth since the user is already logged into mohlearn.
+*/
+Route::get('/moodle/sso/login', [MoodleSSOController::class, 'login'])
+    ->name('moodle.sso.login');
 
-    $moodleService = app(\App\Services\MoodleService::class);
-    $username = $user->username ?? explode('@', $user->email)[0];
-
-    $userData = [
-        'username' => $username,
-        'email' => $user->email,
-        'firstname' => $user->first_name ?? 'User',
-        'lastname' => $user->last_name ?? 'User',
-    ];
-
-    // Generate SSO URL to Moodle dashboard
-    $dashboardUrl = config('moodle.base_url') . '/my/';
-    $loginUrl = $moodleService->generateLoginUrl($userData, $dashboardUrl);
-
-    if ($loginUrl) {
-        return redirect()->away($loginUrl);
-    }
-
-    // Don't redirect to Moodle without SSO — user would land as a guest.
-    return redirect()->route('dashboard')
-        ->with('error', 'Could not log you into Moodle automatically. The SSO login plugin (auth_userkey) may need to be configured by a Moodle administrator.');
-})->middleware('auth')->name('moodle.sso');
+Route::get('/moodle/sso', [MoodleSSOController::class, 'login'])
+    ->middleware('auth')
+    ->name('moodle.sso');
 
 /*
 |==========================================================================
