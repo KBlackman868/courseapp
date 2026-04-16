@@ -480,6 +480,20 @@ export default function Register() {
                                     <Link href={route('login')} className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
                                         Sign In
                                     </Link>
+                                    <span className="mx-2 text-gray-300">|</span>
+                                    <Link href={route('faq')} className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                                        </svg>
+                                        FAQ / Help
+                                    </Link>
+                                </p>
+                                <p className="mt-3 text-xs text-gray-400">
+                                    Need guidance? Our{' '}
+                                    <Link href={route('faq')} className="underline hover:text-indigo-600">
+                                        FAQ guide
+                                    </Link>{' '}
+                                    explains registration, course access, and more.
                                 </p>
                             </div>
                         </div>

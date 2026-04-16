@@ -92,6 +92,16 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                                         >
                                             Register
                                         </Link>
+                                        <Link
+                                            href="/faq"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-white/30 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                                            aria-label="Frequently Asked Questions"
+                                        >
+                                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                                            </svg>
+                                            FAQ
+                                        </Link>
                                     </>
                                 )}
                             </div>
@@ -518,6 +528,12 @@ export default function Welcome({ isAuthenticated, user, enrolledCourses, featur
                             </div>
 
                             <div className="flex items-center space-x-6">
+                                <Link
+                                    href="/faq"
+                                    className="text-sm text-gray-500 transition hover:text-gray-700"
+                                >
+                                    Help &amp; FAQ
+                                </Link>
                                 <Link
                                     href="/terms"
                                     className="text-sm text-gray-500 transition hover:text-gray-700"

@@ -74,6 +74,10 @@ Route::get('/privacy', fn() => Inertia::render('Legal/Privacy'))->name('privacy'
 Route::get('/terms-and-conditions', fn() => redirect('/terms'));
 Route::get('/privacy-policy', fn() => redirect('/privacy'))->name('privacy-policy');
 
+// Help / FAQ (Public)
+Route::get('/faq', fn() => Inertia::render('Help/Faq'))->name('faq');
+Route::get('/help', fn() => redirect()->route('faq'));
+
 /*
 |==========================================================================
 | MOODLE SSO ROUTES
@@ -332,9 +336,11 @@ Route::middleware('auth')->group(function () {
         Route::prefix('profile')->name('profile.')->controller(ProfileController::class)->group(function () {
             Route::get('/', 'show')->name('show');
             Route::get('/settings', 'settings')->name('settings');
+            Route::get('/change-password', 'changePassword')->name('change-password');
             Route::post('/photo', 'updatePhoto')->name('photo');
             Route::post('/password', 'updatePassword')->name('password');
             Route::delete('/', 'destroy')->name('destroy');
+            Route::get('/{user}/photo', 'servePhoto')->name('serve-photo');
         });
 
         // =========================================================================
@@ -555,6 +561,8 @@ Route::middleware('auth')->group(function () {
                         Route::controller(MoodleCourseImportController::class)->group(function () {
                             Route::get('/import', 'index')->name('import');
                             Route::post('/import/file', 'importFromFile')->name('import.file');
+                            Route::get('/fetch', 'fetchMoodleCourses')->name('fetch');
+                            Route::post('/sync-selected', 'syncSelected')->name('syncSelected');
                             Route::post('/sync', 'syncFromMoodle')->name('sync');
                             Route::get('/export', 'exportFromMoodle')->name('export');
                         });
