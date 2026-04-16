@@ -315,6 +315,12 @@ Route::middleware('auth')->group(function () {
         // My Learning (Enrolled courses with progress)
         Route::get('/my-learning', [EnrollmentController::class, 'myLearning'])->name('my-learning.index');
 
+        // Import this user's existing Moodle enrollments into the local registrations table.
+        // Rate limited — each click calls the Moodle API.
+        Route::post('/my-learning/import-moodle', [EnrollmentController::class, 'importFromMoodle'])
+            ->middleware('throttle:3,1')
+            ->name('my-learning.import-moodle');
+
         // My Requests (Course access requests history)
         Route::get('/my-requests', [CourseAccessRequestController::class, 'userRequests'])->name('my-requests.index');
 

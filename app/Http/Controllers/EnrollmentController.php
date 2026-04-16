@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Notifications\NewCourseEnrollmentNotification;
 use App\Services\EmailNotificationService;
 use App\Services\MoodleClient;
+use App\Services\MoodleCourseSync;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -666,6 +667,102 @@ class EnrollmentController extends Controller
             'status' => $status,
             'search' => $search,
         ]);
+    }
+
+    /**
+     * Import the authenticated user's existing Moodle enrollments into the local DB.
+     *
+     * Identity is resolved server-side via auth()->user()->moodle_user_id — the
+     * client never passes a moodle user id. If the user has not been linked to
+     * Moodle yet, we dispatch the link job and ask them to retry.
+     */
+    public function importFromMoodle(Request $request, MoodleCourseSync $moodleCourseSync)
+    {
+        $user = Auth::user();
+
+        if (!$this->moodleClient) {
+            return redirect()->back()->with('error', 'Moodle integration is not configured.');
+        }
+
+        // Not linked yet — kick off the link job and tell the user to retry.
+        if (!$user->moodle_user_id) {
+            try {
+                CreateOrLinkMoodleUser::dispatch($user);
+            } catch (\Throwable $e) {
+                Log::error('Failed to dispatch Moodle link job during import', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return redirect()->back()->with(
+                'info',
+                'We are linking your Moodle account. Please try again in a moment.'
+            );
+        }
+
+        try {
+            $stats = $moodleCourseSync->importUserEnrollments($user);
+        } catch (\Throwable $e) {
+            Log::error('Moodle enrollment import failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            ActivityLogger::log('moodle.enrollment_import_failed',
+                'User-initiated Moodle enrollment import failed',
+                null,
+                ['user_id' => $user->id, 'error' => $e->getMessage()],
+                'failed',
+                'error'
+            );
+
+            return redirect()->back()->with(
+                'error',
+                'Could not reach Moodle right now. Please try again later.'
+            );
+        }
+
+        ActivityLogger::logMoodle('enrollment_import_completed',
+            "User imported their Moodle enrollments",
+            null,
+            [
+                'user_id' => $user->id,
+                'imported' => $stats['imported'],
+                'already_enrolled' => $stats['already_enrolled'],
+                'skipped_unknown' => $stats['skipped_unknown'],
+                'skipped_audience' => $stats['skipped_audience'],
+            ]
+        );
+
+        if ($stats['imported'] === 0 && $stats['already_enrolled'] === 0
+            && $stats['skipped_unknown'] === 0 && $stats['skipped_audience'] === 0) {
+            return redirect()->back()->with(
+                'info',
+                'No Moodle enrollments were found for your account.'
+            );
+        }
+
+        $parts = [];
+        if ($stats['imported'] > 0) {
+            $parts[] = "{$stats['imported']} imported";
+        }
+        if ($stats['already_enrolled'] > 0) {
+            $parts[] = "{$stats['already_enrolled']} already linked";
+        }
+        if ($stats['skipped_unknown'] > 0) {
+            $parts[] = "{$stats['skipped_unknown']} Moodle course(s) not yet available here";
+        }
+        if ($stats['skipped_audience'] > 0) {
+            $parts[] = "{$stats['skipped_audience']} not available for your account type";
+        }
+
+        $summary = 'Moodle enrollment import complete: ' . implode(', ', $parts) . '.';
+
+        return redirect()->back()->with(
+            $stats['imported'] > 0 ? 'success' : 'info',
+            $summary
+        );
     }
 
     /**
