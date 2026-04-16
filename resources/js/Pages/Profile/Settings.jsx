@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { ProfileNav } from '@/Components/ui/profile-nav';
 
 function PasswordInput({ id, label, value, onChange, error, placeholder, autoComplete }) {
     const [show, setShow] = useState(false);
@@ -29,39 +30,6 @@ function PasswordInput({ id, label, value, onChange, error, placeholder, autoCom
     );
 }
 
-function PasswordStrength({ password }) {
-    const strength = useMemo(() => {
-        if (!password) return { score: 0, label: '', color: 'bg-gray-200' };
-        let score = 0;
-        if (password.length >= 8) score++;
-        if (password.length >= 12) score++;
-        if (password.length >= 14) score++;
-        if (/[A-Z]/.test(password)) score++;
-        if (/[0-9]/.test(password)) score++;
-        if (/[^A-Za-z0-9]/.test(password)) score++;
-
-        if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-500' };
-        if (score <= 3) return { score: 2, label: 'Fair', color: 'bg-yellow-500' };
-        if (score <= 4) return { score: 3, label: 'Good', color: 'bg-blue-500' };
-        return { score: 4, label: 'Strong', color: 'bg-green-500' };
-    }, [password]);
-
-    if (!password) return null;
-
-    return (
-        <div className="mt-2">
-            <div className="flex gap-1">
-                {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : 'bg-gray-200'}`} />
-                ))}
-            </div>
-            <p className={`mt-1 text-xs ${strength.score <= 1 ? 'text-red-600' : strength.score <= 2 ? 'text-yellow-600' : strength.score <= 3 ? 'text-blue-600' : 'text-green-600'}`}>
-                {strength.label}
-            </p>
-        </div>
-    );
-}
-
 export default function Settings({ user }) {
     const { flash } = usePage().props;
     const [confirmingDeletion, setConfirmingDeletion] = useState(false);
@@ -69,11 +37,6 @@ export default function Settings({ user }) {
     const [photoPreview, setPhotoPreview] = useState(null);
 
     const photoForm = useForm({ profile_photo: null });
-    const passwordForm = useForm({
-        current_password: '',
-        password: '',
-        password_confirmation: '',
-    });
     const deleteForm = useForm({ password: '' });
 
     const handlePhotoChange = (e) => {
@@ -96,17 +59,6 @@ export default function Settings({ user }) {
         });
     };
 
-    const handlePasswordSubmit = (e) => {
-        e.preventDefault();
-        passwordForm.post(route('profile.password'), {
-            onSuccess: () => {
-                passwordForm.reset();
-                setSuccessMessage('Password changed successfully.');
-                setTimeout(() => setSuccessMessage(''), 4000);
-            },
-        });
-    };
-
     const handleDeleteAccount = (e) => {
         e.preventDefault();
         deleteForm.delete(route('profile.destroy'), {
@@ -119,15 +71,16 @@ export default function Settings({ user }) {
 
     return (
         <>
-            <Head title="Settings" />
+            <Head title="Account Settings" />
 
             <div className="space-y-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
-                    <p className="mt-1 text-sm text-gray-500">Manage your profile photo, password, and account.</p>
+                    <p className="mt-1 text-sm text-gray-500">Manage your profile photo and account preferences.</p>
                 </div>
 
-                {/* Success Toast */}
+                <ProfileNav />
+
                 {(successMessage || flash?.success) && (
                     <div className="rounded-lg bg-green-50 border border-green-200 p-4">
                         <div className="flex items-center gap-3">
@@ -143,7 +96,7 @@ export default function Settings({ user }) {
                 <div className="rounded-lg bg-white shadow">
                     <div className="px-6 py-5 border-b border-gray-200">
                         <h3 className="text-base font-semibold text-gray-900">Profile Photo</h3>
-                        <p className="mt-1 text-sm text-gray-500">Upload a new profile picture. Max 2MB.</p>
+                        <p className="mt-1 text-sm text-gray-500">Upload a new profile picture. Accepted formats: JPG, PNG, GIF, WebP. Max 2MB.</p>
                     </div>
                     <form onSubmit={handlePhotoSubmit} className="px-6 py-5">
                         <div className="flex items-center gap-6">
@@ -151,7 +104,7 @@ export default function Settings({ user }) {
                             <div className="flex-1">
                                 <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/jpeg,image/png,image/gif,image/webp"
                                     onChange={handlePhotoChange}
                                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 file:cursor-pointer file:transition-colors"
                                 />
@@ -174,57 +127,40 @@ export default function Settings({ user }) {
                     </form>
                 </div>
 
-                {/* Change Password */}
+                {/* Profile Information */}
                 <div className="rounded-lg bg-white shadow">
                     <div className="px-6 py-5 border-b border-gray-200">
-                        <h3 className="text-base font-semibold text-gray-900">Change Password</h3>
-                        <p className="mt-1 text-sm text-gray-500">Ensure your account stays secure with a strong password. Minimum 12-14 characters required.</p>
+                        <h3 className="text-base font-semibold text-gray-900">Profile Information</h3>
+                        <p className="mt-1 text-sm text-gray-500">Your account details.</p>
                     </div>
-                    <form onSubmit={handlePasswordSubmit} className="px-6 py-5">
-                        <div className="max-w-lg space-y-4">
-                            <PasswordInput
-                                id="current_password"
-                                label="Current Password"
-                                value={passwordForm.data.current_password}
-                                onChange={(e) => passwordForm.setData('current_password', e.target.value)}
-                                error={passwordForm.errors.current_password}
-                                placeholder="Enter current password"
-                                autoComplete="current-password"
-                            />
+                    <div className="px-6 py-5">
+                        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <PasswordInput
-                                    id="new_password"
-                                    label="New Password"
-                                    value={passwordForm.data.password}
-                                    onChange={(e) => passwordForm.setData('password', e.target.value)}
-                                    error={passwordForm.errors.password}
-                                    placeholder="Min. 14 characters"
-                                    autoComplete="new-password"
-                                />
-                                <PasswordStrength password={passwordForm.data.password} />
+                                <dt className="text-sm font-medium text-gray-500">First Name</dt>
+                                <dd className="mt-1 text-sm text-gray-900">{user?.first_name || '-'}</dd>
                             </div>
-                            <PasswordInput
-                                id="password_confirmation"
-                                label="Confirm New Password"
-                                value={passwordForm.data.password_confirmation}
-                                onChange={(e) => passwordForm.setData('password_confirmation', e.target.value)}
-                                error={passwordForm.errors.password_confirmation}
-                                placeholder="Re-enter new password"
-                                autoComplete="new-password"
-                            />
-                        </div>
-                        <div className="mt-6 flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={passwordForm.processing}
-                                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-                            >
-                                {passwordForm.processing ? (
-                                    <><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Updating...</>
-                                ) : 'Update Password'}
-                            </button>
-                        </div>
-                    </form>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Last Name</dt>
+                                <dd className="mt-1 text-sm text-gray-900">{user?.last_name || '-'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Email</dt>
+                                <dd className="mt-1 text-sm text-gray-900">{user?.email || '-'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Department</dt>
+                                <dd className="mt-1 text-sm text-gray-900">{user?.department || '-'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Organization</dt>
+                                <dd className="mt-1 text-sm text-gray-900">{user?.organization || '-'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-sm font-medium text-gray-500">Account Type</dt>
+                                <dd className="mt-1 text-sm text-gray-900 capitalize">{user?.user_type || '-'}</dd>
+                            </div>
+                        </dl>
+                    </div>
                 </div>
 
                 {/* Delete Account */}

@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 const defaultTheme = require('tailwindcss/defaultTheme');
 const forms = require('@tailwindcss/forms');
 const daisyui = require('daisyui');
+const animate = require('tailwindcss-animate');
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -22,7 +23,7 @@ export default {
         },
     },
 
-    plugins: [forms({ strategy: 'class' }), daisyui],
+    plugins: [forms({ strategy: 'class' }), animate, daisyui],
 
     daisyui: {
         themes: ["light", "dark"],

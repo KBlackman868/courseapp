@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use App\Rules\PasswordRules;
+use App\Models\User;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,22 +38,38 @@ class ProfileController extends Controller
     public function updatePhoto(Request $request)
     {
         $request->validate([
-            'profile_photo' => 'required|image|max:2048',
+            'profile_photo' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
         ]);
-    
+
         $user = $request->user();
+
+        // Delete old photo if it exists
+        if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
+            Storage::disk('public')->delete($user->profile_photo);
+        }
+
         $file = $request->file('profile_photo');
         $ext  = $file->extension();
         $filename = $user->id . '.' . $ext;
-    
-        // will go to storage/app/public/avatars/{id}.{ext}
+
         $file->storeAs('avatars', $filename, 'public');
-    
-        // save *relative* path in DB
+
         $user->profile_photo = "avatars/{$filename}";
         $user->save();
-    
-        return back()->with('success','Profile photo updated.');
+
+        return back()->with('success', 'Profile photo updated.');
+    }
+
+    /**
+     * Serve a user's profile photo (avoids IIS symlink issues).
+     */
+    public function servePhoto(User $user)
+    {
+        if (!$user->profile_photo || !Storage::disk('public')->exists($user->profile_photo)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk('public')->path($user->profile_photo));
     }
    
 
@@ -81,6 +99,11 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Settings', [
             'user' => $request->user(),
         ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        return Inertia::render('Profile/ChangePassword');
     }
 
     public function edit(Request $request): Response

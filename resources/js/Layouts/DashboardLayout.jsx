@@ -69,7 +69,8 @@ export default function DashboardLayout({ children, header }) {
 
     const userDropdownItems = [
         { name: 'Your Profile', href: '/profile' },
-        { name: 'Change Password', href: '/profile/settings' },
+        { name: 'Settings', href: '/profile/settings' },
+        { name: 'Change Password', href: '/profile/change-password' },
     ];
 
     return (

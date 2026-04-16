@@ -80,24 +80,119 @@ class MoodleCourseImportController extends Controller
     }
     
     /**
-     * Sync courses directly from Moodle API
+     * Fetch available Moodle courses for selection (does not import).
+     */
+    public function fetchMoodleCourses()
+    {
+        try {
+            $moodleCourses = $this->syncService->fetchMoodleCourses();
+
+            $localMoodleIds = Course::whereNotNull('moodle_course_id')
+                ->pluck('moodle_course_id')
+                ->map(fn ($id) => (int) $id)
+                ->toArray();
+
+            $courses = [];
+            foreach ($moodleCourses as $mc) {
+                $courses[] = [
+                    'moodle_id'    => $mc['id'],
+                    'shortname'    => $mc['shortname'] ?? '',
+                    'fullname'     => $mc['fullname'] ?? 'Untitled',
+                    'category_id'  => $mc['categoryid'] ?? null,
+                    'visible'      => $mc['visible'] ?? 1,
+                    'summary'      => mb_substr(strip_tags($mc['summary'] ?? ''), 0, 200),
+                    'already_imported' => in_array((int) $mc['id'], $localMoodleIds),
+                ];
+            }
+
+            return response()->json([
+                'status'  => 'success',
+                'courses' => $courses,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Import only selected Moodle courses by their Moodle IDs.
+     */
+    public function syncSelected(Request $request)
+    {
+        $request->validate([
+            'moodle_ids'   => 'required|array|min:1',
+            'moodle_ids.*' => 'integer',
+        ]);
+
+        $selectedIds = $request->input('moodle_ids');
+
+        try {
+            $moodleCourses = $this->syncService->fetchMoodleCourses();
+
+            $stats = [
+                'total'   => 0,
+                'created' => 0,
+                'updated' => 0,
+                'failed'  => 0,
+                'errors'  => [],
+            ];
+
+            DB::beginTransaction();
+
+            foreach ($moodleCourses as $mc) {
+                if (!in_array((int) $mc['id'], $selectedIds)) {
+                    continue;
+                }
+
+                $stats['total']++;
+
+                try {
+                    $existed = Course::where('moodle_course_id', $mc['id'])->exists();
+                    $this->syncService->syncCourse($mc);
+                    $existed ? $stats['updated']++ : $stats['created']++;
+                } catch (\Exception $e) {
+                    $stats['failed']++;
+                    $stats['errors'][] = ($mc['fullname'] ?? "ID {$mc['id']}") . ': ' . $e->getMessage();
+                    Log::error('Failed to sync selected course', [
+                        'moodle_id' => $mc['id'],
+                        'error'     => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "Imported {$stats['created']} new, updated {$stats['updated']}.",
+                'stats'   => $stats,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Sync ALL courses from Moodle API (legacy).
      */
     public function syncFromMoodle(Request $request)
     {
-        $request->validate([
-            'category_id' => 'nullable|integer',
-            'sync_enrollments' => 'boolean',
-        ]);
-        
         try {
             $stats = $this->syncService->syncAllCourses();
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Sync completed',
                 'stats' => $stats
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',

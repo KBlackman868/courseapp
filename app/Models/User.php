@@ -550,11 +550,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return "{$this->first_name} {$this->last_name}";
     }
 
-    // Get profile photo URL accessor
+    // Get profile photo URL accessor — served via route for IIS compatibility
     public function getProfilePhotoUrlAttribute(): ?string
     {
         if ($this->profile_photo) {
-            return Storage::disk('public')->url($this->profile_photo);
+            return url("/profile/{$this->id}/photo");
         }
         return null;
     }

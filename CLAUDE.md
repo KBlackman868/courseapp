@@ -85,6 +85,34 @@ The `Enrollment` model maps to the `registrations` database table (`protected $t
 
 Configured in `config/moodle.php` with env vars `MOODLE_BASE_URL`, `MOODLE_TOKEN`, etc. `MoodleClient` handles API calls with retry logic. SSO uses `auth_userkey` plugin. Webhooks at `/api/v1/moodle/*` sync events bidirectionally.
 
+### Moodle Instance
+- **URL**: `https://learnabouthealth.hin.gov.tt` (Moodle 4.5.4+)
+- **mohlearn URL**: `https://mohlearn.hin.gov.tt`
+- **Moodle install path**: `C:\inetpub\wwwroot\` (same server, no subfolder)
+- **Moodle data path**: `C:\inetpub\moodledata`
+
+### SSO Architecture (Desktop + Mobile App)
+
+All access to Moodle is forced through mohlearn — no direct login on learnabouthealth.
+
+**Moodle-side config** (`config.php`):
+- `$CFG->alternateloginurl` → `https://mohlearn.hin.gov.tt/moodle/sso/login` (redirects login page to mohlearn)
+- `$CFG->logouturl` → `https://mohlearn.hin.gov.tt/logout` (logs out of both systems)
+- `$CFG->forcelogin = true` (no guest access)
+- Moodle `index.php` has a custom redirect for unauthenticated users to mohlearn (after `require_once('config.php')`)
+- Mobile authentication set to **"Via a browser window"** in Moodle admin
+
+**mohlearn-side routes**:
+- `/moodle/sso/login` — Entry point for Moodle's `alternateloginurl`. Handles both desktop and mobile app SSO. Controller: `MoodleSSOController`. No auth middleware — redirects to login if unauthenticated, then back to SSO flow after auth.
+- `/moodle/sso` — Legacy route for in-app "Go to Moodle" nav link (requires auth).
+- `/courses/{id}/access-moodle` — Course-specific SSO with enrollment verification (requires auth).
+
+**Desktop flow**: learnabouthealth → redirected to mohlearn login → authenticate → SSO back to Moodle
+**Mobile app flow**: Moodle app → opens browser → mohlearn login → authenticate → SSO → app receives token
+**In-app flow**: mohlearn dashboard → "Access Course" → enrollment check → SSO into specific course
+
+All Moodle users must have `auth=userkey`. The `CreateOrLinkMoodleUser` job enforces this automatically. Keep 1-2 admin accounts as `auth=manual` for emergency Moodle access via `learnabouthealth.hin.gov.tt/login/index.php?noredirect=1`.
+
 ## Environment
 
 Default database is SQLite. Session, cache, and queue all use database driver. See `.env.example` for full config. Docker deployment config in `docker-compose.yml` with MySQL, Redis, Nginx.
