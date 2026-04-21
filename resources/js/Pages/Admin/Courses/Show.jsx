@@ -195,7 +195,7 @@ export default function CourseShow({ course }) {
                                     type="text"
                                     value={form.data.title}
                                     onChange={(e) => form.setData('title', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 {form.errors.title && <p className="mt-1 text-sm text-red-600">{form.errors.title}</p>}
                             </div>
@@ -206,7 +206,7 @@ export default function CourseShow({ course }) {
                                     rows={4}
                                     value={form.data.description}
                                     onChange={(e) => form.setData('description', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 {form.errors.description && <p className="mt-1 text-sm text-red-600">{form.errors.description}</p>}
                             </div>
@@ -217,7 +217,7 @@ export default function CourseShow({ course }) {
                                         id="is_active"
                                         value={form.data.is_active}
                                         onChange={(e) => form.setData('is_active', e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                     >
                                         <option value="1">Active</option>
                                         <option value="0">Inactive</option>
@@ -229,7 +229,7 @@ export default function CourseShow({ course }) {
                                         id="audience_type"
                                         value={form.data.audience_type}
                                         onChange={(e) => form.setData('audience_type', e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                     >
                                         <option value="all">All Users</option>
                                         <option value="moh">MOH Staff Only</option>
@@ -242,7 +242,7 @@ export default function CourseShow({ course }) {
                                         id="enrollment_type"
                                         value={form.data.enrollment_type}
                                         onChange={(e) => form.setData('enrollment_type', e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                     >
                                         <option value="OPEN_ENROLLMENT">Open Enrollment</option>
                                         <option value="APPROVAL_REQUIRED">Requires Approval</option>

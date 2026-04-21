@@ -681,7 +681,7 @@ class EnrollmentController extends Controller
         $user = Auth::user();
 
         if (!$this->moodleClient) {
-            return redirect()->back()->with('error', 'Moodle integration is not configured.');
+            return redirect()->route('my-learning.index')->with('error', 'Moodle integration is not configured.');
         }
 
         // Not linked yet — kick off the link job and tell the user to retry.
@@ -695,7 +695,7 @@ class EnrollmentController extends Controller
                 ]);
             }
 
-            return redirect()->back()->with(
+            return redirect()->route('my-learning.index')->with(
                 'info',
                 'We are linking your Moodle account. Please try again in a moment.'
             );
@@ -717,7 +717,7 @@ class EnrollmentController extends Controller
                 'error'
             );
 
-            return redirect()->back()->with(
+            return redirect()->route('my-learning.index')->with(
                 'error',
                 'Could not reach Moodle right now. Please try again later.'
             );
@@ -737,7 +737,7 @@ class EnrollmentController extends Controller
 
         if ($stats['imported'] === 0 && $stats['already_enrolled'] === 0
             && $stats['skipped_unknown'] === 0 && $stats['skipped_audience'] === 0) {
-            return redirect()->back()->with(
+            return redirect()->route('my-learning.index')->with(
                 'info',
                 'No Moodle enrollments were found for your account.'
             );
@@ -759,7 +759,7 @@ class EnrollmentController extends Controller
 
         $summary = 'Moodle enrollment import complete: ' . implode(', ', $parts) . '.';
 
-        return redirect()->back()->with(
+        return redirect()->route('my-learning.index')->with(
             $stats['imported'] > 0 ? 'success' : 'info',
             $summary
         );

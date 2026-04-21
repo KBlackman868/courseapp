@@ -147,7 +147,7 @@ export default function Index({ courseCreators, stats = {}, potentialCreators = 
                             <select
                                 value={selectedUser}
                                 onChange={(e) => setSelectedUser(e.target.value)}
-                                className="block w-full max-w-md rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                className="block w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                             >
                                 <option value="">Select a user...</option>
                                 {potentialCreators.map((user) => (

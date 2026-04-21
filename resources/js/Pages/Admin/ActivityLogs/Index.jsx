@@ -243,7 +243,7 @@ export default function ActivityLogsIndex({
                                     id="user_id"
                                     value={filters.user_id}
                                     onChange={(e) => handleFilterChange('user_id', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 >
                                     <option value="">All Users</option>
                                     {users.map((user) => (
@@ -263,7 +263,7 @@ export default function ActivityLogsIndex({
                                     placeholder="e.g. login, create, delete"
                                     value={filters.action}
                                     onChange={(e) => handleFilterChange('action', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                             </div>
                             <div>
@@ -275,7 +275,7 @@ export default function ActivityLogsIndex({
                                     id="date_from"
                                     value={filters.date_from}
                                     onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                             </div>
                             <div>
@@ -287,7 +287,7 @@ export default function ActivityLogsIndex({
                                     id="date_to"
                                     value={filters.date_to}
                                     onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                             </div>
                             <div>
@@ -298,7 +298,7 @@ export default function ActivityLogsIndex({
                                     id="severity"
                                     value={filters.severity}
                                     onChange={(e) => handleFilterChange('severity', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                                 >
                                     <option value="">All Severities</option>
                                     <option value="info">Info</option>

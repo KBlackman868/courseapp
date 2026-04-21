@@ -9,7 +9,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 const appName = import.meta.env.VITE_APP_NAME || 'Learn About Health';
 
 const guestPages = ['Auth/Login', 'Auth/Register', 'Auth/ForgotPassword', 'Auth/ResetPassword', 'Auth/VerifyEmail', 'Auth/ConfirmPassword', 'Auth/RegisterExternal', 'Auth/OtpVerify', 'Auth/MohRequestAccount', 'Auth/MohRequestSubmitted', 'Auth/VerifyEmailOtp'];
-const noLayoutPages = ['Welcome', 'Dashboard/AccountPending', 'Policies/Terms', 'Policies/Privacy', 'Legal/Terms', 'Legal/Privacy', 'Error'];
+const noLayoutPages = ['Welcome', 'Dashboard/AccountPending', 'Policies/Terms', 'Policies/Privacy', 'Legal/Terms', 'Legal/Privacy', 'Help/Faq', 'Error'];
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

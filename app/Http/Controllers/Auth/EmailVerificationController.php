@@ -80,14 +80,9 @@ class EmailVerificationController extends Controller
 
         // External → show "pending admin approval" page
         try {
-            // Notify admins that an external user verified their email
-            SystemNotification::create([
-                'user_id' => null, // System notification — will be shown to admins
-                'title'   => 'New External User Awaiting Approval',
-                'message' => "External user {$accountRequest->full_name} ({$accountRequest->email}) has verified their email and is awaiting approval.",
-                'type'    => 'account_request',
-                'data'    => json_encode(['request_id' => $accountRequest->id]),
-            ]);
+            // Notify SuperAdmins and Course Admins that a new request is ready for review.
+            // Uses the per-admin fan-out so each one sees it in their own bell dropdown.
+            SystemNotification::notifyNewAccountRequest($accountRequest);
         } catch (\Exception $e) {
             Log::warning('Failed to create admin notification', ['error' => $e->getMessage()]);
         }
@@ -176,18 +171,7 @@ class EmailVerificationController extends Controller
                 Log::warning('Failed to send welcome email', ['error' => $e->getMessage()]);
             }
 
-            // Notify admins (informational)
-            try {
-                SystemNotification::create([
-                    'user_id' => null,
-                    'title'   => 'New MOH Staff Registered',
-                    'message' => "New MOH Staff member registered: {$user->first_name} {$user->last_name} ({$user->email}) — {$user->department}",
-                    'type'    => 'info',
-                    'data'    => json_encode(['user_id' => $user->id]),
-                ]);
-            } catch (\Exception $e) {
-                Log::warning('Failed to create admin notification', ['error' => $e->getMessage()]);
-            }
+            // (MOH staff auto-approved — no admin action required, so no admin notification.)
 
             try {
                 ActivityLogger::log(

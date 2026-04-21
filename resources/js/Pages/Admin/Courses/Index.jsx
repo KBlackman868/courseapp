@@ -203,7 +203,7 @@ export default function CoursesIndex({ courses, stats = {} }) {
                     <select
                         value={statusFilter}
                         onChange={handleStatusFilter}
-                        className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                     >
                         <option value="">All Status</option>
                         <option value="active">Active</option>

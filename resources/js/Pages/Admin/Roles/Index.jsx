@@ -193,7 +193,7 @@ export default function RolesIndex({ users, roles = [] }) {
                             <select
                                 value={bulkRole}
                                 onChange={(e) => setBulkRole(e.target.value)}
-                                className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                             >
                                 <option value="">Select role...</option>
                                 {roleList.map((role) => {
@@ -301,7 +301,7 @@ export default function RolesIndex({ users, roles = [] }) {
                                                         value={primaryRole || ''}
                                                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                                         disabled={processing === user.id}
-                                                        className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
                                                     >
                                                         <option value="" disabled>Select role...</option>
                                                         {roleList.map((role) => {
