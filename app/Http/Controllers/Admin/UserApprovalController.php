@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountApproved;
+use App\Mail\AccountRejected;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
@@ -86,8 +88,7 @@ class UserApprovalController extends Controller
                 'approved_by' => auth()->id(),
             ]);
 
-            // TODO: Send welcome email notification
-            // Mail::to($user->email)->send(new AccountApprovedEmail($user));
+            Mail::to($user->email)->queue(new AccountApproved($user));
 
             return back()->with('success', "Account for {$user->full_name} ({$user->email}) has been approved.");
 
@@ -136,9 +137,6 @@ class UserApprovalController extends Controller
                 'denied_by' => auth()->id(),
                 'reason' => $reason,
             ]);
-
-            // TODO: Send denial notification email
-            // Mail::to($user->email)->send(new AccountDeniedEmail($user, $reason));
 
             return back()->with('success', "Account for {$user->full_name} ({$user->email}) has been denied.");
 

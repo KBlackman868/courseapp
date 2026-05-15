@@ -114,8 +114,8 @@ Route::get('/moodle/sso', [MoodleSSOController::class, 'login'])
 */
 Route::controller(LoginController::class)->prefix('auth/otp')->name('auth.otp.')->group(function () {
     Route::get('/verify', 'showOtpForm')->name('verify');
-    Route::post('/verify', 'verifyOtp')->name('submit');
-    Route::post('/resend', 'resendOtp')->name('resend');
+    Route::post('/verify', 'verifyOtp')->name('submit')->middleware('throttle:5,1');
+    Route::post('/resend', 'resendOtp')->name('resend')->middleware('throttle:3,5');
 });
 
 Route::middleware('guest')->group(function () {

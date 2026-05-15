@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\CreateOrLinkMoodleUser;
+use App\Mail\NewAccountRequestAdminEmail;
 use App\Mail\WelcomeEmail;
 use App\Models\AccountRequest;
 use App\Models\SystemNotification;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -83,6 +85,16 @@ class EmailVerificationController extends Controller
             // Notify SuperAdmins and Course Admins that a new request is ready for review.
             // Uses the per-admin fan-out so each one sees it in their own bell dropdown.
             SystemNotification::notifyNewAccountRequest($accountRequest);
+
+            // Send email notification to all admins and course admins
+            $admins = User::where(function ($query) {
+                $query->whereHas('roles', fn ($q) => $q->where('name', User::ROLE_SUPERADMIN))
+                      ->orWhere(fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', User::ROLE_ADMIN))->where('is_course_admin', true));
+            })->get();
+
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->queue(new NewAccountRequestAdminEmail($accountRequest));
+            }
         } catch (\Exception $e) {
             Log::warning('Failed to create admin notification', ['error' => $e->getMessage()]);
         }

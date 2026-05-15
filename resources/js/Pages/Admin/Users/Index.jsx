@@ -1,5 +1,6 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
+import Modal from '@/Components/Modal';
 
 function RoleBadge({ role }) {
     const colors = {
@@ -28,98 +29,186 @@ function StatusBadge({ status, suspended }) {
 }
 
 function AddUserModal({ isOpen, onClose, roles = [] }) {
-    const [form, setForm] = useState({
-        first_name: '', last_name: '', email: '', role: 'moh_staff', date_of_birth: '',
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
+        first_name: '',
+        last_name: '',
+        email: '',
+        role: 'moh_staff',
+        date_of_birth: '',
     });
-    const [errors, setErrors] = useState({});
 
-    if (!isOpen) return null;
+    const roleList = Array.isArray(roles) ? roles : [];
 
-    const handleChange = (field, value) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-        if (errors[field]) setErrors((prev) => ({ ...prev, [field]: '' }));
+    const handleClose = () => {
+        reset();
+        clearErrors();
+        onClose();
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const errs = {};
-        if (!form.first_name.trim() || form.first_name.trim().length < 2) errs.first_name = 'First name is required (min 2 characters).';
-        if (!form.last_name.trim() || form.last_name.trim().length < 2) errs.last_name = 'Last name is required (min 2 characters).';
-        if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'A valid email address is required.';
-        if (!form.role) errs.role = 'Please select a role.';
-        if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-
-        router.post('/admin/users', {
-            first_name: form.first_name.trim(), last_name: form.last_name.trim(),
-            email: form.email.trim(), role: form.role, date_of_birth: form.date_of_birth || null,
-        }, {
+        post('/admin/users', {
             preserveState: true,
-            onSuccess: () => { setForm({ first_name: '', last_name: '', email: '', role: 'moh_staff', date_of_birth: '' }); setErrors({}); onClose(); },
-            onError: (serverErrors) => setErrors(serverErrors),
+            onSuccess: () => handleClose(),
         });
     };
 
-    const handleClose = () => { setForm({ first_name: '', last_name: '', email: '', role: 'moh_staff', date_of_birth: '' }); setErrors({}); onClose(); };
-    const roleList = Array.isArray(roles) ? roles : [];
-
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4">
-                <div className="fixed inset-0 bg-gray-500/75 transition-opacity" onClick={handleClose} />
-                <div className="relative w-full max-w-lg transform rounded-xl bg-white p-6 shadow-xl transition-all">
-                    <div className="mb-5">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
-                                <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">Add New User</h3>
-                                <p className="text-sm text-gray-500">Create a new user account with a temporary password.</p>
-                            </div>
+        <Modal show={isOpen} onClose={handleClose} maxWidth="lg">
+            <form onSubmit={handleSubmit} className="p-6">
+                <div className="mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
+                            <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Add New User</h3>
+                            <p className="text-sm text-gray-500">Create a new user account with a temporary password.</p>
                         </div>
                     </div>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                                <input type="text" value={form.first_name} onChange={(e) => handleChange('first_name', e.target.value)} className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="John" />
-                                {errors.first_name && <p className="mt-1 text-xs text-red-600">{errors.first_name}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                                <input type="text" value={form.last_name} onChange={(e) => handleChange('last_name', e.target.value)} className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Doe" />
-                                {errors.last_name && <p className="mt-1 text-xs text-red-600">{errors.last_name}</p>}
-                            </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input
+                            id="first_name"
+                            type="text"
+                            value={data.first_name}
+                            onChange={(e) => setData('first_name', e.target.value)}
+                            className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder="John"
+                            autoFocus
+                        />
+                        {errors.first_name && <p className="mt-1 text-xs text-red-600">{errors.first_name}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input
+                            id="last_name"
+                            type="text"
+                            value={data.last_name}
+                            onChange={(e) => setData('last_name', e.target.value)}
+                            className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder="Doe"
+                        />
+                        {errors.last_name && <p className="mt-1 text-xs text-red-600">{errors.last_name}</p>}
+                    </div>
+                </div>
+                <div className="mt-4">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input
+                        id="email"
+                        type="email"
+                        value={data.email}
+                        onChange={(e) => setData('email', e.target.value)}
+                        className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        placeholder="john.doe@example.com"
+                    />
+                    {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                </div>
+                <div className="mt-4">
+                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select
+                        id="role"
+                        value={data.role}
+                        onChange={(e) => setData('role', e.target.value)}
+                        className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    >
+                        {roleList.map((role) => (
+                            <option key={role} value={role}>
+                                {role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.role && <p className="mt-1 text-xs text-red-600">{errors.role}</p>}
+                </div>
+                <div className="mt-4">
+                    <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700 mb-1">
+                        Date of Birth <span className="text-gray-400">(Optional)</span>
+                    </label>
+                    <input
+                        id="date_of_birth"
+                        type="date"
+                        value={data.date_of_birth}
+                        onChange={(e) => setData('date_of_birth', e.target.value)}
+                        className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                    {errors.date_of_birth && <p className="mt-1 text-xs text-red-600">{errors.date_of_birth}</p>}
+                </div>
+
+                <div className="flex gap-3 justify-end pt-4 mt-6 border-t border-gray-100">
+                    <button type="button" onClick={handleClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" disabled={processing} className={`rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        {processing ? 'Creating...' : 'Create User'}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    );
+}
+
+function TempCredentialsModal({ credentials, onClose }) {
+    if (!credentials) return null;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(credentials.password);
+    };
+
+    return (
+        <Modal show={!!credentials} onClose={onClose} maxWidth="md">
+            <div className="p-6">
+                <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                        <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-900">User Created Successfully</h3>
+                        <p className="text-sm text-gray-500">Save these credentials now. The password will not be shown again.</p>
+                    </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <div>
+                        <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Email</p>
+                        <p className="mt-1 text-sm font-mono text-gray-900">{credentials.email}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Temporary Password</p>
+                        <div className="mt-1 flex items-center gap-2">
+                            <p className="text-sm font-mono text-gray-900">{credentials.password}</p>
+                            <button
+                                type="button"
+                                onClick={handleCopy}
+                                className="inline-flex items-center rounded bg-white px-2 py-1 text-xs text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+                            >
+                                Copy
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                            <input type="email" value={form.email} onChange={(e) => handleChange('email', e.target.value)} className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="john.doe@example.com" />
-                            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                            <select value={form.role} onChange={(e) => handleChange('role', e.target.value)} className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                {roleList.map((role) => (
-                                    <option key={role} value={role}>{role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
-                                ))}
-                            </select>
-                            {errors.role && <p className="mt-1 text-xs text-red-600">{errors.role}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth <span className="text-gray-400">(Optional)</span></label>
-                            <input type="date" value={form.date_of_birth} onChange={(e) => handleChange('date_of_birth', e.target.value)} className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                            {errors.date_of_birth && <p className="mt-1 text-xs text-red-600">{errors.date_of_birth}</p>}
-                        </div>
-                        <div className="flex gap-3 justify-end pt-2">
-                            <button type="button" onClick={handleClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Cancel</button>
-                            <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors">Create User</button>
-                        </div>
-                    </form>
+                    </div>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs text-amber-800">
+                        Please share these credentials securely with the user. They should change their password upon first login.
+                    </p>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:bg-gray-900"
+                    >
+                        Done
+                    </button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 }
 
@@ -129,6 +218,7 @@ export default function UsersIndex({ users, roles = [] }) {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [processing, setProcessing] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [tempCredentials, setTempCredentials] = useState(flash?.tempCredentials || null);
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -235,6 +325,7 @@ export default function UsersIndex({ users, roles = [] }) {
             <Head title="User Management" />
 
             <AddUserModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} roles={roleList} />
+            <TempCredentialsModal credentials={tempCredentials} onClose={() => setTempCredentials(null)} />
 
             <div className="space-y-6">
                 {/* Page Header */}

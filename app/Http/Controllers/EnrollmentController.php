@@ -76,10 +76,12 @@ class EnrollmentController extends Controller
             return redirect()->back()->with('error', 'You are already enrolled in this course.');
         }
 
-        // Determine enrollment status based on user type
-        // Internal MOH users are auto-approved, external users need approval
+        // Determine enrollment status based on user type and course enrollment type
+        // Internal MOH users are always auto-approved.
+        // External users are auto-approved on OPEN_ENROLLMENT courses,
+        // but need admin approval on APPROVAL_REQUIRED courses.
         $isInternal = $user->isInternal();
-        $initialStatus = $isInternal ? 'approved' : 'pending';
+        $initialStatus = ($isInternal || $course->isOpenEnrollment()) ? 'approved' : 'pending';
 
         // Create the enrollment record
         $enrollment = Enrollment::create([
@@ -88,15 +90,16 @@ class EnrollmentController extends Controller
             'status'    => $initialStatus,
         ]);
 
-        // Auto-approved internal users: sync to Moodle immediately
-        if ($isInternal && $initialStatus === 'approved') {
+        // Auto-approved users: sync to Moodle immediately
+        if ($initialStatus === 'approved') {
             ActivityLogger::logEnrollment('auto_approved', $enrollment,
-                "MOH staff auto-approved for enrollment in course: {$course->title}",
+                "User auto-approved for enrollment in course: {$course->title}",
                 [
                     'course_id' => $course->id,
                     'course_title' => $course->title,
                     'user_email' => $user->email,
-                    'user_type' => 'internal'
+                    'user_type' => $isInternal ? 'internal' : 'external',
+                    'enrollment_type' => $course->enrollment_type,
                 ]
             );
 

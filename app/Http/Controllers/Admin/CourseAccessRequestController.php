@@ -10,9 +10,11 @@ use App\Models\SystemNotification;
 use App\Services\ActivityLogger;
 use App\Jobs\CreateOrLinkMoodleUser;
 use App\Jobs\EnrollUserIntoMoodleCourse;
+use App\Mail\NewCourseAccessRequestAdminEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 /**
@@ -446,6 +448,7 @@ class CourseAccessRequestController extends Controller
                 ]);
 
                 SystemNotification::notifyNewCourseRequest($existingRequest);
+                $this->emailAdminsAboutCourseRequest($existingRequest);
 
                 return back()->with('success', 'Your access request has been resubmitted.');
             }
@@ -458,8 +461,9 @@ class CourseAccessRequestController extends Controller
             $validated['request_reason'] ?? null
         );
 
-        // Notify Course Admins
+        // Notify Course Admins (in-app + email)
         SystemNotification::notifyNewCourseRequest($accessRequest);
+        $this->emailAdminsAboutCourseRequest($accessRequest);
 
         // Log the action
         ActivityLogger::log(
@@ -474,5 +478,24 @@ class CourseAccessRequestController extends Controller
         );
 
         return back()->with('success', 'Your access request has been submitted. You will be notified once it is reviewed.');
+    }
+
+    /**
+     * Send email notification to all admins and course admins about a new course access request.
+     */
+    private function emailAdminsAboutCourseRequest(CourseAccessRequest $request): void
+    {
+        try {
+            $admins = User::where(function ($query) {
+                $query->whereHas('roles', fn ($q) => $q->where('name', User::ROLE_SUPERADMIN))
+                      ->orWhere(fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', User::ROLE_ADMIN))->where('is_course_admin', true));
+            })->get();
+
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->queue(new NewCourseAccessRequestAdminEmail($request));
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to send course access request admin email', ['error' => $e->getMessage()]);
+        }
     }
 }

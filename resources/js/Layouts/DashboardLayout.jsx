@@ -83,7 +83,16 @@ function NavBadge({ count, tone = 'indigo' }) {
 function NotificationsBell({ recent = [], unreadCount = 0 }) {
     const handleOpen = (notification, close) => {
         close();
-        router.post(`/notifications/${notification.id}/read`, {}, { preserveScroll: true, preserveState: false });
+        // Mark as read, then navigate to the notification's action URL
+        router.post(`/notifications/${notification.id}/read`, {}, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: () => {
+                if (notification.action_url) {
+                    router.visit(notification.action_url);
+                }
+            },
+        });
     };
 
     const markAllRead = (close) => {

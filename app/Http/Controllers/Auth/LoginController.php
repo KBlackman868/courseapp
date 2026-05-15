@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\LdapService;
 use App\Services\OtpService;
 use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
@@ -16,13 +15,11 @@ use Inertia\Inertia;
 class LoginController extends Controller
 {
     protected $redirectTo = '/dashboard';
-    
-    private LdapService $ldapService;
+
     private OtpService $otpService;
 
-    public function __construct(LdapService $ldapService, OtpService $otpService)
+    public function __construct(OtpService $otpService)
     {
-        $this->ldapService = $ldapService;
         $this->otpService = $otpService;
     }
 
@@ -55,68 +52,7 @@ class LoginController extends Controller
     }
 
     /**
-     * Handle internal (MOH) user login via LDAP
-     */
-    private function handleInternalLogin(Request $request, string $email, string $password)
-    {
-        // Extract username from email for LDAP lookup
-        $username = explode('@', $email)[0];
-
-        // Authenticate against LDAP
-        $ldapData = $this->ldapService->authenticate($username, $password);
-
-        if (!$ldapData) {
-            // Try with full email
-            $ldapData = $this->ldapService->authenticate($email, $password);
-        }
-
-        if (!$ldapData) {
-            Log::warning('LDAP authentication failed', ['email' => $email]);
-            
-            if (class_exists(ActivityLogger::class)) {
-                ActivityLogger::logAuth('ldap_login_failed', 'LDAP authentication failed', [
-                    'email' => $email,
-                    'ip_address' => $request->ip()
-                ], 'failed', 'warning');
-            }
-
-            return back()->withErrors([
-                'email' => 'Invalid credentials. Please check your MOH username and password.',
-            ])->withInput($request->only('email'));
-        }
-
-        // Find or create user from LDAP data
-        $user = $this->ldapService->findOrCreateUser($ldapData);
-
-        if (!$user) {
-            return back()->withErrors([
-                'email' => 'Unable to process your account. Please contact IT support.',
-            ])->withInput($request->only('email'));
-        }
-
-        // Check if user needs OTP verification
-        if ($this->otpService->needsOtpVerification($user)) {
-            return $this->initiateOtpVerification($user);
-        }
-
-        // Log the user in
-        Auth::login($user, $request->boolean('remember'));
-        $request->session()->regenerate();
-
-        if (class_exists(ActivityLogger::class)) {
-            ActivityLogger::logAuth('ldap_login', 'User logged in via LDAP', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'ip_address' => $request->ip()
-            ]);
-        }
-
-        return redirect()->intended($this->redirectTo)
-            ->with('success', "Welcome back, {$user->first_name}!");
-    }
-
-    /**
-     * Handle external user login (standard password auth)
+     * Handle user login (standard password auth)
      */
     private function handleExternalLogin(Request $request, string $email, string $password)
     {
@@ -266,11 +202,28 @@ class LoginController extends Controller
             ]);
         }
 
+        // Re-check suspension status before granting access (AC5: account may
+        // have been suspended during the OTP window)
+        if ($user->is_suspended ?? false) {
+            session()->forget('otp_user_id');
+
+            if (class_exists(ActivityLogger::class)) {
+                ActivityLogger::logAuth('login_blocked', 'Suspended user completed OTP but was blocked', [
+                    'user_id' => $user->id,
+                    'email'   => $user->email,
+                    'ip_address' => $request->ip(),
+                ], 'failed', 'warning');
+            }
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Your account has been suspended. Please contact support.']);
+        }
+
         // Clear session
         session()->forget('otp_user_id');
 
         // Log the user in
-        Auth::login($user, true);
+        Auth::login($user, $request->boolean('remember', false));
         $request->session()->regenerate();
 
         if (class_exists(ActivityLogger::class)) {

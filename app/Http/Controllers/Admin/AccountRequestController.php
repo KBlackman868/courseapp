@@ -9,9 +9,11 @@ use App\Models\SystemNotification;
 use App\Services\ActivityLogger;
 use App\Services\MoodleService;
 use App\Jobs\CreateOrLinkMoodleUser;
+use App\Mail\AccountApproved;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 /**
@@ -104,7 +106,10 @@ class AccountRequestController extends Controller
                 Log::warning('Failed to dispatch Moodle sync', ['error' => $e->getMessage()]);
             }
 
-            try { SystemNotification::notifyAccountApproved($user); } catch (\Exception $e) {
+            try {
+                SystemNotification::notifyAccountApproved($user);
+                Mail::to($user->email)->queue(new AccountApproved($user));
+            } catch (\Exception $e) {
                 Log::warning('Failed to send approval notification', ['error' => $e->getMessage()]);
             }
 

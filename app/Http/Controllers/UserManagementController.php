@@ -62,7 +62,11 @@ class UserManagementController extends Controller
         ]);
 
         return redirect()->route('admin.users.index')
-            ->with('success', "User {$user->first_name} {$user->last_name} created successfully. Temporary password: {$tempPassword}");
+            ->with('success', "User {$user->first_name} {$user->last_name} created successfully.")
+            ->with('tempCredentials', [
+                'email' => $user->email,
+                'password' => $tempPassword,
+            ]);
     }
 
     /**

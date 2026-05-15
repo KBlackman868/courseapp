@@ -43,7 +43,7 @@ php artisan optimize:clear     # Clear all caches
 ### Backend (Laravel)
 
 - **Controllers** are organized by domain: `Http/Controllers/Admin/`, `Http/Controllers/Auth/`, `Http/Controllers/API/V1/`
-- **Services** contain business logic: `MoodleService`, `MoodleClient`, `MoodleCourseSync`, `OtpService`, `LdapService`, `ActivityLogger`, `EmailNotificationService`
+- **Services** contain business logic: `MoodleService`, `MoodleClient`, `MoodleCourseSync`, `OtpService`, `ActivityLogger`, `EmailNotificationService`
 - **Jobs** handle async Moodle operations: `CreateMoodleUserWithPassword`, `EnrollUserIntoMoodleCourse`, `DeleteMoodleUser`, `CreateOrLinkMoodleUser`
 - **Policies** control authorization: `CoursePolicy`, `UserPolicy`, `AccountRequestPolicy`, `CourseAccessRequestPolicy`
 - **Middleware** chain: `Authenticate` → `CheckAccountStatus` → `CheckSuspended` → `EnsureOtpVerified` → `LogActivity`

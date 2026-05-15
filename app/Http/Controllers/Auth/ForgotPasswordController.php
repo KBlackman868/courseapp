@@ -20,16 +20,15 @@ class ForgotPasswordController extends Controller
 
     public function sendResetLinkEmail(Request $request)
     {
-        $request->validate(['email' => 'required|email|exists:users,email']);
+        $request->validate(['email' => 'required|email']);
 
-        // Send password reset link
-        $status = Password::sendResetLink($request->only('email'));
+        // Send password reset link (silently succeeds even if email not found)
+        Password::sendResetLink($request->only('email'));
 
         // Log the password reset attempt
         \Log::info('Password reset requested', ['email' => $request->email]);
 
-        return $status === Password::RESET_LINK_SENT
-            ? back()->with(['status' => 'We have emailed your password reset link! Please check your inbox.'])
-            : back()->withErrors(['email' => 'We couldn\'t find an account with that email address.']);
+        // Always return the same response to prevent account enumeration
+        return back()->with(['status' => 'If an account exists with that email, a password reset link has been sent. Please check your inbox.']);
     }
 }

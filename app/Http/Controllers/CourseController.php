@@ -208,18 +208,29 @@ class CourseController extends Controller
                 'button_text' => 'Enroll Now',
                 'button_style' => 'primary'
             ];
-        } else {
-            // External users: Show "Request Access" button.
-            // This submits a CourseAccessRequest for admin review.
+        }
+
+        // External users on OPEN_ENROLLMENT courses can enroll directly
+        if ($course->isOpenEnrollment()) {
             return [
-                'level' => 'request_access',
+                'level' => 'enroll',
                 'can_access_moodle' => false,
-                'message' => 'This course requires approval. Submit a request to get access.',
-                'action' => 'request_access',
-                'button_text' => 'Request Access',
-                'button_style' => 'secondary'
+                'message' => 'This course is open for enrollment.',
+                'action' => 'enroll_direct',
+                'button_text' => 'Enroll Now',
+                'button_style' => 'primary'
             ];
         }
+
+        // External users on APPROVAL_REQUIRED courses must request access
+        return [
+            'level' => 'request_access',
+            'can_access_moodle' => false,
+            'message' => 'This course requires approval. Submit a request to get access.',
+            'action' => 'request_access',
+            'button_text' => 'Request Access',
+            'button_style' => 'secondary'
+        ];
     }
 
     /**
