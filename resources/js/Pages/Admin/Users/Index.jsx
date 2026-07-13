@@ -1,6 +1,8 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState, useEffect, useMemo } from 'react';
 import Modal from '@/Components/Modal';
+import StyledSelect from '@/Components/UI/StyledSelect';
+import { ClientPagination } from '@/Components/UI/Pagination';
 
 function RoleBadge({ role }) {
     const colors = {
@@ -111,18 +113,18 @@ function AddUserModal({ isOpen, onClose, roles = [] }) {
                 </div>
                 <div className="mt-4">
                     <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                    <select
+                    <StyledSelect
                         id="role"
                         value={data.role}
                         onChange={(e) => setData('role', e.target.value)}
-                        className="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="w-full"
                     >
                         {roleList.map((role) => (
                             <option key={role} value={role}>
                                 {role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                             </option>
                         ))}
-                    </select>
+                    </StyledSelect>
                     {errors.role && <p className="mt-1 text-xs text-red-600">{errors.role}</p>}
                 </div>
                 <div className="mt-4">
@@ -222,11 +224,15 @@ export default function UsersIndex({ users, roles = [] }) {
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const perPage = 20;
 
     useEffect(() => {
-        const timer = setTimeout(() => setDebouncedSearch(search), 300);
+        const timer = setTimeout(() => { setDebouncedSearch(search); setCurrentPage(1); }, 300);
         return () => clearTimeout(timer);
     }, [search]);
+
+    useEffect(() => { setCurrentPage(1); }, [roleFilter, statusFilter]);
 
     const allUsers = Array.isArray(users) ? users : (users?.data || []);
 
@@ -256,13 +262,18 @@ export default function UsersIndex({ users, roles = [] }) {
         return list;
     }, [debouncedSearch, allUsers, roleFilter, statusFilter]);
 
-    const isAllSelected = filteredUsers.length > 0 && filteredUsers.every((u) => selectedUsers.includes(u.id));
+    const totalPages = Math.ceil(filteredUsers.length / perPage);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * perPage, currentPage * perPage);
+    const paginationFrom = filteredUsers.length === 0 ? 0 : (currentPage - 1) * perPage + 1;
+    const paginationTo = Math.min(currentPage * perPage, filteredUsers.length);
+
+    const isAllSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => selectedUsers.includes(u.id));
 
     const toggleSelectAll = () => {
         if (isAllSelected) {
-            setSelectedUsers([]);
+            setSelectedUsers((prev) => prev.filter((id) => !paginatedUsers.some((u) => u.id === id)));
         } else {
-            setSelectedUsers(filteredUsers.map((u) => u.id));
+            setSelectedUsers((prev) => [...new Set([...prev, ...paginatedUsers.map((u) => u.id)])]);
         }
     };
 
@@ -382,25 +393,23 @@ export default function UsersIndex({ users, roles = [] }) {
                             </button>
                         )}
                     </div>
-                    <select
+                    <StyledSelect
                         value={roleFilter}
                         onChange={(e) => setRoleFilter(e.target.value)}
-                        className="rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     >
                         <option value="">All Roles</option>
                         {roleList.map((role) => (
                             <option key={role} value={role}>{role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
                         ))}
-                    </select>
-                    <select
+                    </StyledSelect>
+                    <StyledSelect
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                     >
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
                         <option value="suspended">Suspended</option>
-                    </select>
+                    </StyledSelect>
                 </div>
 
                 {/* Bulk Actions Bar */}
@@ -463,7 +472,7 @@ export default function UsersIndex({ users, roles = [] }) {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredUsers.length === 0 ? (
+                                {paginatedUsers.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="px-6 py-12 text-center">
                                             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -481,7 +490,7 @@ export default function UsersIndex({ users, roles = [] }) {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredUsers.map((user) => {
+                                    paginatedUsers.map((user) => {
                                         const primaryRole = user.roles?.[0]?.name || null;
                                         const isActive = !user.is_suspended;
                                         const avatarUrl = user.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((user.first_name || '') + ' ' + (user.last_name || ''))}&background=6366f1&color=fff&size=40`;
@@ -507,11 +516,11 @@ export default function UsersIndex({ users, roles = [] }) {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.department || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <select
+                                                    <StyledSelect
                                                         value={primaryRole || ''}
                                                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                                         disabled={processing === user.id}
-                                                        className="rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                                        size="sm"
                                                     >
                                                         <option value="" disabled>Select role...</option>
                                                         {roleList.map((role) => (
@@ -519,7 +528,7 @@ export default function UsersIndex({ users, roles = [] }) {
                                                                 {role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                                                             </option>
                                                         ))}
-                                                    </select>
+                                                    </StyledSelect>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <StatusBadge suspended={user.is_suspended} />
@@ -573,12 +582,15 @@ export default function UsersIndex({ users, roles = [] }) {
                     </div>
                 </div>
 
-                {/* Show total count at bottom */}
-                {filteredUsers.length > 0 && (
-                    <p className="text-center text-xs text-gray-400">
-                        Showing {filteredUsers.length} of {allUsers.length} total users
-                    </p>
-                )}
+                {/* Pagination */}
+                <ClientPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    from={paginationFrom}
+                    to={paginationTo}
+                    total={filteredUsers.length}
+                />
             </div>
         </>
     );

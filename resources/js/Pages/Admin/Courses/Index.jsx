@@ -1,5 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useCallback } from 'react';
+import StyledSelect from '@/Components/UI/StyledSelect';
+import { ServerPagination } from '@/Components/UI/Pagination';
 
 function debounce(fn, delay) {
     let timer;
@@ -14,32 +16,6 @@ function StatusBadge({ active }) {
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
             {active ? 'Active' : 'Inactive'}
         </span>
-    );
-}
-
-function Pagination({ links }) {
-    if (!links || links.length <= 3) return null;
-
-    return (
-        <nav className="flex justify-center mt-6">
-            <div className="flex gap-1">
-                {links.map((link, i) => (
-                    <Link
-                        key={i}
-                        href={link.url || '#'}
-                        className={`rounded-md px-3 py-2 text-sm ${
-                            link.active
-                                ? 'bg-indigo-600 text-white'
-                                : link.url
-                                  ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`}
-                        dangerouslySetInnerHTML={{ __html: link.label }}
-                        preserveState
-                    />
-                ))}
-            </div>
-        </nav>
     );
 }
 
@@ -74,6 +50,8 @@ export default function CoursesIndex({ courses, stats = {} }) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [processing, setProcessing] = useState(null);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
 
     const debouncedSearch = useCallback(
         debounce((value) => {
@@ -110,6 +88,35 @@ export default function CoursesIndex({ courses, stats = {} }) {
         }
     };
 
+    const courseList = courses?.data || [];
+
+    const toggleSelect = (id) => {
+        setSelectedIds((prev) =>
+            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === courseList.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(courseList.map((c) => c.id));
+        }
+    };
+
+    const handleBulkDelete = () => {
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} course(s)? Courses with enrollments will be skipped. This action cannot be undone.`)) {
+            return;
+        }
+        setBulkDeleting(true);
+        router.delete('/admin/courses/bulk-delete', {
+            data: { course_ids: selectedIds },
+            preserveState: true,
+            onSuccess: () => setSelectedIds([]),
+            onFinish: () => setBulkDeleting(false),
+        });
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -118,8 +125,6 @@ export default function CoursesIndex({ courses, stats = {} }) {
             day: 'numeric',
         });
     };
-
-    const courseList = courses?.data || [];
 
     return (
         <>
@@ -200,18 +205,41 @@ export default function CoursesIndex({ courses, stats = {} }) {
                             className="block w-full rounded-lg border-gray-300 pl-10 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                         />
                     </div>
-                    <select
+                    <StyledSelect
                         value={statusFilter}
                         onChange={handleStatusFilter}
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-indigo-500"
                     >
                         <option value="">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="synced">Synced to Moodle</option>
                         <option value="not_synced">Not Synced</option>
-                    </select>
+                    </StyledSelect>
                 </div>
+
+                {/* Bulk Action Bar */}
+                {selectedIds.length > 0 && (
+                    <div className="flex items-center justify-between rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3">
+                        <span className="text-sm font-medium text-indigo-700">
+                            {selectedIds.length} course{selectedIds.length !== 1 ? 's' : ''} selected
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setSelectedIds([])}
+                                className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                            >
+                                Clear selection
+                            </button>
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={bulkDeleting}
+                                className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {bulkDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.length})`}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Courses Table */}
                 <div className="overflow-hidden rounded-lg bg-white shadow">
@@ -219,6 +247,14 @@ export default function CoursesIndex({ courses, stats = {} }) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th scope="col" className="w-12 px-4 py-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={courseList.length > 0 && selectedIds.length === courseList.length}
+                                            onChange={toggleSelectAll}
+                                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                    </th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Course Title
                                     </th>
@@ -242,7 +278,7 @@ export default function CoursesIndex({ courses, stats = {} }) {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {courseList.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
+                                        <td colSpan={7} className="px-6 py-12 text-center">
                                             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                                             </svg>
@@ -265,7 +301,15 @@ export default function CoursesIndex({ courses, stats = {} }) {
                                     </tr>
                                 ) : (
                                     courseList.map((course) => (
-                                        <tr key={course.id} className="hover:bg-gray-50 transition-colors">
+                                        <tr key={course.id} className={`transition-colors ${selectedIds.includes(course.id) ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
+                                            <td className="w-12 px-4 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(course.id)}
+                                                    onChange={() => toggleSelect(course.id)}
+                                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium text-gray-900">
                                                     {course.title}
@@ -329,7 +373,12 @@ export default function CoursesIndex({ courses, stats = {} }) {
                 </div>
 
                 {/* Pagination */}
-                <Pagination links={courses?.links} />
+                <ServerPagination
+                    links={courses?.links}
+                    from={courses?.from}
+                    to={courses?.to}
+                    total={courses?.total}
+                />
             </div>
         </>
     );

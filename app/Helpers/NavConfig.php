@@ -54,6 +54,9 @@ class NavConfig
         if ($user->hasRole('course_admin')) {
             return 'course_admin';
         }
+        if ($user->isMoodleEditor()) {
+            return 'moodle_editor';
+        }
         if ($user->isMohStaff()) {
             return 'moh_staff';
         }
@@ -94,6 +97,9 @@ class NavConfig
 
             case 'course_admin':
                 return array_merge($nav, self::getCourseAdminNav());
+
+            case 'moodle_editor':
+                return array_merge($nav, self::getMoodleEditorNav());
 
             case 'moh_staff':
             case 'external_user':
@@ -177,6 +183,17 @@ class NavConfig
                     ['label' => 'Legacy Enrollments', 'route' => 'admin.enrollments.index'],
                 ],
             ],
+            ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'bell', 'badge' => 'unread_notifications'],
+        ];
+    }
+
+    /**
+     * Moodle Editor navigation items (ITECH team)
+     * Minimal nav — just dashboard (with SSO button) and notifications
+     */
+    private static function getMoodleEditorNav(): array
+    {
+        return [
             ['label' => 'Notifications', 'route' => 'notifications.index', 'icon' => 'bell', 'badge' => 'unread_notifications'],
         ];
     }
@@ -271,6 +288,11 @@ class NavConfig
         // Admin, Course Admin → Admin Dashboard
         if ($user->isAdmin() || $user->hasRole('course_admin')) {
             return route('dashboard.admin');
+        }
+
+        // Moodle Editor → Moodle Editor Dashboard
+        if ($user->isMoodleEditor()) {
+            return route('dashboard.moodle-editor');
         }
 
         // MOH Staff, External User → Learner Dashboard

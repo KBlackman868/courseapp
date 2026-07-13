@@ -83,10 +83,22 @@ export default function Index({ notifications, filter = 'all', unreadCount = 0 }
     const { flash } = usePage().props;
 
     const handleMarkAsRead = (id) => {
-        router.post(`/notifications/${id}/mark-as-read`, {}, {
+        router.post(`/notifications/${id}/read`, {}, {
             preserveState: true,
             preserveScroll: true,
         });
+    };
+
+    const handleClick = (notification) => {
+        if (notification.action_url) {
+            // Mark as read and navigate — server redirects to action_url
+            router.post(`/notifications/${notification.id}/read`, {}, {
+                preserveScroll: false,
+                preserveState: false,
+            });
+        } else if (!notification.read_at) {
+            handleMarkAsRead(notification.id);
+        }
     };
 
     const handleMarkAllRead = () => {
@@ -177,9 +189,10 @@ export default function Index({ notifications, filter = 'all', unreadCount = 0 }
                         notifications.data.map((notification) => (
                             <div
                                 key={notification.id}
+                                onClick={() => handleClick(notification)}
                                 className={`rounded-lg bg-white p-4 shadow transition-colors ${
                                     !notification.read_at ? 'border-l-4 border-indigo-500' : ''
-                                }`}
+                                } ${notification.action_url ? 'cursor-pointer hover:bg-gray-50' : ''}`}
                             >
                                 <div className="flex items-start gap-4">
                                     <NotificationIcon type={notification.type} />
@@ -193,6 +206,11 @@ export default function Index({ notifications, filter = 'all', unreadCount = 0 }
                                                 <p className="mt-1 text-sm text-gray-500">
                                                     {notification.message || notification.data?.message || ''}
                                                 </p>
+                                                {notification.action_url && (
+                                                    <p className="mt-1.5 text-xs font-medium text-indigo-600">
+                                                        {notification.action_text || 'View details'} &rarr;
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 ml-4">
                                                 {!notification.read_at && (
@@ -207,14 +225,14 @@ export default function Index({ notifications, filter = 'all', unreadCount = 0 }
                                         <div className="mt-3 flex items-center gap-3">
                                             {!notification.read_at && (
                                                 <button
-                                                    onClick={() => handleMarkAsRead(notification.id)}
+                                                    onClick={(e) => { e.stopPropagation(); handleMarkAsRead(notification.id); }}
                                                     className="text-xs font-medium text-indigo-600 hover:text-indigo-500"
                                                 >
                                                     Mark as read
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => handleDelete(notification.id)}
+                                                onClick={(e) => { e.stopPropagation(); handleDelete(notification.id); }}
                                                 className="text-xs font-medium text-red-600 hover:text-red-500"
                                             >
                                                 Delete

@@ -16,19 +16,19 @@
             <td align="center">
                 <table cellpadding="0" cellspacing="0" border="0" style="width:100%;">
                     <tr>
-                        <td style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 100%);border-radius:12px;padding:28px;text-align:center;">
-                            <p style="color:rgba(255,255,255,0.9);font-size:12px;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin:0 0 12px 0;">Your Verification Code</p>
+                        <td style="background-color:#4F46E5;border-radius:12px;padding:28px;text-align:center;">
+                            <p style="color:#E0E7FF;font-size:12px;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin:0 0 12px 0;">Your Verification Code</p>
                             <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 16px auto;">
                                 <tr>
-                                    <td style="background-color:rgba(255,255,255,0.15);border-radius:8px;padding:12px 24px;">
+                                    <td style="background-color:#3730A3;border-radius:8px;padding:12px 24px;">
                                         <span style="font-size:36px;font-weight:700;letter-spacing:10px;color:#ffffff;font-family:Consolas,'Liberation Mono',Menlo,monospace;">{{ $otpCode }}</span>
                                     </td>
                                 </tr>
                             </table>
                             <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
                                 <tr>
-                                    <td style="background-color:rgba(255,255,255,0.2);border-radius:20px;padding:8px 16px;">
-                                        <span style="color:#ffffff;font-size:13px;font-weight:500;">Expires in {{ $expiryMinutes ?? 10 }} minutes</span>
+                                    <td style="background-color:#3730A3;border-radius:20px;padding:8px 16px;">
+                                        <span style="color:#E0E7FF;font-size:13px;font-weight:500;">Expires in {{ $expiryMinutes ?? 10 }} minutes</span>
                                     </td>
                                 </tr>
                             </table>

@@ -371,7 +371,7 @@ export default function AccountRequestsIndex({
                         </svg>
                         <input
                             type="text"
-                            placeholder="Search by name or email..."
+                            placeholder="Search by name, email, department, organization, reviewer..."
                             value={search}
                             onChange={handleSearchChange}
                             className="block w-full rounded-lg border-gray-300 pl-10 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -412,13 +412,14 @@ export default function AccountRequestsIndex({
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reviewed By</th>
                                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {requestList.length === 0 ? (
                                     <tr>
-                                        <td colSpan={currentStatus === 'pending' ? 8 : 7} className="px-6 py-12 text-center">
+                                        <td colSpan={currentStatus === 'pending' ? 9 : 8} className="px-6 py-12 text-center">
                                             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                                             </svg>
@@ -455,6 +456,16 @@ export default function AccountRequestsIndex({
                                                     <p className="mt-1 text-xs text-red-500 max-w-[200px] truncate" title={request.rejection_reason}>
                                                         {request.rejection_reason}
                                                     </p>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {request.reviewer ? (
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">{request.reviewer.first_name} {request.reviewer.last_name}</p>
+                                                        <p className="text-xs text-gray-400">{formatDate(request.reviewed_at)}</p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400">-</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

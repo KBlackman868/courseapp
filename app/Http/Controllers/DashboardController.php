@@ -352,6 +352,23 @@ class DashboardController extends Controller
     }
 
     /**
+     * Moodle Editor Dashboard (ITECH team)
+     *
+     * Shows:
+     * - Welcome message with "Open Moodle" SSO button
+     */
+    public function moodleEditor(Request $request)
+    {
+        $user = auth()->user();
+
+        if (!$user->isMoodleEditor()) {
+            return redirect()->route('dashboard');
+        }
+
+        return Inertia::render('Dashboard/MoodleEditor');
+    }
+
+    /**
      * Account pending status page
      * Shown to MOH Staff whose account is pending approval
      */

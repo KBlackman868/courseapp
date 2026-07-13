@@ -10,17 +10,7 @@ export default function MissingCourses({ missingCourses = [], stats = {} }) {
     const handleImportCourse = (course) => {
         setImporting((prev) => ({ ...prev, [course.moodle_id]: true }));
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-        fetch('/admin/moodle/courses/sync', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            body: JSON.stringify({ moodle_id: course.moodle_id }),
-        })
-            .then((response) => response.json())
+        window.axios.post('/admin/moodle/courses/sync', { moodle_id: course.moodle_id })
             .then(() => {
                 router.reload({ preserveScroll: true });
             })

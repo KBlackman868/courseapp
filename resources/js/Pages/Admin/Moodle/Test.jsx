@@ -38,21 +38,13 @@ export default function Test() {
         setCreateUserLoading(true);
         setCreateUserResult(null);
         try {
-            const response = await fetch('/admin/moodle/test/create-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-                body: JSON.stringify(newUser),
-            });
-            const data = await response.json();
+            const { data } = await window.axios.post('/admin/moodle/test/create-user', newUser);
             setCreateUserResult(data);
             if (data.status === 'success') {
                 setNewUser({ firstname: '', lastname: '', email: '', password: '' });
             }
         } catch (error) {
-            setCreateUserResult({ status: 'error', message: 'Network error: ' + error.message });
+            setCreateUserResult({ status: 'error', message: 'Network error: ' + (error.response?.data?.message || error.message) });
         } finally {
             setCreateUserLoading(false);
         }
@@ -63,17 +55,10 @@ export default function Test() {
         setSyncUserLoading(true);
         setSyncUserResult(null);
         try {
-            const response = await fetch(`/admin/moodle/test/sync-user/${syncUserId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-            });
-            const data = await response.json();
+            const { data } = await window.axios.post(`/admin/moodle/test/sync-user/${syncUserId}`);
             setSyncUserResult(data);
         } catch (error) {
-            setSyncUserResult({ status: 'error', message: 'Network error: ' + error.message });
+            setSyncUserResult({ status: 'error', message: 'Network error: ' + (error.response?.data?.message || error.message) });
         } finally {
             setSyncUserLoading(false);
         }

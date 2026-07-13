@@ -13,7 +13,7 @@ export function initAjaxForms() {
                     method: method,
                     body: formData,
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });

@@ -27,10 +27,19 @@ class LogActivity
     }
 
     /**
-     * Determine if the request should be logged
+     * Determine if the request should be logged.
+     *
+     * Only logs state-changing requests (POST/PUT/PATCH/DELETE) and
+     * significant admin page views. Routine GET page views are skipped
+     * to keep the activity_logs table from growing excessively.
      */
     protected function shouldLog(Request $request): bool
     {
+        // Only log authenticated user actions
+        if (!auth()->check()) {
+            return false;
+        }
+
         // Skip static assets
         $skipExtensions = ['js', 'css', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'svg', 'woff', 'woff2', 'ttf'];
         $extension = pathinfo($request->path(), PATHINFO_EXTENSION);
@@ -38,8 +47,8 @@ class LogActivity
             return false;
         }
 
-        // Skip AJAX polling requests (live updates)
-        if ($request->ajax() && str_contains($request->path(), '/live')) {
+        // Skip AJAX polling requests (live updates, recent notifications)
+        if ($request->ajax() && (str_contains($request->path(), '/live') || str_contains($request->path(), '/recent'))) {
             return false;
         }
 
@@ -48,8 +57,23 @@ class LogActivity
             return false;
         }
 
-        // Only log authenticated user actions
-        return auth()->check();
+        // Always log state-changing requests (POST, PUT, PATCH, DELETE)
+        if ($request->method() !== 'GET') {
+            return true;
+        }
+
+        // For GET requests, only log admin pages (skip routine page views)
+        $path = $request->path();
+        if (str_contains($path, 'admin/')) {
+            // Skip the activity-logs page itself to avoid recursive noise
+            if (str_contains($path, 'activity-logs')) {
+                return false;
+            }
+            return true;
+        }
+
+        // Skip all other routine GET page views (dashboard, catalog, profile, etc.)
+        return false;
     }
 
     /**

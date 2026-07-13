@@ -15,14 +15,7 @@ export default function OtpVerify({ user, remainingResends }) {
     const handleResend = async () => {
         setResending(true);
         try {
-            const response = await fetch('/auth/otp/resend', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-            });
-            const data = await response.json();
+            const { data } = await window.axios.post('/auth/otp/resend');
             setResendMessage(data.message || 'Code resent.');
         } catch {
             setResendMessage('Failed to resend code.');

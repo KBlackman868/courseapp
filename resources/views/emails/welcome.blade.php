@@ -67,7 +67,7 @@
             <td style="padding:8px 0;">
                 <table cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <td style="width:28px;height:28px;background:linear-gradient(135deg,#4F46E5,#6366F1);color:#ffffff;font-size:13px;font-weight:700;border-radius:50%;text-align:center;vertical-align:middle;line-height:28px;">1</td>
+                        <td style="width:28px;height:28px;background-color:#4F46E5;color:#ffffff;font-size:13px;font-weight:700;border-radius:50%;text-align:center;vertical-align:middle;line-height:28px;">1</td>
                         <td style="padding-left:12px;">
                             <p style="font-size:14px;font-weight:600;color:#111827;margin:0;">Verify Your Email</p>
                             <p style="font-size:13px;color:#6B7280;margin:2px 0 0 0;">Enter the verification code sent to your email</p>
@@ -80,7 +80,7 @@
             <td style="padding:8px 0;">
                 <table cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <td style="width:28px;height:28px;background:linear-gradient(135deg,#4F46E5,#6366F1);color:#ffffff;font-size:13px;font-weight:700;border-radius:50%;text-align:center;vertical-align:middle;line-height:28px;">2</td>
+                        <td style="width:28px;height:28px;background-color:#4F46E5;color:#ffffff;font-size:13px;font-weight:700;border-radius:50%;text-align:center;vertical-align:middle;line-height:28px;">2</td>
                         <td style="padding-left:12px;">
                             <p style="font-size:14px;font-weight:600;color:#111827;margin:0;">Complete Your Profile</p>
                             <p style="font-size:13px;color:#6B7280;margin:2px 0 0 0;">Add your profile photo and additional information</p>
@@ -93,7 +93,7 @@
             <td style="padding:8px 0;">
                 <table cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                        <td style="width:28px;height:28px;background:linear-gradient(135deg,#4F46E5,#6366F1);color:#ffffff;font-size:13px;font-weight:700;border-radius:50%;text-align:center;vertical-align:middle;line-height:28px;">3</td>
+                        <td style="width:28px;height:28px;background-color:#4F46E5;color:#ffffff;font-size:13px;font-weight:700;border-radius:50%;text-align:center;vertical-align:middle;line-height:28px;">3</td>
                         <td style="padding-left:12px;">
                             <p style="font-size:14px;font-weight:600;color:#111827;margin:0;">Browse & Enroll</p>
                             <p style="font-size:13px;color:#6B7280;margin:2px 0 0 0;">Explore courses and begin your learning journey</p>

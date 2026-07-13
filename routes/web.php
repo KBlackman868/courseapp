@@ -272,6 +272,11 @@ Route::middleware('auth')->group(function () {
             ->middleware('role:superadmin')
             ->name('dashboard.superadmin');
 
+        // Moodle Editor Dashboard (ITECH team)
+        Route::get('/dashboard/moodle-editor', [DashboardController::class, 'moodleEditor'])
+            ->middleware('role:moodle_editor')
+            ->name('dashboard.moodle-editor');
+
         // Learner Dashboard (MOH Staff / External User)
         Route::get('/dashboard/learner', [DashboardController::class, 'learner'])->name('dashboard.learner');
 
@@ -304,6 +309,7 @@ Route::middleware('auth')->group(function () {
 
             // DYNAMIC routes - These come AFTER static routes
             Route::get('/{course}', [CourseController::class, 'show'])->name('show')->where('course', '[0-9]+');
+            Route::get('/{course}/image', [CourseController::class, 'serveImage'])->name('image')->where('course', '[0-9]+');
             Route::get('/{course}/register', [CourseController::class, 'register'])->name('register')->where('course', '[0-9]+');
             Route::post('/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store')->where('course', '[0-9]+');
             Route::get('/{course}/access-moodle', [CourseController::class, 'accessMoodle'])->name('access-moodle')->where('course', '[0-9]+');
@@ -498,7 +504,33 @@ Route::middleware('auth')->group(function () {
 
                     return \Inertia\Inertia::render('Admin/Moodle/Status', ['stats' => $stats]);
                 })->name('status');
-                
+
+                // Quick actions called from the Status page
+                Route::post('/sync-users', function () {
+                    $users = \App\Models\User::whereNull('moodle_user_id')->get();
+                    $count = 0;
+                    foreach ($users as $user) {
+                        \App\Jobs\CreateOrLinkMoodleUser::dispatch($user);
+                        $count++;
+                    }
+                    return back()->with('success', "Queued {$count} users for Moodle sync");
+                })->name('syncUsers');
+
+                Route::post('/import-courses', function () {
+                    try {
+                        $sync = app(\App\Services\MoodleCourseSync::class);
+                        $stats = $sync->syncAllCourses();
+                        return back()->with('success', "Imported {$stats['created']} new, updated {$stats['updated']} courses from Moodle");
+                    } catch (\Throwable $e) {
+                        return back()->with('error', 'Failed to import courses: ' . $e->getMessage());
+                    }
+                })->name('importCourses');
+
+                Route::post('/process-queue', function () {
+                    \Artisan::call('queue:work', ['--once' => true]);
+                    return back()->with('success', 'Queue processing triggered');
+                })->name('processQueue');
+
                 Route::get('/test-connection', function() {
                     try {
                         $moodleService = app(\App\Services\MoodleService::class);

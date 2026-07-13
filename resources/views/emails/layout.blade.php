@@ -42,13 +42,13 @@
                 <table class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);">
                     <!-- Header -->
                     <tr>
-                        <td class="header-padding" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);padding:32px 40px;text-align:center;">
+                        <td class="header-padding" style="background-color:#4F46E5;padding:32px 40px;text-align:center;">
                             <table width="100%" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
                                     <td align="center">
                                         <table cellpadding="0" cellspacing="0" border="0">
                                             <tr>
-                                                <td style="width:44px;height:44px;background-color:rgba(255,255,255,0.2);border-radius:50%;text-align:center;vertical-align:middle;line-height:44px;">
+                                                <td style="width:44px;height:44px;background-color:#3730A3;border-radius:50%;text-align:center;vertical-align:middle;line-height:44px;">
                                                     <span style="font-size:20px;font-weight:700;color:#ffffff;">M</span>
                                                 </td>
                                                 <td style="padding-left:12px;">
@@ -61,7 +61,7 @@
                                 @hasSection('header-subtitle')
                                 <tr>
                                     <td align="center" style="padding-top:8px;">
-                                        <span style="color:rgba(255,255,255,0.9);font-size:14px;">@yield('header-subtitle')</span>
+                                        <span style="color:#E0E7FF;font-size:14px;">@yield('header-subtitle')</span>
                                     </td>
                                 </tr>
                                 @endif
@@ -85,7 +85,7 @@
                                         <!-- Divider -->
                                         <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
                                             <tr>
-                                                <td style="width:40px;height:3px;background:linear-gradient(90deg,#4F46E5,#6366F1);border-radius:2px;"></td>
+                                                <td style="width:40px;height:3px;background-color:#4F46E5;border-radius:2px;"></td>
                                             </tr>
                                         </table>
                                         <p style="font-size:14px;font-weight:600;color:#1F2937;margin:0 0 4px 0;">&copy; {{ date('Y') }} Ministry of Health, Trinidad and Tobago</p>

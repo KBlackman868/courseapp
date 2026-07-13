@@ -79,7 +79,7 @@ class Course extends Model
     ];
 
     /**
-     * Get the course image URL with storage prefix.
+     * Get the course image URL — served via a controller route for IIS compatibility.
      */
     public function getImageUrlAttribute(): ?string
     {
@@ -87,10 +87,10 @@ class Course extends Model
         if (!$value) {
             return null;
         }
-        if (str_starts_with($value, 'http') || str_starts_with($value, '/storage/')) {
+        if (str_starts_with($value, 'http')) {
             return $value;
         }
-        return '/storage/' . $value;
+        return url("/courses/{$this->id}/image");
     }
 
     /**

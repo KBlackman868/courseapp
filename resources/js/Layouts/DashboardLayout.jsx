@@ -14,9 +14,14 @@ function getUserRole(user) {
     if (roleNames.includes('superadmin')) return 'superadmin';
     if (roleNames.includes('admin')) return 'admin';
     if (roleNames.includes('course_admin')) return 'course_admin';
+    if (roleNames.includes('moodle_editor')) return 'moodle_editor';
     if (roleNames.includes('external_staff')) return 'external_staff';
     return 'moh_staff';
 }
+
+const moodleEditorNav = [
+    { name: 'Dashboard', href: '/dashboard/moodle-editor' },
+];
 
 const learnerNav = [
     { name: 'My Courses', href: '/dashboard/learner' },
@@ -48,6 +53,7 @@ const adminManagementItems = [
 function getNavItems(role) {
     if (role === 'course_admin') return courseAdminNav;
     if (role === 'admin' || role === 'superadmin') return [];
+    if (role === 'moodle_editor') return moodleEditorNav;
     return learnerNav;
 }
 
@@ -83,16 +89,19 @@ function NavBadge({ count, tone = 'indigo' }) {
 function NotificationsBell({ recent = [], unreadCount = 0 }) {
     const handleOpen = (notification, close) => {
         close();
-        // Mark as read, then navigate to the notification's action URL
-        router.post(`/notifications/${notification.id}/read`, {}, {
-            preserveScroll: true,
-            preserveState: false,
-            onSuccess: () => {
-                if (notification.action_url) {
-                    router.visit(notification.action_url);
-                }
-            },
-        });
+        if (notification.action_url) {
+            // Mark as read — the server will redirect to the action_url
+            router.post(`/notifications/${notification.id}/read`, {}, {
+                preserveScroll: false,
+                preserveState: false,
+            });
+        } else {
+            // No action URL — just mark as read and stay on current page
+            router.post(`/notifications/${notification.id}/read`, {}, {
+                preserveScroll: true,
+                preserveState: false,
+            });
+        }
     };
 
     const markAllRead = (close) => {

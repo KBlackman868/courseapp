@@ -12,6 +12,7 @@ use App\Jobs\EnrollUserIntoMoodleCourse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Enrollment;
 use Inertia\Inertia;
 
@@ -308,6 +309,20 @@ class CourseController extends Controller
      * If ANY step fails, the user is redirected back with a clear error
      * instead of landing on Moodle as an unauthenticated guest.
      */
+    /**
+     * Serve the course image file directly (IIS compatibility — symlinks unreliable).
+     */
+    public function serveImage($id)
+    {
+        $course = Course::findOrFail($id);
+
+        if (!$course->image || !Storage::disk('public')->exists($course->image)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk('public')->path($course->image));
+    }
+
     public function accessMoodle($id)
     {
         $course = Course::findOrFail($id);

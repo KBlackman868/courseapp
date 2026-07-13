@@ -40,6 +40,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public const ROLE_SUPERADMIN = 'superadmin';
     public const ROLE_ADMIN = 'admin';
     public const ROLE_COURSE_ADMIN = 'course_admin';
+    public const ROLE_MOODLE_EDITOR = 'moodle_editor';
     public const ROLE_MOH_STAFF = 'moh_staff';
     public const ROLE_EXTERNAL_USER = 'external_user';
 
@@ -181,6 +182,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isMohStaff(): bool
     {
         return $this->hasRole(self::ROLE_MOH_STAFF);
+    }
+
+    /**
+     * Check if user is a Moodle Editor (ITECH team)
+     *
+     * @return bool
+     */
+    public function isMoodleEditor(): bool
+    {
+        return $this->hasRole(self::ROLE_MOODLE_EDITOR);
     }
 
     /**
@@ -443,6 +454,9 @@ class User extends Authenticatable implements MustVerifyEmail
         }
         if ($this->isAdmin()) {
             return $this->is_course_admin ? 'Course Administrator' : 'Administrator';
+        }
+        if ($this->isMoodleEditor()) {
+            return 'Moodle Editor';
         }
         if ($this->isMohStaff()) {
             return 'MOH Staff';

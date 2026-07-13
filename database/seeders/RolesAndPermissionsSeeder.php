@@ -156,6 +156,16 @@ class RolesAndPermissionsSeeder extends Seeder
                     ]
                 ],
 
+                // Moodle Editor: ITECH team — SSO into Moodle to create/manage courses
+                User::ROLE_MOODLE_EDITOR => [
+                    'display_name' => 'Moodle Editor',
+                    'description' => 'ITECH team member. Can SSO into Moodle to create and manage courses directly.',
+                    'permissions' => [
+                        'access_moodle_courses',
+                        'view_notifications',
+                    ]
+                ],
+
                 // MOH Staff: Ministry of Health employees
                 User::ROLE_MOH_STAFF => [
                     'display_name' => 'MOH Staff',

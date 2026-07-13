@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 function StatusBadge({ active }) {
     return (
@@ -38,21 +38,41 @@ export default function CourseShow({ course }) {
     const [editing, setEditing] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
+
     const form = useForm({
+        _method: 'PUT',
         title: course.title || '',
         description: course.description || '',
         is_active: course.is_active ? '1' : '0',
         audience_type: course.audience_type || 'all',
         enrollment_type: course.enrollment_type || 'OPEN_ENROLLMENT',
+        image: null,
     });
 
     const deleteForm = useForm({});
 
     const handleUpdate = (e) => {
         e.preventDefault();
-        form.put(`/admin/courses/${course.id}`, {
-            onSuccess: () => setEditing(false),
+        form.post(`/admin/courses/${course.id}`, {
+            forceFormData: true,
+            onSuccess: () => { setEditing(false); setImagePreview(null); },
         });
+    };
+
+    const handleImageChange = (file) => {
+        if (!file) return;
+        form.setData('image', file);
+        const reader = new FileReader();
+        reader.onload = (e) => setImagePreview(e.target.result);
+        reader.readAsDataURL(file);
+    };
+
+    const clearImage = () => {
+        form.setData('image', null);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleDelete = (e) => {
@@ -249,10 +269,57 @@ export default function CourseShow({ course }) {
                                     </select>
                                 </div>
                             </div>
+                            {/* Course Image */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Course Image</label>
+                                <div className="flex items-start gap-5">
+                                    {/* Current / preview thumbnail */}
+                                    <div className="flex-shrink-0">
+                                        {(imagePreview || imageUrl) ? (
+                                            <img
+                                                src={imagePreview || imageUrl}
+                                                alt="Course"
+                                                className="h-28 w-40 rounded-lg object-cover border border-gray-200"
+                                            />
+                                        ) : (
+                                            <div className="flex h-28 w-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50">
+                                                <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {/* Upload controls */}
+                                    <div className="flex-1">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageChange(e.target.files[0])}
+                                            className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                                        />
+                                        <p className="mt-1.5 text-xs text-gray-500">PNG, JPG, or WEBP. Max 2MB.</p>
+                                        {imagePreview && (
+                                            <button
+                                                type="button"
+                                                onClick={clearImage}
+                                                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-500"
+                                            >
+                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                </svg>
+                                                Remove new image
+                                            </button>
+                                        )}
+                                        {form.errors.image && <p className="mt-1 text-sm text-red-600">{form.errors.image}</p>}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                                 <button
                                     type="button"
-                                    onClick={() => { setEditing(false); form.reset(); }}
+                                    onClick={() => { setEditing(false); form.reset(); setImagePreview(null); }}
                                     className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
                                     Cancel

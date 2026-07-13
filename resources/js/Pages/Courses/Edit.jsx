@@ -1,9 +1,11 @@
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export default function Edit({ course }) {
     const { flash } = usePage().props;
     const [moodleEnabled, setMoodleEnabled] = useState(!!course.moodle_enabled || !!course.moodle_course_id);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
 
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
@@ -135,29 +137,62 @@ export default function Edit({ course }) {
 
                             {/* Course Image */}
                             <div>
-                                <label htmlFor="image" className="block text-sm font-medium text-gray-700">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Course Image
                                 </label>
-                                {course.image_url && (
-                                    <div className="mt-2 mb-3">
-                                        <img
-                                            src={course.image_url}
-                                            alt={course.title}
-                                            className="h-32 w-48 rounded-md object-cover"
-                                        />
-                                        <p className="mt-1 text-xs text-gray-500">Current image. Upload a new one to replace.</p>
+                                <div className="flex items-start gap-5">
+                                    {/* Thumbnail preview */}
+                                    <div className="flex-shrink-0">
+                                        {(imagePreview || course.image_url) ? (
+                                            <img
+                                                src={imagePreview || course.image_url}
+                                                alt={course.title}
+                                                className="h-28 w-40 rounded-lg object-cover border border-gray-200"
+                                            />
+                                        ) : (
+                                            <div className="flex h-28 w-40 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50">
+                                                <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                                                </svg>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                                <input
-                                    id="image"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => setData('image', e.target.files[0])}
-                                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                                />
-                                {errors.image && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.image}</p>
-                                )}
+                                    {/* Upload controls */}
+                                    <div className="flex-1">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                setData('image', file);
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => setImagePreview(ev.target.result);
+                                                reader.readAsDataURL(file);
+                                            }}
+                                            className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+                                        />
+                                        <p className="mt-1.5 text-xs text-gray-500">PNG, JPG, or WEBP. Max 2MB.</p>
+                                        {imagePreview && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('image', null);
+                                                    setImagePreview(null);
+                                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                                }}
+                                                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-500"
+                                            >
+                                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                </svg>
+                                                Remove new image
+                                            </button>
+                                        )}
+                                        {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

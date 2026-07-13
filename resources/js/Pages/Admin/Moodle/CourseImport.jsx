@@ -19,18 +19,13 @@ export default function CourseImport({ stats = {} }) {
 
     const { local_courses = 0, moodle_synced = 0, not_synced = 0 } = stats;
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
     // Fetch available courses from Moodle
     const handleFetchCourses = async () => {
         setFetchLoading(true);
         setFetchError(null);
         setImportResult(null);
         try {
-            const response = await fetch('/admin/moodle/courses/fetch', {
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-            });
-            const data = await response.json();
+            const { data } = await window.axios.get('/admin/moodle/courses/fetch');
             if (data.status === 'success') {
                 setMoodleCourses(data.courses);
                 setSelectedIds([]);
@@ -38,7 +33,7 @@ export default function CourseImport({ stats = {} }) {
                 setFetchError(data.message || 'Failed to fetch courses');
             }
         } catch (error) {
-            setFetchError('Network error: ' + error.message);
+            setFetchError('Network error: ' + (error.response?.data?.message || error.message));
         } finally {
             setFetchLoading(false);
         }
@@ -50,23 +45,15 @@ export default function CourseImport({ stats = {} }) {
         setImportLoading(true);
         setImportResult(null);
         try {
-            const response = await fetch('/admin/moodle/courses/sync-selected', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({ moodle_ids: selectedIds }),
+            const { data } = await window.axios.post('/admin/moodle/courses/sync-selected', {
+                moodle_ids: selectedIds,
             });
-            const data = await response.json();
             setImportResult(data);
             if (data.status === 'success') {
-                // Re-fetch to update statuses
                 handleFetchCourses();
             }
         } catch (error) {
-            setImportResult({ status: 'error', message: 'Network error: ' + error.message });
+            setImportResult({ status: 'error', message: 'Network error: ' + (error.response?.data?.message || error.message) });
         } finally {
             setImportLoading(false);
         }
