@@ -103,7 +103,7 @@ export default function Index({ notifications, filter = 'all', unreadCount = 0 }
 
     const handleMarkAllRead = () => {
         router.post('/notifications/mark-all-read', {}, {
-            preserveState: true,
+            preserveState: false,
             preserveScroll: true,
         });
     };

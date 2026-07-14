@@ -261,16 +261,16 @@ export default function Index({ enrollments, counts = {}, status = 'all', search
                                         </p>
 
                                         {/* Progress Bar */}
-                                        {(enrollment.status === 'approved' || enrollment.status === 'active') && (
+                                        {(enrollment.status === 'approved' || enrollment.status === 'active' || enrollment.status === 'completed') && (
                                             <div className="mt-3">
                                                 <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                                                     <span>Progress</span>
-                                                    <span>{enrollment.progress ?? 0}%</span>
+                                                    <span>{enrollment.completion_percentage ?? 0}%</span>
                                                 </div>
                                                 <div className="h-2 w-full rounded-full bg-gray-200">
                                                     <div
-                                                        className="h-2 rounded-full bg-indigo-600 transition-all"
-                                                        style={{ width: `${enrollment.progress ?? 0}%` }}
+                                                        className={`h-2 rounded-full transition-all ${(enrollment.completion_percentage ?? 0) >= 100 ? 'bg-green-500' : 'bg-indigo-600'}`}
+                                                        style={{ width: `${enrollment.completion_percentage ?? 0}%` }}
                                                     />
                                                 </div>
                                             </div>

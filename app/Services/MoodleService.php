@@ -499,4 +499,51 @@ class MoodleService
 
         return $loginUrl;
     }
+
+    /**
+     * Get course completion percentage for a user.
+     *
+     * Uses core_completion_get_activities_completion_status to count
+     * completed activities vs total activities in the course.
+     *
+     * @param int $moodleUserId
+     * @param int $moodleCourseId
+     * @return int Percentage 0-100
+     */
+    public function getCourseCompletion(int $moodleUserId, int $moodleCourseId): int
+    {
+        try {
+            $result = $this->call('core_completion_get_activities_completion_status', [
+                'courseid' => $moodleCourseId,
+                'userid'   => $moodleUserId,
+            ]);
+
+            $statuses = $result['statuses'] ?? [];
+            if (empty($statuses)) {
+                return 0;
+            }
+
+            $completed = collect($statuses)->where('state', 1)->count();
+            return (int) round(($completed / count($statuses)) * 100);
+        } catch (\Throwable $e) {
+            Log::debug("Moodle completion fetch failed for user {$moodleUserId} course {$moodleCourseId}: {$e->getMessage()}");
+            return 0;
+        }
+    }
+
+    /**
+     * Get completion percentages for multiple courses for a user.
+     *
+     * @param int $moodleUserId
+     * @param array $moodleCourseIds
+     * @return array<int, int> [moodle_course_id => percentage]
+     */
+    public function getBulkCourseCompletion(int $moodleUserId, array $moodleCourseIds): array
+    {
+        $results = [];
+        foreach ($moodleCourseIds as $courseId) {
+            $results[$courseId] = $this->getCourseCompletion($moodleUserId, $courseId);
+        }
+        return $results;
+    }
 }

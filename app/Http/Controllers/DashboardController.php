@@ -285,8 +285,13 @@ class DashboardController extends Controller
                 }
             }
 
-            // No enrollment or request - check enrollment type
-            $statuses[$courseId] = ['status' => 'available', 'cta' => null, 'action' => null];
+            // No enrollment or request — check enrollment type to determine CTA
+            $course = \App\Models\Course::find($courseId);
+            if ($course && $course->enrollment_type === 'OPEN_ENROLLMENT') {
+                $statuses[$courseId] = ['status' => 'available', 'cta' => 'Enroll Now', 'action' => 'enroll', 'course_id' => $courseId];
+            } else {
+                $statuses[$courseId] = ['status' => 'available', 'cta' => 'Request Access', 'action' => 'request'];
+            }
         }
 
         return $statuses;

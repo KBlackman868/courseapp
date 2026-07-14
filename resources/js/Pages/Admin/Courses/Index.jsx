@@ -45,13 +45,14 @@ function StatCard({ title, value, color = 'indigo' }) {
     );
 }
 
-export default function CoursesIndex({ courses, stats = {} }) {
+export default function CoursesIndex({ courses, stats = {}, filters = {} }) {
     const { flash } = usePage().props;
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
+    const [search, setSearch] = useState(filters.search || '');
     const [processing, setProcessing] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
     const [bulkDeleting, setBulkDeleting] = useState(false);
+
+    const statusFilter = filters.status || '';
 
     const debouncedSearch = useCallback(
         debounce((value) => {
@@ -71,7 +72,6 @@ export default function CoursesIndex({ courses, stats = {} }) {
 
     const handleStatusFilter = (e) => {
         const value = e.target.value;
-        setStatusFilter(value);
         router.get('/admin/courses', {
             search: search || undefined,
             status: value || undefined,

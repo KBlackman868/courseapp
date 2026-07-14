@@ -1194,6 +1194,10 @@ class CourseController extends Controller
         return Inertia::render('Admin/Courses/Index', [
             'courses' => $courses,
             'stats' => $stats,
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'status' => $request->input('status', ''),
+            ],
         ]);
     }
 

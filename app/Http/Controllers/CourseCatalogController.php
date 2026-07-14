@@ -56,7 +56,16 @@ class CourseCatalogController extends Controller
             ]
         );
 
-        return Inertia::render('Courses/Catalog', ['courses' => $courses]);
+        $categories = \App\Models\Category::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('Courses/Catalog', [
+            'courses' => $courses,
+            'categories' => $categories,
+            'filters' => [
+                'search' => $request->input('search', ''),
+                'category' => $request->input('category', ''),
+            ],
+        ]);
     }
 
     /**

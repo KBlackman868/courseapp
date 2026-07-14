@@ -106,7 +106,9 @@ function NotificationsBell({ recent = [], unreadCount = 0 }) {
 
     const markAllRead = (close) => {
         close();
-        router.post('/notifications/mark-all-read', {}, { preserveScroll: true, preserveState: false });
+        window.axios.post('/notifications/mark-all-read').then(() => {
+            router.reload();
+        });
     };
 
     const colorDot = (color) => {

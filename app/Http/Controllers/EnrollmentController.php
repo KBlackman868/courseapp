@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Services\MoodleService;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
@@ -645,6 +646,36 @@ class EnrollmentController extends Controller
         }
 
         $enrollments = $query->paginate(12);
+
+        // Sync completion percentages from Moodle for approved enrollments on this page
+        if ($user->moodle_user_id) {
+            $toSync = $enrollments->getCollection()
+                ->filter(fn ($e) => $e->status === 'approved' && $e->course?->moodle_course_id)
+                ->filter(fn ($e) => !$e->completion_synced_at || $e->completion_synced_at->lt(now()->subMinutes(5)));
+
+            if ($toSync->isNotEmpty()) {
+                try {
+                    $moodleService = app(MoodleService::class);
+                    $moodleCourseIds = $toSync->map(fn ($e) => $e->course->moodle_course_id)->values()->all();
+                    $completions = $moodleService->getBulkCourseCompletion($user->moodle_user_id, $moodleCourseIds);
+
+                    foreach ($toSync as $enrollment) {
+                        $moodleId = $enrollment->course->moodle_course_id;
+                        if (isset($completions[$moodleId])) {
+                            $pct = $completions[$moodleId];
+                            $newStatus = ($pct >= 100) ? 'completed' : $enrollment->status;
+                            $enrollment->update([
+                                'completion_percentage' => $pct,
+                                'completion_synced_at' => now(),
+                                'status' => $newStatus,
+                            ]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::debug('Moodle completion sync skipped: ' . $e->getMessage());
+                }
+            }
+        }
 
         // Get counts for tabs
         $counts = [

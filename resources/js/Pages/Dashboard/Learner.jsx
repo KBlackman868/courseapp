@@ -213,17 +213,26 @@ export default function Learner({
                                             <div className="mt-4">
                                                 {courseStatus?.action === 'access' ? (
                                                     <a
-                                                        href={`/courses/${course.id}`}
-                                                        className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                                        href={`/courses/${course.id}/access-moodle`}
+                                                        className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500"
                                                     >
                                                         Go to Course
                                                     </a>
+                                                ) : courseStatus?.action === 'enroll' ? (
+                                                    <Link
+                                                        href={`/courses/${course.id}/enroll`}
+                                                        method="post"
+                                                        as="button"
+                                                        className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                                    >
+                                                        Enroll Now
+                                                    </Link>
                                                 ) : courseStatus?.action === 'request' ? (
                                                     <Link
                                                         href={`/courses/${course.id}/request-access`}
                                                         method="post"
                                                         as="button"
-                                                        className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                                        className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
                                                     >
                                                         Request Access
                                                     </Link>
